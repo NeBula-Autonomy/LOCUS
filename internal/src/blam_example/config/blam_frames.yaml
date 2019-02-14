@@ -1,0 +1,4 @@
+frame_id:
+  fixed: world
+  base: base
+  odometry: odometry

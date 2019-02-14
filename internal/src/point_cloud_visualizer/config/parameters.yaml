@@ -1,0 +1,4 @@
+visualizer:
+  # Enable or disable dense point cloud visualization (as a map). Disabling the
+  # visualization will significantly increase run-time performance.
+  enable_visualization: false
