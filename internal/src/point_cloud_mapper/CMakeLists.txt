@@ -17,9 +17,12 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     parameter_utils
-  DEPENDS
-    PCL
 )
+
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -53,4 +56,5 @@ add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
 )

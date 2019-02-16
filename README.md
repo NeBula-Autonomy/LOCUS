@@ -5,6 +5,18 @@
 ***BLAM!*** is an open-source software package for LiDAR-based real-time 3D localization and mapping. ***BLAM!*** is developed by Erik Nelson from the Berkeley AI Research Laboratory ([BAIR](http://bair.berkeley.edu)). See https://youtu.be/08GTGfNneCI for a video example.
 
 ## Build Instructions
+### Updated Instructions for This Branch
+This repository contains the checked-out repositories that were installed via rosinstall in the original ***BLAM!*** repository.
+With these changes, the following commands build the entire ***BLAM!*** stack:
+```bash
+cd internal
+catkin_make
+```
+
+The following significant changes were made to the build process:
+* Projects using PCL are now including `${PCL_LIBRARIES}` in their respective `CMakeLists.txt`.
+
+### Old Build Instructions for the Original Repository
 This repository contains two ROS workspaces (one internal, one external). The build process is proctored by the `update` script. To build, first make sure that you do not have any other ROS workspaces in your `ROS_PACKAGE_PATH`, then clone the repository and from the top directory execute
 
 ```bash

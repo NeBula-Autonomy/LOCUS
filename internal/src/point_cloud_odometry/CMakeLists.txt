@@ -27,9 +27,12 @@ catkin_package(
     sensor_msgs
     pcl_ros
     tf2_ros
-  DEPENDS
-    PCL
 )
+
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 include_directories(
   include
@@ -52,4 +55,5 @@ add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
 )

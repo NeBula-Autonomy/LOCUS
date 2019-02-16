@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud_filter)
 
-find_package(PCL REQUIRED COMPONENTS common filters)
-if(NOT PCL_FOUND)
-  message(FATAL_ERROR "This program requires the PCL library.")
-endif(NOT PCL_FOUND)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -19,9 +15,12 @@ catkin_package(
     roscpp
     parameter_utils
     pcl_ros
-  DEPENDS
-    pcl
 )
+
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 include_directories(
   include

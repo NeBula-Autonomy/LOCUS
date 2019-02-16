@@ -34,9 +34,16 @@ catkin_package(
     visualization_msgs
     std_msgs
     pcl_ros
-  DEPENDS
-    PCL
 )
+
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+FIND_PACKAGE( Boost 1.58 COMPONENTS program_options timer REQUIRED )
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -54,6 +61,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
+  ${Boost_INCLUDE_DIR}
 )
 
 link_directories(
@@ -67,4 +75,5 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   gtsam
+  ${Boost_LIBRARIES}
 )

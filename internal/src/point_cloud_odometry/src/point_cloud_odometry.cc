@@ -36,6 +36,7 @@
 
 #include <ros/ros.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
+#include <pcl/search/impl/search.hpp>
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "point_cloud_odometry");

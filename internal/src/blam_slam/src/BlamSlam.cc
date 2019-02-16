@@ -240,7 +240,6 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
       mapper_.InsertPoints(msg_fixed, unused.get());
     }
   }
-  // TODO: Kamak-Check for human-assited loop closures.
 
   // Visualize the pose graph and current loop closure radius.
   loop_closure_.PublishPoseGraph();

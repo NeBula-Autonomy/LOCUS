@@ -7,6 +7,9 @@ external/devel_isolated
 external/install_isolated
 internal/build
 internal/devel
+internal/build_isolated
+internal/devel_isolated
+internal/install_isolated
 #internal/src
 *.catkin_workspace
 

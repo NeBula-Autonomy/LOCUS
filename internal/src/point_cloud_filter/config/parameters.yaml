@@ -6,10 +6,10 @@ filtering:
   grid_res: 0.2
 
   # Apply a random downsample filter on incoming point clouds.
-  random_filter: true
+  random_filter: false
 
   # Percentage of points to discard. Must be between 0.0 and 1.0.
-  decimate_percentage: 0.90
+  decimate_percentage: 0.95
 
   # Apply a statistical outlier filter on incoming point clouds.
   outlier_filter: false

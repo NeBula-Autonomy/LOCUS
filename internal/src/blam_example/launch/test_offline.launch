@@ -10,7 +10,7 @@
           output="screen">
 
       <!-- Bagfile parameters -->
-      <param name="filename/bag" value="/home/parallels/bags/eagle_full.bag"/>
+      <param name="filename/bag" value="/Users/eanelson/Desktop/lbl_lidar.bag"/>
       <param name="scan_topic" value="/velodyne_points"/>
 
       <param name="time_start" value="0.0"/>

@@ -340,9 +340,6 @@ bool LaserLoopClosure::FindLoopClosures(
   return closed_loop;
 }
 
-// TODO: Human-in-the-loop SLAM
-// TODO: Search for another loop closure based on Human-in-the-loop output
-
 void LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
   if (points == NULL) {
     ROS_ERROR("%s: Output point cloud container is null.", name_.c_str());

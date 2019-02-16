@@ -36,6 +36,7 @@
 
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <pcl/search/impl/search.hpp>
 
 namespace pu = parameter_utils;
 
