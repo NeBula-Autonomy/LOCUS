@@ -41,6 +41,7 @@
 #include <geometry_utils/Matrix3x3.h>
 #include <geometry_utils/Transform3.h>
 #include <point_cloud_filter/PointCloudFilter.h>
+#include <laser_loop_closure/ManualLoopClosure.h>
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
@@ -99,8 +100,12 @@ class LaserLoopClosure {
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
- private:
+  // Add factor between the two keys to connect them. This function is
+  // designed for a scenario where a human operator can manually perform
+  // loop closures by adding these factors to the pose graph.
+  bool AddFactor(unsigned int key1, unsigned int key2);
 
+ private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
@@ -126,6 +131,9 @@ class LaserLoopClosure {
                   const geometry_utils::Transform3& pose1,
                   const geometry_utils::Transform3& pose2,
                   geometry_utils::Transform3* delta, Mat66* covariance);
+
+  bool AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
+                        laser_loop_closure::ManualLoopClosureResponse &response);
 
   // Node name.
   std::string name_;
@@ -170,6 +178,8 @@ class LaserLoopClosure {
   ros::Publisher closure_area_pub_;
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
+
+  ros::ServiceServer add_factor_srv_;
 
   // Pose graph publishers.
   ros::Publisher pose_graph_pub_;

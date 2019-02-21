@@ -167,6 +167,13 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   return true;
 }
 
+bool LaserLoopClosure::AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
+                                        laser_loop_closure::ManualLoopClosureResponse &response) {
+  response.success = AddFactor(static_cast<unsigned int>(request.key_from),
+                               static_cast<unsigned int>(request.key_to));
+  return true;
+}
+
 bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
@@ -191,6 +198,8 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 10, false);
   loop_closure_notifier_pub_ =
       nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
+
+  add_factor_srv_ = nl.advertiseService("add_factor", &LaserLoopClosure::AddFactorService, this);
 
   return true;
 }
@@ -250,6 +259,8 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
     keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key, stamp));
   }
+
+  ROS_INFO_STREAM("AddKeyScanPair " << key);
 
   // Add the key and scan.
   keyed_scans_.insert(std::pair<unsigned int, PointCloud::ConstPtr>(key, scan));
@@ -531,6 +542,39 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   scan2_pub_.publish(*target);
 
   return true;
+}
+
+bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
+  // Thanks to Luca for providing the code
+  ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
+
+  // creating relative pose factor (also works for relative positions)
+  gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
+
+  // create Information of measured
+  gtsam::Vector6 precisions; // inverse of variances
+  precisions.head<3>().setConstant(0.0);
+  precisions.tail<3>().setConstant(1.0); // std: 1m^2
+  static const gtsam::SharedNoiseModel& betweenNoise_ =
+  gtsam::noiseModel::Diagonal::Precisions(precisions);
+
+  gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
+  gtsam::Key id2 = key2;
+  gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, betweenNoise_);
+
+  // add factor to factor graph
+  NonlinearFactorGraph new_factor;
+  new_factor.add(factor);
+
+  // optimize
+  try {
+    const auto result = isam_->update(new_factor);
+    result.print("iSAM2 update result:\t");
+    return result.getVariablesReeliminated() > 0;
+  } catch (...) {
+    ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
+    return false;
+  }
 }
 
 void LaserLoopClosure::PublishPoseGraph() {

@@ -18,15 +18,20 @@ find_package(catkin REQUIRED COMPONENTS
   point_cloud_filter
   pose_graph_msgs
   visualization_msgs
+  message_generation
   std_msgs
   pcl_ros
 )
+
+add_service_files(FILES ManualLoopClosure.srv)
+generate_messages()
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
+    message_runtime
     geometry_utils
     parameter_utils
     point_cloud_filter
@@ -35,6 +40,7 @@ catkin_package(
     std_msgs
     pcl_ros
 )
+
 
 find_package(PCL 1.7 REQUIRED)
 include_directories(${PCL_INCLUDE_DIRS})
