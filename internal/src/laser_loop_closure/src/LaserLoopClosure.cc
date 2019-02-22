@@ -173,6 +173,12 @@ bool LaserLoopClosure::AddFactorService(laser_loop_closure::ManualLoopClosureReq
                                         laser_loop_closure::ManualLoopClosureResponse &response) {
   response.success = AddFactor(static_cast<unsigned int>(request.key_from),
                                static_cast<unsigned int>(request.key_to));
+  if (response.success){
+    std::cout << "adding factor for loop closure succeeded" << std::endl;
+  }else{
+    std::cout << "adding factor for loop closure failed" << std::endl;
+  }
+
   return true;
 }
 
@@ -228,7 +234,7 @@ bool LaserLoopClosure::AddBetweenFactor(
   keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
 
   // Update ISAM2.
-  isam_->update(new_factor, new_value);
+  isam_->update(new_factor, new_value); // Is it ok to have one new_factor added?
   values_ = isam_->calculateEstimate();
 
   // Assign output and get ready to go again!
@@ -550,13 +556,16 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // Thanks to Luca for providing the code
   ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
 
+  // TODO - some check to see what the distance between the two poses are
+  // Print that out for the operator to check - to see how large a change is being asked for
+
   // creating relative pose factor (also works for relative positions)
   gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
 
   // create Information of measured
   gtsam::Vector6 precisions; // inverse of variances
   precisions.head<3>().setConstant(0.0);
-  precisions.tail<3>().setConstant(1.0); // std: 1m^2
+  precisions.tail<3>().setConstant(1.0/1000.0); // std: 10m^2
   static const gtsam::SharedNoiseModel& betweenNoise_ =
   gtsam::noiseModel::Diagonal::Precisions(precisions);
 
@@ -574,7 +583,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   // optimize
   try {
-    const auto result = isam_->update(new_factor);
+    const auto result = isam_->update(new_factor, Values());
     result.print("iSAM2 update result:\t");
 
     // redirect cout to file
@@ -595,11 +604,25 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     double error = nfg.error(linPoint);
     ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
 
+    // Store for visualization and output.
+    loop_edges_.push_back(std::make_pair(id1, id2));
+
+    // Send an empty message notifying any subscribers that we found a loop
+    // closure.
+    loop_closure_notifier_pub_.publish(std_msgs::Empty());
+
+    // Update values
+    values_ = isam_->calculateEstimate();
+
+    // Publish
+    PublishPoseGraph();
+
     return result.getVariablesReeliminated() > 0;
   } catch (...) {
     ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
     throw;
   }
+
 }
 
 void LaserLoopClosure::PublishPoseGraph() {
