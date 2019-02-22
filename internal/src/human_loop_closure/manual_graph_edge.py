@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy, sys
-from laser_loop_closure.srv import ManualLoopClosure
+from blam_slam.srv import ManualLoopClosure
 
 def connect(key_from, key_to):
     rospy.init_node('human_operator_loop_closure')

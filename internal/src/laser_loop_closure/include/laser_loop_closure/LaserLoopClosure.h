@@ -132,8 +132,8 @@ class LaserLoopClosure {
                   const geometry_utils::Transform3& pose2,
                   geometry_utils::Transform3* delta, Mat66* covariance);
 
-  bool AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
-                        laser_loop_closure::ManualLoopClosureResponse &response);
+  // bool AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
+  //                       laser_loop_closure::ManualLoopClosureResponse &response);
 
   // Node name.
   std::string name_;
@@ -179,7 +179,7 @@ class LaserLoopClosure {
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
 
-  ros::ServiceServer add_factor_srv_;
+  // ros::ServiceServer add_factor_srv_;
 
   // Pose graph publishers.
   ros::Publisher pose_graph_pub_;

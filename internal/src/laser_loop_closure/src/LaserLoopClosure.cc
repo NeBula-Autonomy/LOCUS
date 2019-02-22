@@ -169,18 +169,18 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   return true;
 }
 
-bool LaserLoopClosure::AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
-                                        laser_loop_closure::ManualLoopClosureResponse &response) {
-  response.success = AddFactor(static_cast<unsigned int>(request.key_from),
-                               static_cast<unsigned int>(request.key_to));
-  if (response.success){
-    std::cout << "adding factor for loop closure succeeded" << std::endl;
-  }else{
-    std::cout << "adding factor for loop closure failed" << std::endl;
-  }
+// bool LaserLoopClosure::AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
+//                                         laser_loop_closure::ManualLoopClosureResponse &response) {
+//   response.success = AddFactor(static_cast<unsigned int>(request.key_from),
+//                                static_cast<unsigned int>(request.key_to));
+//   if (response.success){
+//     std::cout << "adding factor for loop closure succeeded" << std::endl;
+//   }else{
+//     std::cout << "adding factor for loop closure failed" << std::endl;
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
 bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
@@ -207,7 +207,7 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
   loop_closure_notifier_pub_ =
       nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
 
-  add_factor_srv_ = nl.advertiseService("add_factor", &LaserLoopClosure::AddFactorService, this);
+  // add_factor_srv_ = nl.advertiseService("add_factor", &LaserLoopClosure::AddFactorService, this);
 
   return true;
 }
@@ -234,7 +234,27 @@ bool LaserLoopClosure::AddBetweenFactor(
   keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
 
   // Update ISAM2.
-  isam_->update(new_factor, new_value); // Is it ok to have one new_factor added?
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
   values_ = isam_->calculateEstimate();
 
   // Assign output and get ready to go again!
@@ -287,7 +307,6 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
 
 bool LaserLoopClosure::FindLoopClosures(
     unsigned int key, std::vector<unsigned int>* closure_keys) {
-
   // If loop closure checking is off, don't do this step. This will save some
   // computation time.
   if (!check_for_loop_closures_)
@@ -565,7 +584,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // create Information of measured
   gtsam::Vector6 precisions; // inverse of variances
   precisions.head<3>().setConstant(0.0);
-  precisions.tail<3>().setConstant(1.0/1000.0); // std: 10m^2
+  precisions.tail<3>().setConstant(1.0/25.0); // std: 5m^2
   static const gtsam::SharedNoiseModel& betweenNoise_ =
   gtsam::noiseModel::Diagonal::Precisions(precisions);
 
@@ -622,6 +641,8 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
     throw;
   }
+
+  std::cout << "Made it out of the loop closure AddFactor" << std::endl;
 
 }
 

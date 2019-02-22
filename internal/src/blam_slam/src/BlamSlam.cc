@@ -106,11 +106,14 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
 
   visualization_update_timer_ = nl.createTimer(
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
+      
+  add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
   else
     return RegisterOnlineCallbacks(n);
+
 }
 
 bool BlamSlam::RegisterLogCallbacks(const ros::NodeHandle& n) {
@@ -138,6 +141,40 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
 
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
+ 
+  return true;
+}
+
+bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
+                                        blam_slam::ManualLoopClosureResponse &response) {
+  // TODO - bring the service creation into this node?
+  response.success = loop_closure_.AddFactor(static_cast<unsigned int>(request.key_from),
+                               static_cast<unsigned int>(request.key_to));
+  if (response.success){
+    std::cout << "adding factor for loop closure succeeded" << std::endl;
+  }else{
+    std::cout << "adding factor for loop closure failed" << std::endl;
+  }
+
+  // Update the map from the loop closures
+  std::cout << "Updating the map" << std::endl;
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+  // Visualize the pose graph and current loop closure radius.
+  loop_closure_.PublishPoseGraph();
+
+  // Publish updated map
+  mapper_.PublishMap();
+
+  std::cout << "Updated the map" << std::endl;
 
   return true;
 }
@@ -273,6 +310,7 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
                                       covariance, stamp, &pose_key)) {
     return false;
   }
+  
   *new_keyframe = true;
 
   if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {
