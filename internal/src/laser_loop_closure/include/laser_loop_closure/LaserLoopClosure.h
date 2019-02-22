@@ -174,6 +174,7 @@ class LaserLoopClosure {
   ros::Publisher odometry_edge_pub_;
   ros::Publisher loop_edge_pub_;
   ros::Publisher graph_node_pub_;
+  ros::Publisher graph_node_id_pub_;
   ros::Publisher keyframe_node_pub_;
   ros::Publisher closure_area_pub_;
   ros::Publisher scan1_pub_;

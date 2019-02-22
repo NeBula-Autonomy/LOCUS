@@ -192,6 +192,8 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<visualization_msgs::Marker>("loop_edges", 10, false);
   graph_node_pub_ =
       nl.advertise<visualization_msgs::Marker>("graph_nodes", 10, false);
+  graph_node_id_pub_ =
+      nl.advertise<visualization_msgs::Marker>("graph_node_ids", 10, false);
   keyframe_node_pub_ =
       nl.advertise<visualization_msgs::Marker>("keyframe_nodes", 10, false);
   closure_area_pub_ =
@@ -558,9 +560,9 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   // TODO: Use real ICP covariance.
   covariance->Zeros();
   for (int i = 0; i < 3; ++i)
-    (*covariance)(i, i) = 0.01;
+    (*covariance)(i, i) = 0.01; // 0.01
   for (int i = 3; i < 6; ++i)
-    (*covariance)(i, i) = 0.04;
+    (*covariance)(i, i) = 0.04; // 0.04
 
   // If the loop closure was a success, publish the two scans.
   source->header.frame_id = fixed_frame_id_;
@@ -584,7 +586,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // create Information of measured
   gtsam::Vector6 precisions; // inverse of variances
   precisions.head<3>().setConstant(0.0);
-  precisions.tail<3>().setConstant(1.0/25.0); // std: 5m^2
+  precisions.tail<3>().setConstant(1.0/1000.0); // std: 1/1000 ~ 30 m^2 1/100 - 10 m^2 1/25 - 5m^2
   static const gtsam::SharedNoiseModel& betweenNoise_ =
   gtsam::noiseModel::Diagonal::Precisions(precisions);
 
@@ -725,6 +727,33 @@ void LaserLoopClosure::PublishPoseGraph() {
     graph_node_pub_.publish(m);
   }
 
+  // Publish node IDs in the pose graph.
+  if (graph_node_id_pub_.getNumSubscribers() > 0) {
+    visualization_msgs::Marker m;
+    m.header.frame_id = fixed_frame_id_;
+    m.ns = fixed_frame_id_;
+    
+    m.action = visualization_msgs::Marker::ADD;
+    m.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+    m.color.r = 1.0;
+    m.color.g = 1.0;
+    m.color.b = 0.2;
+    m.color.a = 0.8;
+    m.scale.z = 0.02; // Only Scale z is used - height of capital A in the text
+
+    int id_base = 100;
+
+    for (const auto& keyed_pose : values_) {
+      gu::Transform3 p = ToGu(values_.at<Pose3>(keyed_pose.key));
+      m.pose = gr::ToRosPose(p);
+      // Display text for the node
+      m.text = std::to_string(keyed_pose.key);
+      m.id = id_base + keyed_pose.key;
+      graph_node_id_pub_.publish(m);
+    }
+    
+  }
+
   // Publish keyframe nodes in the pose graph.
   if (keyframe_node_pub_.getNumSubscribers() > 0) {
     visualization_msgs::Marker m;
@@ -747,7 +776,7 @@ void LaserLoopClosure::PublishPoseGraph() {
         m.points.push_back(gr::ToRosPoint(p));
       }
     }
-    graph_node_pub_.publish(m);
+    keyframe_node_pub_.publish(m);
   }
 
   // Draw a sphere around the current sensor frame to show the area in which we

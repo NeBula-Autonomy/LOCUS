@@ -9,7 +9,7 @@ relinearize_threshold: 0.01
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures
 # are fast.
-translation_threshold: 2.0
+translation_threshold: 1.0
 
 # When searching through old poses for loop closures, only consider old poses
 # that are within this distance of the current pose.
