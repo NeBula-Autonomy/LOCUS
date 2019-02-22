@@ -46,6 +46,8 @@
 #include <pcl/registration/gicp.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <fstream>
+
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
 namespace pu = parameter_utils;
@@ -562,6 +564,10 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   gtsam::Key id2 = key2;
   gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, betweenNoise_);
 
+  gtsam::Values linPoint = isam_->getLinearizationPoint();
+  double cost = factor.error(linPoint);
+  ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
+
   // add factor to factor graph
   NonlinearFactorGraph new_factor;
   new_factor.add(factor);
@@ -570,10 +576,29 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   try {
     const auto result = isam_->update(new_factor);
     result.print("iSAM2 update result:\t");
+
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    gtsam::Values linPoint = isam_->getLinearizationPoint();
+    double error = nfg.error(linPoint);
+    ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
+
     return result.getVariablesReeliminated() > 0;
   } catch (...) {
     ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
-    return false;
+    throw;
   }
 }
 

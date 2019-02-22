@@ -1,6 +1,6 @@
 # Toggle loop closures on or off. Setting this to off will increase run-time
 # speed by a small fraction.
-check_for_loop_closures: true
+check_for_loop_closures: false
 
 # Default parameters for the ISAM2 data structure.
 relinearize_skip: 1
@@ -13,16 +13,16 @@ translation_threshold: 0.5
 
 # When searching through old poses for loop closures, only consider old poses
 # that are within this distance of the current pose.
-proximity_threshold: 1.5
+proximity_threshold: 3
 
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
 # the ICP "fitness score" must be less than this number.
-max_tolerable_fitness: 0.10
+max_tolerable_fitness: 0.08
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.
-skip_recent_poses: 200
+skip_recent_poses: 100
 
 # If a loop has recently been closed, don't close a new one for at least this
 # many poses (i.e. the sensor would have to move translation_threshold *
