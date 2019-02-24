@@ -152,9 +152,12 @@ class LaserLoopClosure {
   unsigned int relinearize_interval_;
   unsigned int skip_recent_poses_;
   unsigned int poses_before_reclosing_;
+  unsigned int n_iterations_manual_loop_close_;
   double translation_threshold_;
   double proximity_threshold_;
   double max_tolerable_fitness_;
+  double maual_lc_rot_precision_;
+  double maual_lc_trans_precision_;
 
   // ICP parameters.
   double icp_ransac_thresh_;

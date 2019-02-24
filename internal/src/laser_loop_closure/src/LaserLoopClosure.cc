@@ -103,6 +103,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   double relinearize_threshold = 0.01;
   if (!pu::Get("relinearize_skip", relinearize_skip)) return false;
   if (!pu::Get("relinearize_threshold", relinearize_threshold)) return false;
+  if (!pu::Get("n_iterations_manual_loop_close", n_iterations_manual_loop_close_)) return false;
 
   // Load loop closing parameters.
   if (!pu::Get("translation_threshold", translation_threshold_)) return false;
@@ -110,6 +111,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("max_tolerable_fitness", max_tolerable_fitness_)) return false;
   if (!pu::Get("skip_recent_poses", skip_recent_poses_)) return false;
   if (!pu::Get("poses_before_reclosing", poses_before_reclosing_)) return false;
+  if (!pu::Get("maual_lc_rot_precision", maual_lc_rot_precision_)) return false;
+  if (!pu::Get("maual_lc_trans_precision", maual_lc_trans_precision_)) return false;
 
   // Load ICP parameters.
   if (!pu::Get("icp/tf_epsilon", icp_tf_epsilon_)) return false;
@@ -585,8 +588,8 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   // create Information of measured
   gtsam::Vector6 precisions; // inverse of variances
-  precisions.head<3>().setConstant(0.0);
-  precisions.tail<3>().setConstant(1.0/1000.0); // std: 1/1000 ~ 30 m^2 1/100 - 10 m^2 1/25 - 5m^2
+  precisions.head<3>().setConstant(maual_lc_rot_precision_); // rotation precision
+  precisions.tail<3>().setConstant(maual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
   static const gtsam::SharedNoiseModel& betweenNoise_ =
   gtsam::noiseModel::Diagonal::Precisions(precisions);
 
@@ -594,9 +597,22 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   gtsam::Key id2 = key2;
   gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, betweenNoise_);
 
+  // Get the current offset and predict the error and cost
+  gtsam::Pose3 p1 = values_.at<Pose3>(key1);
+  gtsam::Pose3 p2 = values_.at<Pose3>(key2);
+  gtsam::Point3 diff = p2.translation() - p1.translation();//p2.translation.distance(p1.translation);
+  double err_d = diff.norm();
+  double predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*maual_lc_trans_precision_;
+  ROS_INFO_STREAM("Vector between poses on loop closure is ");
+  diff.print();
+  ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
+  ROS_INFO_STREAM("Predicted cost is " << predicted_cost); 
+
+
   gtsam::Values linPoint = isam_->getLinearizationPoint();
   double cost = factor.error(linPoint);
   ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
+  // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
 
   // add factor to factor graph
   NonlinearFactorGraph new_factor;
@@ -604,8 +620,29 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   // optimize
   try {
-    const auto result = isam_->update(new_factor, Values());
-    result.print("iSAM2 update result:\t");
+    std::cout << "Optimizing maual loop closure, frist iteration" << std::endl;
+    gtsam::ISAM2Result result;    
+
+    gtsam::Values linPoint;
+    double error;
+
+    // Loop for n_iterations of the update 
+    for (int i = 0; i < n_iterations_manual_loop_close_; i++){
+      std::cout << "Optimizing maual loop closure, iteration " << i << std::endl;
+      if (i == 0){
+        // Run first update with the added factors 
+        result = isam_->update(new_factor, Values());
+      } else {
+        // Run iterations of the update without adding new factors
+        result = isam_->update(NonlinearFactorGraph(), Values());
+      }
+      result.print("iSAM2 update result:\t");
+
+      linPoint = isam_->getLinearizationPoint();
+      gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+      error = nfg.error(linPoint);
+      ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
+    }
 
     // redirect cout to file
     std::ofstream nfgFile;
@@ -620,11 +657,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     nfgFile.close();
 
     std::cout.rdbuf(coutbuf); //reset to standard output again
-
-    gtsam::Values linPoint = isam_->getLinearizationPoint();
-    double error = nfg.error(linPoint);
-    ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
-
+    
     // Store for visualization and output.
     loop_edges_.push_back(std::make_pair(id1, id2));
 
@@ -634,6 +667,17 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
     // Update values
     values_ = isam_->calculateEstimate();
+
+    // Get the current offset and predict the error and cost
+    p1 = values_.at<Pose3>(key1);
+    p2 = values_.at<Pose3>(key2);
+    diff = p2.translation() - p1.translation();//p2.translation.distance(p1.translation);
+    err_d = diff.norm();
+    predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*maual_lc_trans_precision_;
+    ROS_INFO_STREAM("Vector between poses on loop closure is ");
+    diff.print();
+    ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
+    ROS_INFO_STREAM("Predicted cost is " << predicted_cost); 
 
     // Publish
     PublishPoseGraph();
