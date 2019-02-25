@@ -585,17 +585,18 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   // creating relative pose factor (also works for relative positions)
   gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
+  measured.print("Between pose is ");
 
   // create Information of measured
   gtsam::Vector6 precisions; // inverse of variances
   precisions.head<3>().setConstant(maual_lc_rot_precision_); // rotation precision
   precisions.tail<3>().setConstant(maual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
-  static const gtsam::SharedNoiseModel& betweenNoise_ =
+  static const gtsam::SharedNoiseModel& loopClosureNoise =
   gtsam::noiseModel::Diagonal::Precisions(precisions);
 
   gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
   gtsam::Key id2 = key2;
-  gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, betweenNoise_);
+  gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
   // Get the current offset and predict the error and cost
   gtsam::Pose3 p1 = values_.at<Pose3>(key1);
@@ -621,7 +622,8 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // optimize
   try {
     std::cout << "Optimizing maual loop closure, frist iteration" << std::endl;
-    gtsam::ISAM2Result result;    
+    gtsam::ISAM2Result result;
+    gtsam::NonlinearFactorGraph nfg;
 
     gtsam::Values linPoint;
     double error;
@@ -639,7 +641,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
       result.print("iSAM2 update result:\t");
 
       linPoint = isam_->getLinearizationPoint();
-      gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+      nfg = isam_->getFactorsUnsafe();
       error = nfg.error(linPoint);
       ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
     }
@@ -652,7 +654,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     std::cout.rdbuf(nfgFile.rdbuf());
 
     // save entire factor graph to file and debug if loop closure is correct
-    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg = isam_->getFactorsUnsafe();
     nfg.print();
     nfgFile.close();
 
