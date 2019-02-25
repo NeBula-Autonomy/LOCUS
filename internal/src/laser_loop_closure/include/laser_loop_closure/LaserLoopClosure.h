@@ -48,10 +48,16 @@
 #include <gtsam/geometry/Rot3.h>
 #include <gtsam/linear/NoiseModel.h>
 #include <gtsam/nonlinear/ISAM2.h>
+#include <gtsam/nonlinear/GaussNewtonOptimizer.h>
+#include <gtsam/nonlinear/DoglegOptimizer.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
+
+// This new header allows us to read examples easily from .graph files
+#include <gtsam/slam/dataset.h>
 
 #include <pcl_ros/point_cloud.h>
 
@@ -147,6 +153,7 @@ class LaserLoopClosure {
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
+  unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;
   unsigned int relinearize_interval_;
@@ -158,6 +165,8 @@ class LaserLoopClosure {
   double max_tolerable_fitness_;
   double maual_lc_rot_precision_;
   double maual_lc_trans_precision_;
+  unsigned int relinearize_skip_;
+  double relinearize_threshold_;
 
   // ICP parameters.
   double icp_ransac_thresh_;

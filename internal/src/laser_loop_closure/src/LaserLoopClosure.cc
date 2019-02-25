@@ -98,11 +98,15 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Should we turn loop closure checking on or off?
   if (!pu::Get("check_for_loop_closures", check_for_loop_closures_)) return false;
 
+  // Optimizer selection
+  if (!pu::Get("loop_closure_optimizer", loop_closure_optimizer_)) return false;
+  
+
   // Load ISAM2 parameters.
-  unsigned int relinearize_skip = 1;
-  double relinearize_threshold = 0.01;
-  if (!pu::Get("relinearize_skip", relinearize_skip)) return false;
-  if (!pu::Get("relinearize_threshold", relinearize_threshold)) return false;
+  relinearize_skip_ = 1;
+  relinearize_threshold_ = 0.01;
+  if (!pu::Get("relinearize_skip", relinearize_skip_)) return false;
+  if (!pu::Get("relinearize_threshold", relinearize_threshold_)) return false;
   if (!pu::Get("n_iterations_manual_loop_close", n_iterations_manual_loop_close_)) return false;
 
   // Load loop closing parameters.
@@ -141,8 +145,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   // Create the ISAM2 solver.
   ISAM2Params parameters;
-  parameters.relinearizeSkip = relinearize_skip;
-  parameters.relinearizeThreshold = relinearize_threshold;
+  parameters.relinearizeSkip = relinearize_skip_;
+  parameters.relinearizeThreshold = relinearize_threshold_;
   isam_.reset(new ISAM2(parameters));
 
   // Set the initial position.
@@ -598,6 +602,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   gtsam::Key id2 = key2;
   gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
+  // TODO - remove debug messages 
   // Get the current offset and predict the error and cost
   gtsam::Pose3 p1 = values_.at<Pose3>(key1);
   gtsam::Pose3 p2 = values_.at<Pose3>(key2);
@@ -619,32 +624,146 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   NonlinearFactorGraph new_factor;
   new_factor.add(factor);
 
+  // // save factor graph as graphviz dot file
+  // // Render to PDF using "fdp Pose2SLAMExample.dot -Tpdf > graph.pdf"
+  // std::ofstream os("Pose2SLAMExample.dot");
+  // graph.saveGraph(os, result);
+
+  // // Read File, create graph and initial estimate
+  // // we are in build/examples, data is in examples/Data
+  // NonlinearFactorGraph::shared_ptr graph;
+  // Values::shared_ptr initial;
+  // SharedDiagonal model = noiseModel::Diagonal::Sigmas((Vector(3) << 0.05, 0.05, 5.0 * M_PI / 180.0).finished());
+  // string graph_file = findExampleDataFile("w100.graph");
+  // boost::tie(graph, initial) = load2D(graph_file, model);
+  // initial->print("Initial estimate:\n");
+
+  // TODO - option to save or load the graph - check size of the existing graph?
+  // Or just create an option to load an existing graph in the launch file?
+  // TODO - Debug this for quicker testing - load a good graph that already has all we want.
+  // bool bLoadGraph = false;
+  // if (!bLoadGraph){
+  //   // Save the graph 
+  //   gtsam::SharedNoiseModel noise_model;
+  //   noise_model = gtsam::noiseModel::Diagonal::Precisions::shared_ptr((gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.04, 0.04, 0.04).finished());
+  //   gtsam::save2D(isam_->getFactorsUnsafe(), values_, noise_model, "pre-loop_graph.graph");
+  // }else{
+  //   // Load the graph
+  //   NonlinearFactorGraph::shared_ptr graph;
+  //   Values::shared_ptr initial;
+  //   gtsam::SharedNoiseModel noise_model = gtsam::noiseModel::Diagonal::Precisions::shared_ptr((gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.04, 0.04, 0.04).finished());
+  //   string graph_file = findExampleDataFile("pre-loop_graph.graph");
+  //   boost::tie(graph, initial) = load2D(graph_file, noise_model);
+  //   // initial->print("Initial estimate:\n");
+  // }
+
+
+
   // optimize
   try {
     std::cout << "Optimizing maual loop closure, frist iteration" << std::endl;
-    gtsam::ISAM2Result result;
+    // gtsam::ISAM2Result result;
     gtsam::NonlinearFactorGraph nfg;
+    gtsam::Values initialEstimate;
+    gtsam::Values result;
+
+    // TODO - loop over optimizers?
+    // TODO using strings or enum rather than ints
+    // Switch based on optimizer input
+    switch (loop_closure_optimizer_){
+      case 0 : 
+      {
+        // Run isam 2 standard
+      }
+        break;
+      case 1 : 
+      {
+        // Levenber Marquardt Optimizer
+        std::cout << "Running LM optimization" << std::endl;
+        nfg = isam_->getFactorsUnsafe();
+        nfg.add(factor);
+        initialEstimate = isam_->calculateEstimate();
+        result = gtsam::LevenbergMarquardtOptimizer(nfg, initialEstimate).optimize();
+        // result.print("LM result is: ");
+      }
+        break;
+      case 2 : 
+      {
+        // Dogleg Optimizer
+        std::cout << "Running Dogleg optimization" << std::endl;
+        nfg = isam_->getFactorsUnsafe();
+        nfg.add(factor);
+        initialEstimate = isam_->calculateEstimate();
+        result = gtsam::DoglegOptimizer(nfg, initialEstimate).optimize();
+      }
+        break;
+      case 3 : 
+      {
+        // Gauss Newton Optimizer
+        std::cout << "Running Gauss Newton optimization" << std::endl;
+        nfg = isam_->getFactorsUnsafe();
+        nfg.add(factor);
+
+        // Optimise on the graph - set up parameters
+        gtsam::GaussNewtonParams parameters;
+
+        // Print per iteration
+        parameters.setVerbosity("ERROR");
+
+        // Optimize
+        initialEstimate = isam_->calculateEstimate();
+        result = gtsam::GaussNewtonOptimizer(nfg, initialEstimate, parameters).optimize();
+        
+      }
+        break;
+      default : 
+      {
+        // Error
+        ROS_INFO_STREAM("ERROR, wrong optimizer option");
+        // TODO handle the error
+      }
+    }
+    std::cout << "initial error = " << nfg.error(initialEstimate) << std::endl;
+    std::cout << "final error = " << nfg.error(result) << std::endl;
+
+    
+    // ----------------------------------------------
+    // Update results in ISAM2 - replace points?
+    // Rest 
+    // Create the ISAM2 solver.
+    ISAM2Params parameters;
+    parameters.relinearizeSkip = relinearize_skip_;
+    parameters.relinearizeThreshold = relinearize_threshold_;
+    isam_.reset(new ISAM2(parameters));
+    
+    // Update with the new graph
+    isam_->update(nfg,result); 
+    
+
+
+
 
     gtsam::Values linPoint;
     double error;
 
-    // Loop for n_iterations of the update 
-    for (int i = 0; i < n_iterations_manual_loop_close_; i++){
-      std::cout << "Optimizing maual loop closure, iteration " << i << std::endl;
-      if (i == 0){
-        // Run first update with the added factors 
-        result = isam_->update(new_factor, Values());
-      } else {
-        // Run iterations of the update without adding new factors
-        result = isam_->update(NonlinearFactorGraph(), Values());
-      }
-      result.print("iSAM2 update result:\t");
+    // // Loop for n_iterations of the update 
+    // for (int i = 0; i < n_iterations_manual_loop_close_; i++){
+    //   std::cout << "Optimizing maual loop closure, iteration " << i << std::endl;
+    //   if (i == 0){
+    //     // Run first update with the added factors 
+    //     result = isam_->update(new_factor, Values());
+    //   } else {
+    //     // Run iterations of the update without adding new factors
+    //     result = isam_->update(NonlinearFactorGraph(), Values());
+    //   }
+    //   result.print("iSAM2 update result:\t");
 
-      linPoint = isam_->getLinearizationPoint();
-      nfg = isam_->getFactorsUnsafe();
-      error = nfg.error(linPoint);
-      ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
-    }
+    //   linPoint = isam_->getLinearizationPoint();
+    //   nfg = isam_->getFactorsUnsafe();
+    //   error = nfg.error(linPoint);
+    //   ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
+    //   double error_isam = isam_->error();
+    // }
 
     // redirect cout to file
     std::ofstream nfgFile;
@@ -668,7 +787,11 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     loop_closure_notifier_pub_.publish(std_msgs::Empty());
 
     // Update values
-    values_ = isam_->calculateEstimate();
+    // values_ = isam_->calculateEstimate();
+    values_ = result;//
+
+    // Todo test calculate best estimate vs calculate estimate
+    // values =  isam_->calculateBestEstimate();
 
     // Get the current offset and predict the error and cost
     p1 = values_.at<Pose3>(key1);
@@ -680,18 +803,19 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     diff.print();
     ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
     ROS_INFO_STREAM("Predicted cost is " << predicted_cost); 
+    linPoint = isam_->getLinearizationPoint();
+    nfg = isam_->getFactorsUnsafe();
+    error = nfg.error(linPoint);
+    ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << error); // 10^6 - 10^9 is ok (re-adjust covariances) 
 
     // Publish
     PublishPoseGraph();
 
-    return result.getVariablesReeliminated() > 0;
+    return true; //result.getVariablesReeliminated() > 0;
   } catch (...) {
     ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
     throw;
   }
-
-  std::cout << "Made it out of the loop closure AddFactor" << std::endl;
-
 }
 
 void LaserLoopClosure::PublishPoseGraph() {

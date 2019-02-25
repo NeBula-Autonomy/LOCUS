@@ -19,7 +19,7 @@ tmux send-keys -t 0 "roscore" C-m
 tmux send-keys -t 2 "sleep 1; source internal/devel/setup.bash;roslaunch blam_example test_online.launch" C-m
 
 # Place rosbag
-tmux send-keys -t 1 "rosbag play -r 2 /home/bjm/postdoc/data/Eagle_Mine/full_tunnel_hand-carry_no_rs_2_2019-01-19-laser_imu.bag" 
+tmux send-keys -t 1 "rosbag play -r 4 -s 2 /home/bjm/postdoc/data/Eagle_Mine/full_tunnel_hand-carry_no_rs_2_2019-01-19-laser_imu.bag" 
 
 
 # Prep tf record script
