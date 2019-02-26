@@ -664,8 +664,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   //   // initial->print("Initial estimate:\n");
   // }
 
-
-
   // optimize
   try {
     std::cout << "Optimizing maual loop closure, iteration" << std::endl;
@@ -739,7 +737,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
       {
         // Gauss Newton Optimizer
         std::cout << "Running Gauss Newton optimization" << std::endl;
-        nfg_ = isam_->getFactorsUnsafe();
+        // nfg_ = isam_->getFactorsUnsafe();
         nfg_.add(factor);
 
         // Optimise on the graph - set up parameters
@@ -765,17 +763,17 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     std::cout << "final error = " << nfg_.error(result) << std::endl;
 
     
-    // // ----------------------------------------------
-    // // Update results in ISAM2 - replace points?
-    // // Rest 
-    // // Create the ISAM2 solver.
-    // ISAM2Params parameters;
-    // parameters.relinearizeSkip = relinearize_skip_;
-    // parameters.relinearizeThreshold = relinearize_threshold_;
-    // isam_.reset(new ISAM2(parameters));
+    // ----------------------------------------------
+    // Update results in ISAM2 - replace points?
+    // Rest 
+    // Create the ISAM2 solver.
+    ISAM2Params parameters;
+    parameters.relinearizeSkip = relinearize_skip_;
+    parameters.relinearizeThreshold = relinearize_threshold_;
+    isam_.reset(new ISAM2(parameters));
     
-    // // Update with the new graph
-    // isam_->update(nfg_,result); 
+    // Update with the new graph
+    isam_->update(nfg_,result); 
     
 
 
