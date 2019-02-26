@@ -3,14 +3,14 @@
 check_for_loop_closures: false
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
-loop_closure_optimizer: 3
+loop_closure_optimizer: 1
 
 # Default parameters for the ISAM2 data structure.
 relinearize_skip: 1 # - keep this at 1 - to encourage relinearization
-relinearize_threshold: 0.0001 # Make this smaller (was at 0.01)
+relinearize_threshold: 0.000 # Make this smaller (was at 0.01)
 
 # Number of iterations of the isam2 update when doing manual loop closures
-n_iterations_manual_loop_close: 10
+n_iterations_manual_loop_close: 1
 
 # Noise parameters (as precisions) for manual loop closure
 maual_lc_rot_precision: 0.0 # default 0.0 (no information)
@@ -19,7 +19,7 @@ maual_lc_trans_precision: 0.1 # default 0.001 (~30 m sd)
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures
 # are fast.
-translation_threshold: 1.0
+translation_threshold: 1.0 
 
 # When searching through old poses for loop closures, only consider old poses
 # that are within this distance of the current pose.

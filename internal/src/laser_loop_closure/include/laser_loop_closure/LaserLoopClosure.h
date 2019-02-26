@@ -176,6 +176,7 @@ class LaserLoopClosure {
 
   // ISAM2 optimizer object, and best guess pose values.
   std::unique_ptr<gtsam::ISAM2> isam_;
+  gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
 
   // Frames.
