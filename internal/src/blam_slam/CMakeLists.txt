@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   message_generation
 )
-set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
+# set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
 
 add_service_files(FILES ManualLoopClosure.srv)
 generate_messages()

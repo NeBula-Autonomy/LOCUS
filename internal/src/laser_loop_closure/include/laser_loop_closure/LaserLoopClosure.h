@@ -163,8 +163,10 @@ class LaserLoopClosure {
   double translation_threshold_;
   double proximity_threshold_;
   double max_tolerable_fitness_;
-  double maual_lc_rot_precision_;
-  double maual_lc_trans_precision_;
+  double manual_lc_rot_precision_;
+  double manual_lc_trans_precision_;
+  double laser_lc_rot_precision_;
+  double laser_lc_trans_precision_;
   unsigned int relinearize_skip_;
   double relinearize_threshold_;
 

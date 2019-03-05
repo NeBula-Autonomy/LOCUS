@@ -1,6 +1,6 @@
 # Toggle loop closures on or off. Setting this to off will increase run-time
 # speed by a small fraction.
-check_for_loop_closures: false
+check_for_loop_closures: true
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
 loop_closure_optimizer: 1
@@ -13,8 +13,12 @@ relinearize_threshold: 0.0001 # Make this smaller (was at 0.01)
 n_iterations_manual_loop_close: 1
 
 # Noise parameters (as precisions) for manual loop closure
-maual_lc_rot_precision: 0.0 # default 0.0 (no information)
-maual_lc_trans_precision: 10.0 # default 0.001 (~30 m sd)
+manual_lc_rot_precision: 0.0 # default 0.0 (no information)
+manual_lc_trans_precision: 10.0 # default 0.001 (~30 m sd)
+
+# Noise parameters (as precisions) for Laser loop closure
+manual_lc_rot_precision: 0.01 # default 0.01
+manual_lc_trans_precision: 0.04 # default 0.04 
 
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures

@@ -115,8 +115,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("max_tolerable_fitness", max_tolerable_fitness_)) return false;
   if (!pu::Get("skip_recent_poses", skip_recent_poses_)) return false;
   if (!pu::Get("poses_before_reclosing", poses_before_reclosing_)) return false;
-  if (!pu::Get("maual_lc_rot_precision", maual_lc_rot_precision_)) return false;
-  if (!pu::Get("maual_lc_trans_precision", maual_lc_trans_precision_)) return false;
+  if (!pu::Get("manual_lc_rot_precision", manual_lc_rot_precision_)) return false;
+  if (!pu::Get("manual_lc_trans_precision", manual_lc_trans_precision_)) return false;
+  if (!pu::Get("laser_lc_rot_precision", laser_lc_rot_precision_)) return false;
+  if (!pu::Get("laser_lc_trans_precision", laser_lc_trans_precision_)) return false;
 
   // Load ICP parameters.
   if (!pu::Get("icp/tf_epsilon", icp_tf_epsilon_)) return false;
@@ -573,9 +575,9 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   // TODO: Use real ICP covariance.
   covariance->Zeros();
   for (int i = 0; i < 3; ++i)
-    (*covariance)(i, i) = 0.01; // 0.01
+    (*covariance)(i, i) = laser_lc_rot_precision_; // 0.01
   for (int i = 3; i < 6; ++i)
-    (*covariance)(i, i) = 0.04; // 0.04
+    (*covariance)(i, i) = laser_lc_trans_precision_; // 0.04
 
   // If the loop closure was a success, publish the two scans.
   source->header.frame_id = fixed_frame_id_;
@@ -599,8 +601,8 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   // create Information of measured
   gtsam::Vector6 precisions; // inverse of variances
-  precisions.head<3>().setConstant(maual_lc_rot_precision_); // rotation precision
-  precisions.tail<3>().setConstant(maual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
+  precisions.head<3>().setConstant(manual_lc_rot_precision_); // rotation precision
+  precisions.tail<3>().setConstant(manual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
   static const gtsam::SharedNoiseModel& loopClosureNoise =
   gtsam::noiseModel::Diagonal::Precisions(precisions);
 
@@ -614,7 +616,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   gtsam::Pose3 p2 = values_.at<Pose3>(key2);
   gtsam::Point3 diff = p2.translation() - p1.translation();//p2.translation.distance(p1.translation);
   double err_d = diff.norm();
-  double predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*maual_lc_trans_precision_;
+  double predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*manual_lc_trans_precision_;
   ROS_INFO_STREAM("Vector between poses on loop closure is ");
   diff.print();
   ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
@@ -666,7 +668,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   // optimize
   try {
-    std::cout << "Optimizing maual loop closure, iteration" << std::endl;
+    std::cout << "Optimizing manual loop closure, iteration" << std::endl;
     gtsam::ISAM2Result result_ISAM;
     // gtsam::NonlinearFactorGraph nfg;
     gtsam::Values initialEstimate;
@@ -687,7 +689,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         try{
         std::cout << "In ISAM2 update" << std::endl;
         for (int i = 0; i < n_iterations_manual_loop_close_; i++){
-          std::cout << "Optimizing maual loop closure ISAM, iteration " << i << std::endl;
+          std::cout << "Optimizing manual loop closure ISAM, iteration " << i << std::endl;
           if (i == 0){
             // Run first update with the added factors 
             result_ISAM = isam_->update(new_factor, Values());
@@ -816,7 +818,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     p2 = values_.at<Pose3>(key2);
     diff = p2.translation() - p1.translation();//p2.translation.distance(p1.translation);
     err_d = diff.norm();
-    predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*maual_lc_trans_precision_;
+    predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*manual_lc_trans_precision_;
     ROS_INFO_STREAM("Vector between poses on loop closure is ");
     diff.print();
     ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
