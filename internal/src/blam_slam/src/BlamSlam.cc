@@ -43,7 +43,8 @@ namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
 BlamSlam::BlamSlam()
-    : estimate_update_rate_(0.0), visualization_update_rate_(0.0) {}
+    : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
+    position_covariance_(0.01), attitude_covariance_(0.04) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -96,6 +97,10 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Load frame ids.
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
+
+  // Covariance for odom factors
+  if (!pu::Get("noise/odom_position_sigma", position_covariance_)) return false;
+  if (!pu::Get("noise/odom_attitude_sigma", attitude_covariance_)) return false;
 
   return true;
 }
@@ -301,9 +306,9 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   gu::MatrixNxNBase<double, 6> covariance;
   covariance.Zeros();
   for (int i = 0; i < 3; ++i)
-    covariance(i, i) = 0.1; //0.01; sqrt(0.01) rad sd
+    covariance(i, i) = position_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
   for (int i = 3; i < 6; ++i)
-    covariance(i, i) = 0.4; //0.004; 0.2 m sd
+    covariance(i, i) = attitude_covariance_; //0.4, 0.004; 0.2 m sd
 
   const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
   if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
