@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
 )
 
+set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
