@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(blam_slam)
 
+find_package(GTSAM REQUIRED)
+if (NOT GTSAM_FOUND)
+  message(FATAL_ERROR "This program requires the GTSAM library.")
+endif(NOT GTSAM_FOUND)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rosbag
@@ -16,7 +21,6 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   message_generation
 )
-set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
 
 add_service_files(FILES ManualLoopClosure.srv)
 generate_messages()
@@ -51,19 +55,21 @@ else()
   message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
 endif()
 
-include_directories(include ${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR})
+link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS})
 add_library(${PROJECT_NAME} src/BlamSlam.cc)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} gtsam)
 
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  gtsam
 )
 
 add_executable(${PROJECT_NAME}_offline src/${PROJECT_NAME}_offline.cc)
 target_link_libraries(${PROJECT_NAME}_offline
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  gtsam
 )
