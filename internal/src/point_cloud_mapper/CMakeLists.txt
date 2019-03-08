@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud_mapper)
 
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release)
+ENDIF()
+
 find_package(PCL REQUIRED COMPONENTS common octree)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
