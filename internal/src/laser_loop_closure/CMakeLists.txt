@@ -23,9 +23,6 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
-add_service_files(FILES ManualLoopClosure.srv)
-generate_messages()
-
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -43,13 +40,12 @@ catkin_package(
 
 
 find_package(PCL 1.7 REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-FIND_PACKAGE( Boost 1.58 COMPONENTS program_options timer REQUIRED )
-INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+find_package(Boost 1.58 COMPONENTS filesystem program_options timer REQUIRED)
 
+find_package(ZLIB REQUIRED)
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -68,12 +64,14 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
   ${Boost_INCLUDE_DIR}
+  ${ZLIB_INCLUDE_DIR}
 )
 
 link_directories(
   ${catkin_LIBRARY_DIRS}
   ${PCL_LIBRARY_DIRS}
   ${GTSAM_LIBRARY_DIRS}
+  ${ZLIB_LIBRARY_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
@@ -81,5 +79,7 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   gtsam
+  minizip
   ${Boost_LIBRARIES}
+  ${ZLIB_LIBRARIES}
 )

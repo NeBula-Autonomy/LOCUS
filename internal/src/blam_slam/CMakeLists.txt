@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
 
-add_service_files(FILES ManualLoopClosure.srv)
+add_service_files(FILES ManualLoopClosure.srv SaveGraph.srv)
 generate_messages()
 
 catkin_package(

@@ -111,6 +111,9 @@ class LaserLoopClosure {
   // loop closures by adding these factors to the pose graph.
   bool AddFactor(unsigned int key1, unsigned int key2);
 
+  // Saves pose graph and accompanying point clouds to a zip file.
+  bool Save(const std::string &zipFilename) const;
+
  private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);

@@ -45,8 +45,14 @@
 
 #include <pcl/registration/gicp.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/io/pcd_io.h>
+
+#include <gtsam/slam/dataset.h>
 
 #include <fstream>
+
+#include <minizip/zip.h>
+#include <time.h>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -218,9 +224,7 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 10, false);
   loop_closure_notifier_pub_ =
       nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
-
-  // add_factor_srv_ = nl.advertiseService("add_factor", &LaserLoopClosure::AddFactorService, this);
-
+      
   return true;
 }
 
@@ -714,7 +718,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         break;
       case 1 : 
       {
-        // Levenber Marquardt Optimizer
+        // Levenberg Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
         // nfg_ = isam_->getFactorsUnsafe();
         nfg_.add(factor);
@@ -836,6 +840,92 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
     throw;
   }
+}
+
+std::string absPath(const std::string &relPath) {
+  return boost::filesystem::canonical(boost::filesystem::path(relPath)).string();
+}
+
+bool writeFileToZip(zipFile &zip, const std::string &filename) {
+  // this code is inspired by http://www.vilipetek.com/2013/11/22/zippingunzipping-files-in-c/
+  static const unsigned int BUFSIZE = 2048;
+
+  zip_fileinfo zi = {0};
+  tm_zip& tmZip = zi.tmz_date;
+  time_t rawtime;
+  time(&rawtime);
+  auto timeinfo = localtime(&rawtime);
+  tmZip.tm_sec = timeinfo->tm_sec;
+  tmZip.tm_min = timeinfo->tm_min;
+  tmZip.tm_hour = timeinfo->tm_hour;
+  tmZip.tm_mday = timeinfo->tm_mday;
+  tmZip.tm_mon = timeinfo->tm_mon;
+  tmZip.tm_year = timeinfo->tm_year;
+  int err = zipOpenNewFileInZip(zip, filename.c_str(), &zi,
+      NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_DEFAULT_COMPRESSION);
+
+  if (err != ZIP_OK) {
+    ROS_ERROR_STREAM("Failed to add entry \"" << filename << "\" to zip file.");
+    return false;
+  }
+  char buf[BUFSIZE];
+  unsigned long nRead = 0;
+
+  std::ifstream is(filename);
+  if (is.bad()) {
+    ROS_ERROR_STREAM("Could not read file \"" << filename << "\" to be added to zip file.");
+    return false;
+  }
+  while (err == ZIP_OK && is.good()) {
+    is.read(buf, BUFSIZE);
+    unsigned int nRead = (unsigned int)is.gcount();
+    if (nRead)
+      err = zipWriteInFileInZip(zip, buf, nRead);
+    else
+      break;
+  }
+  is.close();
+  if (err != ZIP_OK) {
+    ROS_ERROR_STREAM("Failed to write file \"" << filename << "\" to zip file.");
+    return false;
+  }
+  return true;
+}
+
+bool LaserLoopClosure::Save(const std::string &zipFilename) const {
+  const std::string path = "pose_graph";
+  boost::filesystem::path directory(path);
+  boost::filesystem::create_directory(directory);
+
+  writeG2o(isam_->getFactorsUnsafe(), values_, path + "/graph.g2o");
+  ROS_INFO("Saved factor graph as a g2o file.");
+
+  // info_file stores factor key, point cloud filename, and time stamp
+  std::ofstream info_file(path + "/info_file.csv");
+  if (info_file.bad()) {
+    ROS_ERROR("Failed to write info file.");
+    return false;
+  }
+
+  auto zipFile = zipOpen64(zipFilename.c_str(), 0);
+  writeFileToZip(zipFile, path + "/graph.g2o");
+  int i = 0;
+  for (const auto &entry : keyed_scans_) {
+    info_file << entry.first << ",";
+    // save point cloud as binary PCD file
+    const std::string pcd_filename = path + "/pc_" + std::to_string(i) + ".pcd";
+    pcl::io::savePCDFile(pcd_filename, *entry.second, true);
+    writeFileToZip(zipFile, pcd_filename);
+
+    ROS_INFO("Saved point cloud %d/%d.", i+1, keyed_scans_.size());
+    info_file << pcd_filename << ",";
+    info_file << keyed_stamps_.at(entry.first).toNSec() << "\n";
+    ++i;
+  }
+  info_file.close();
+  writeFileToZip(zipFile, path + "/info_file.csv");
+  zipClose(zipFile, 0);
+  ROS_INFO_STREAM("Successfully saved pose graph to " << absPath(zipFilename) << ".");
 }
 
 void LaserLoopClosure::PublishPoseGraph() {

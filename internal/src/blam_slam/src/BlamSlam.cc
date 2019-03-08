@@ -113,6 +113,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
       
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
+  save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -181,6 +182,13 @@ bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
 
   std::cout << "Updated the map" << std::endl;
 
+  return true;
+}
+
+bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
+                                blam_slam::SaveGraphResponse &response) {
+  std::cout << "Saving graph..." << std::endl;
+  response.success = loop_closure_.Save(request.filename);
   return true;
 }
 
