@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud_odometry)
 
+list(APPEND CMAKE_MODULE_PATH "/opt/pcl-1.7/cmake")
 find_package(PCL REQUIRED COMPONENTS common filters features registration)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")

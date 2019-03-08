@@ -8,6 +8,7 @@
           name="blam_slam"
           type="blam_slam_node"
           output="screen">
+      <env name="LD_LIBRARY_PATH" value="/opt/pcl-1.7/lib:$(optenv LD_LIBRARY_PATH)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>
