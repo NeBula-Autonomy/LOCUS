@@ -47,6 +47,8 @@
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <pcl_ros/point_cloud.h>
 
+#include <core_msgs/Artifact.h>
+
 class BlamSlam {
  public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -72,6 +74,7 @@ class BlamSlam {
 
   // Sensor callbacks.
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
+  void ArtifactCallback(const core_msgs::Artifact& msg);
 
   // Timer callbacks.
   void EstimateTimerCallback(const ros::TimerEvent& ev);
@@ -84,6 +87,10 @@ class BlamSlam {
   // Generic add Factor service - for human loop closures to start
   bool AddFactorService(blam_slam::ManualLoopClosureRequest &request,
                         blam_slam::ManualLoopClosureResponse &response);
+
+  // Publish Artifacts
+  void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
+                               const core_msgs::Artifact& msg) const;
 
   // The node's name.
   std::string name_;
@@ -100,9 +107,11 @@ class BlamSlam {
 
   // Subscribers.
   ros::Subscriber pcld_sub_;
+  ros::Subscriber artifact_sub_;
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
+  ros::Publisher artifact_pub_;
 
   // Services
   ros::ServiceServer add_factor_srv_;

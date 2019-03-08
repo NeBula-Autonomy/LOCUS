@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   parameter_utils
   pcl_ros
   pcl_conversions
+  core_msgs
   message_generation
 )
 
@@ -42,6 +43,7 @@ catkin_package(
     parameter_utils
     pcl_ros
     pcl_conversions
+    core_msgs
 )
 
 include(CheckCXXCompilerFlag)
