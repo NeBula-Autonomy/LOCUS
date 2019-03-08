@@ -3,13 +3,13 @@ filtering:
   grid_filter: true
 
   # Resolution of voxel grid filter.
-  grid_res: 0.2
+  grid_res: 0.1
 
   # Apply a random downsample filter on incoming point clouds.
   random_filter: true
 
   # Percentage of points to discard. Must be between 0.0 and 1.0.
-  decimate_percentage: 0.9
+  decimate_percentage: 0.95
 
   # Apply a statistical outlier filter on incoming point clouds.
   outlier_filter: false
