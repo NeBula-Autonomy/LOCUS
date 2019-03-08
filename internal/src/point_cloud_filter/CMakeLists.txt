@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud_filter)
 
-list(APPEND CMAKE_MODULE_PATH "/opt/pcl-1.7/cmake")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   parameter_utils
