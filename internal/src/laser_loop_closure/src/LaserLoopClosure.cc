@@ -704,7 +704,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
           cost = nfg_.error(linPoint);
           ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
         }
-        result = isam_->calculateEstimate();
+        result = isam_->calculateBestEstimate();
         }
         catch (...) {
           ROS_INFO_STREAM("Error with ISAM");
