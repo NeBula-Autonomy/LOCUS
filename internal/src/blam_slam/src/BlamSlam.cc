@@ -135,7 +135,9 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
 
   pcld_sub_ = nl.subscribe("pcld", 100, &BlamSlam::PointCloudCallback, this);
-  artifact_sub_ = nl.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
+
+  ros::NodeHandle na(n);
+  artifact_sub_ = na.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
 
   return CreatePublishers(n);
 }
@@ -146,7 +148,9 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
 
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
-  artifact_pub_ = nl.advertise<core_msgs::Artifact>("artifact", 10);
+
+  ros::NodeHandle na(n);
+  artifact_pub_ = na.advertise<core_msgs::Artifact>("artifact", 10);
 
   return true;
 }
@@ -225,11 +229,11 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Subscribe to artifact messages and include them in the posegraph
 
   // TODO review logic to filter - not accept if confidence is not high enough
-  if (msg.confidence < 0.5) {
-    std::cout << "Object " << msg.id << " confidence is not sufficiently high, "
-              << msg.confidence << " - rejecting" << std::endl;
-    return;
-  }
+  // if (msg.confidence < 0.5) {
+  //   std::cout << "Object " << msg.id << " confidence is not sufficiently high, "
+  //             << msg.confidence << " - rejecting" << std::endl;
+  //   return;
+  // }
   // TODO other logic - if have seen the object before within the past n
   // seconds, then don't add a new node
 
@@ -258,9 +262,12 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Assum transform from body to global
   Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
   Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
+  std::cout << "Global position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
 
   // Apply transform 
   Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global;
+
+  std::cout << "Artifact position in global is: " << W_artifact_position[0] << ", " << W_artifact_position[1] << ", " << W_artifact_position[2] << std::endl;
 
   PublishArtifact(W_artifact_position, msg); 
 }
@@ -376,4 +383,17 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
              pose_key, closure_key);
   }
   return true;
+}
+
+void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
+                               const core_msgs::Artifact& msg) const {
+  // Publish the message with the updated position
+  core_msgs::Artifact new_msg =
+      msg;              // This copying may be expensive with the thumbnail
+  new_msg.header.seq++; // Change the sequence so it is not completely
+                        // duplicating the message
+  new_msg.point.point.x = W_artifact_position[0];
+  new_msg.point.point.y = W_artifact_position[1];
+  new_msg.point.point.z = W_artifact_position[2];
+  artifact_pub_.publish(new_msg);
 }
