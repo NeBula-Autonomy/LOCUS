@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   parameter_utils
   pcl_ros
   pcl_conversions
+  core_msgs
 )
 set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
 
@@ -33,6 +34,7 @@ catkin_package(
     parameter_utils
     pcl_ros
     pcl_conversions
+    core_msgs
 )
 
 include(CheckCXXCompilerFlag)
