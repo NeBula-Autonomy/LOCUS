@@ -43,7 +43,8 @@ namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
 BlamSlam::BlamSlam()
-    : estimate_update_rate_(0.0), visualization_update_rate_(0.0) {}
+    : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
+    position_covariance_(0.01), attitude_covariance_(0.04) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -97,6 +98,10 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
 
+  // Covariance for odom factors
+  if (!pu::Get("noise/odom_position_sigma", position_covariance_)) return false;
+  if (!pu::Get("noise/odom_attitude_sigma", attitude_covariance_)) return false;
+
   return true;
 }
 
@@ -106,6 +111,8 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
 
   visualization_update_timer_ = nl.createTimer(
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
+      
+  add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -140,6 +147,40 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
   artifact_pub_ = nl.advertise<core_msgs::Artifact>("artifact", 10);
+
+  return true;
+}
+
+bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
+                                        blam_slam::ManualLoopClosureResponse &response) {
+  // TODO - bring the service creation into this node?
+  response.success = loop_closure_.AddFactor(static_cast<unsigned int>(request.key_from),
+                               static_cast<unsigned int>(request.key_to));
+  if (response.success){
+    std::cout << "adding factor for loop closure succeeded" << std::endl;
+  }else{
+    std::cout << "adding factor for loop closure failed" << std::endl;
+  }
+
+  // Update the map from the loop closures
+  std::cout << "Updating the map" << std::endl;
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+  // Visualize the pose graph and current loop closure radius.
+  loop_closure_.PublishPoseGraph();
+
+  // Publish updated map
+  mapper_.PublishMap();
+
+  std::cout << "Updated the map" << std::endl;
 
   return true;
 }
@@ -310,9 +351,9 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   gu::MatrixNxNBase<double, 6> covariance;
   covariance.Zeros();
   for (int i = 0; i < 3; ++i)
-    covariance(i, i) = 0.01;
+    covariance(i, i) = position_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
   for (int i = 3; i < 6; ++i)
-    covariance(i, i) = 0.004;
+    covariance(i, i) = attitude_covariance_; //0.4, 0.004; 0.2 m sd
 
   const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
   if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
@@ -335,17 +376,4 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
              pose_key, closure_key);
   }
   return true;
-}
-
-void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
-                               const core_msgs::Artifact& msg) const {
-  // Publish the message with the updated position
-  core_msgs::Artifact new_msg =
-      msg;              // This copying may be expensive with the thumbnail
-  new_msg.header.seq++; // Change the sequence so it is not completely
-                        // duplicating the message
-  new_msg.point.point.x = W_artifact_position[0];
-  new_msg.point.point.y = W_artifact_position[1];
-  new_msg.point.point.z = W_artifact_position[2];
-  artifact_pub_.publish(new_msg);
 }

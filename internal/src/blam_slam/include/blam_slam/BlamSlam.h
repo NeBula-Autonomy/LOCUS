@@ -42,6 +42,7 @@
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
 #include <laser_loop_closure/LaserLoopClosure.h>
+#include <blam_slam/ManualLoopClosure.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <pcl_ros/point_cloud.h>
@@ -83,6 +84,10 @@ class BlamSlam {
   // output whether or not a new keyframe was added to the pose graph.
   bool HandleLoopClosures(const PointCloud::ConstPtr& scan, bool* new_keyframe);
 
+  // Generic add Factor service - for human loop closures to start
+  bool AddFactorService(blam_slam::ManualLoopClosureRequest &request,
+                        blam_slam::ManualLoopClosureResponse &response);
+
   // Publish Artifacts
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
                                const core_msgs::Artifact& msg) const;
@@ -96,6 +101,10 @@ class BlamSlam {
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
+  // Covariances
+  double position_covariance_;
+  double attitude_covariance_;
+
   // Subscribers.
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
@@ -103,6 +112,9 @@ class BlamSlam {
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
   ros::Publisher artifact_pub_;
+
+  // Services
+  ros::ServiceServer add_factor_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;

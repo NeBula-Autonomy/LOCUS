@@ -15,14 +15,19 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   core_msgs
+  message_generation
 )
 set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
+
+add_service_files(FILES ManualLoopClosure.srv)
+generate_messages()
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
+    message_runtime
     rosbag
     measurement_synchronizer
     point_cloud_filter

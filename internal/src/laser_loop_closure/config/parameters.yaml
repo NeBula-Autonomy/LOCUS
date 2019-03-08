@@ -2,14 +2,28 @@
 # speed by a small fraction.
 check_for_loop_closures: true
 
+# Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
+loop_closure_optimizer: 1
+
 # Default parameters for the ISAM2 data structure.
-relinearize_skip: 1
-relinearize_threshold: 0.01
+relinearize_skip: 1 # - keep this at 1 - to encourage relinearization
+relinearize_threshold: 0.0001 # Make this smaller (was at 0.01)
+
+# Number of iterations of the isam2 update when doing manual loop closures
+n_iterations_manual_loop_close: 1
+
+# Noise parameters (as precisions) for manual loop closure
+manual_lc_rot_precision: 0.0 # default 0.0 (no information)
+manual_lc_trans_precision: 10.0 # default 0.001 (~30 m sd)
+
+# Noise parameters (as precisions) for Laser loop closure
+laser_lc_rot_precision: 0.01 # default 0.01
+laser_lc_trans_precision: 0.04 # default 0.04 
 
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures
 # are fast.
-translation_threshold: 0.5
+translation_threshold: 1.0 
 
 # When searching through old poses for loop closures, only consider old poses
 # that are within this distance of the current pose.
@@ -18,11 +32,11 @@ proximity_threshold: 3
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
 # the ICP "fitness score" must be less than this number.
-max_tolerable_fitness: 0.1
+max_tolerable_fitness: 0.08
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.
-skip_recent_poses: 200
+skip_recent_poses: 100
 
 # If a loop has recently been closed, don't close a new one for at least this
 # many poses (i.e. the sensor would have to move translation_threshold *

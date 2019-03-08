@@ -20,6 +20,12 @@
         orientation_sigma: {roll: 0.02, pitch: 0.02, yaw: 0.02}
       </rosparam>
 
+      <!-- Noise parameters -->
+      <rosparam param="noise">
+        odom_position_sigma: 0.4
+        odom_attitude_sigma: 0.1
+      </rosparam>
+
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
 
