@@ -62,6 +62,7 @@ using gtsam::Rot3;
 using gtsam::Values;
 using gtsam::Vector3;
 using gtsam::Vector6;
+using gtsam::ISAM2GaussNewtonParams;
 
 LaserLoopClosure::LaserLoopClosure()
     : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {}
@@ -149,6 +150,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
   parameters.relinearizeThreshold = relinearize_threshold_;
+  // // Set wildfire threshold
+  // ISAM2GaussNewtonParams gnparams(-1);
+  // parameters.setOptimizationParams(gnparams);
+
   isam_.reset(new ISAM2(parameters));
 
   // Set the initial position.
@@ -772,10 +777,18 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
     parameters.relinearizeThreshold = relinearize_threshold_;
+    // // Set wildfire threshold 
+    // ISAM2GaussNewtonParams gnparams(-1);
+    // parameters.setOptimizationParams(gnparams);
+
     isam_.reset(new ISAM2(parameters));
     
+    writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
+
     // Update with the new graph
     isam_->update(nfg_,result); 
+
+    writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
     
 
 
