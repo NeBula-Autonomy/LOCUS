@@ -73,7 +73,9 @@ using gtsam::Vector3;
 using gtsam::Vector6;
 
 LaserLoopClosure::LaserLoopClosure()
-    : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {}
+    : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {
+  initial_noise_.setZero();
+}
 
 LaserLoopClosure::~LaserLoopClosure() {}
 
@@ -166,10 +168,9 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   Pose3 pose(rotation, translation);
 
   // Set the covariance on initial position.
-  Vector6 noise;
-  noise << sigma_x, sigma_y, sigma_z, sigma_roll, sigma_pitch, sigma_yaw;
+  initial_noise_ << sigma_x, sigma_y, sigma_z, sigma_roll, sigma_pitch, sigma_yaw;
   LaserLoopClosure::Diagonal::shared_ptr covariance(
-      LaserLoopClosure::Diagonal::Sigmas(noise));
+      LaserLoopClosure::Diagonal::Sigmas(initial_noise_));
 
   // Initialize ISAM2.
   NonlinearFactorGraph new_factor;
@@ -897,7 +898,7 @@ bool writeFileToZip(zipFile &zip, const std::string &filename) {
 
 bool LaserLoopClosure::Save(const std::string &zipFilename) const {
   const std::string path = "pose_graph";
-  boost::filesystem::path directory(path);
+  const boost::filesystem::path directory(path);
   boost::filesystem::create_directory(directory);
 
   writeG2o(isam_->getFactorsUnsafe(), values_, path + "/graph.g2o");
@@ -999,10 +1000,8 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
 
     boost::filesystem::path dir(filename);
     dir = dir.parent_path();
-    if (boost::filesystem::create_directory(dir)) {
-      ROS_INFO_STREAM("Created folder " << dir.string());
+    if (boost::filesystem::create_directory(dir))
       folders.emplace_back(dir);
-    }
 
     auto size = (unsigned int) oFileInfo.uncompressed_size;
     char* buf = new char[size];
@@ -1020,17 +1019,13 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     }
     os.close();
     delete [] buf;
-    ROS_INFO_STREAM("Extracted file " << i << "/" << files.size() << " -- " << filename);
+    ROS_INFO_STREAM("Extracted file " << i << "/" << (int) files.size() << " -- " << filename);
     ++i;
   }
+  unzClose(zipFile);
 
+  // restore pose graph from g2o file
   const GraphAndValues gv = gtsam::load3D(graphFilename);
-  // remove all keys first to avoid conflicts
-  // remove first key which was already added in the initialization step
-  // gtsam::FactorIndices removeFactorIndices;
-  // for (const auto &key : gv.first->keys())
-  //   removeFactorIndices.emplace_back(key);
-
   nfg_ = *gv.first;
   values_ = *gv.second;
 
@@ -1039,49 +1034,51 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
   parameters.relinearizeThreshold = relinearize_threshold_;
   isam_.reset(new ISAM2(parameters));
 
-  gtsam::FastList<gtsam::Key> noRelinKeys;
-  for (const auto &key : gv.first->keys())
-    noRelinKeys.emplace_back(key);
-  
-  isam_->update(nfg_, values_, gtsam::FactorIndices(), boost::none, noRelinKeys); 
+  const LaserLoopClosure::Diagonal::shared_ptr covariance(
+      LaserLoopClosure::Diagonal::Sigmas(initial_noise_));
+  const gtsam::Key key0 = *nfg_.keys().begin();
+  nfg_.add(gtsam::PriorFactor<Pose3>(key0, values_.at<Pose3>(key0), covariance));
+  isam_->update(nfg_, values_); 
 
   ROS_INFO_STREAM("Updated graph from " << graphFilename);
 
   // info_file stores factor key, point cloud filename, and time stamp
   std::ifstream info_file(keysFilename);
   if (info_file.bad()) {
-    ROS_ERROR("Failed to open keys.csv.");
+    ROS_ERROR_STREAM("Failed to open " << keysFilename);
     return false;
   }
 
-  // auto zipFile = zipOpen64(zipFilename.c_str(), 0);
-  // writeFileToZip(zipFile, path + "/graph.g2o");
-  // i = 0;
-  // for (const auto &entry : keyed_scans_) {
-  //   info_file << entry.first << ",";
-  //   // save point cloud as binary PCD file
-  //   const std::string pcd_filename = path + "/pc_" + std::to_string(i) + ".pcd";
-  //   PointCloud::Ptr pc(new PointCloud);
-  //   if (!pcl::io::loadPCDFile(pcd_filename, *pc)) {
-  //     ROS_ERROR_STREAM("Failed to load point cloud " << pcd_filename << " from " << absFilename);
-  //     return false;
-  //   }
-  //   writeFileToZip(zipFile, pcd_filename);
+  std::string keyStr, pcd_filename, timeStr;
+  while (info_file.good()) {
+    std::getline(info_file, keyStr, ',');
+    if (keyStr.empty())
+      break;
+    key_ = std::stoi(keyStr);
+    std::getline(info_file, pcd_filename, ',');
+    PointCloud::Ptr pc(new PointCloud);
+    if (pcl::io::loadPCDFile(pcd_filename, *pc) == -1) {
+      ROS_ERROR_STREAM("Failed to load point cloud " << pcd_filename << " from " << absFilename);
+      return false;
+    }
+    ROS_INFO_STREAM("Loaded point cloud " << pcd_filename);
+    keyed_scans_[key_] = pc;
+    std::getline(info_file, timeStr);
+    ros::Time t;
+    t.fromNSec(std::stol(timeStr));
+    keyed_stamps_[key_] = t;
+  }
 
-  //   ROS_INFO("Saved point cloud %d/%d.", i+1, keyed_scans_.size());
-  //   info_file << pcd_filename << ",";
-  //   info_file << keyed_stamps_.at(entry.first).toNSec() << "\n";
-  //   ++i;
-  // }
+  ROS_INFO("Loaded all point clouds.");
   info_file.close();
   
   // remove all extracted folders
-  for (const auto &folder: folders) {
+  for (const auto &folder: folders)
     boost::filesystem::remove_all(folder);
-  }
 
-  zipClose(zipFile, 0);
   ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
+  PublishPoseGraph();
+  return true;
 }
 
 void LaserLoopClosure::PublishPoseGraph() {

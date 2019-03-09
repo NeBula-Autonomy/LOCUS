@@ -2,6 +2,9 @@
   <!-- True for simulation, false for real-time and bagfiles -->
   <param name="/use_sim_time" value="false"/>
 
+  <!-- optional filename of the zip archive of a pose graph to be loaded -->
+  <arg name="load_pose_graph_file" default="" /> 
+
   <group ns="blam">
     <!-- SLAM -->
     <node pkg="blam_slam"
@@ -9,7 +12,7 @@
           type="blam_slam_node"
           output="screen">
 
-      <param name="load_graph" value="$(env HOME)/.ros/mine.zip"/>
+      <param name="load_graph" value="$(arg load_pose_graph_file)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>

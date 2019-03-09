@@ -131,6 +131,9 @@ class LaserLoopClosure {
   Mat66 ToGu(const Gaussian::shared_ptr& covariance) const;
   Gaussian::shared_ptr ToGtsam(const Mat66& covariance) const;
 
+  // Diagonal of the covariance matrix of the first pose
+  gtsam::Vector6 initial_noise_;
+
   // Create prior and between factors.
   gtsam::PriorFactor<gtsam::Pose3> MakePriorFactor(
       const gtsam::Pose3& pose, const Diagonal::shared_ptr& covariance);

@@ -103,8 +103,20 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("noise/odom_attitude_sigma", attitude_covariance_)) return false;
 
   std::string graph_filename;
-  if (pu::Get("load_graph", graph_filename)) {
-    if (!loop_closure_.Load(graph_filename)) {
+  if (pu::Get("load_graph", graph_filename) && !graph_filename.empty()) {
+    if (loop_closure_.Load(graph_filename)) {
+      PointCloud::Ptr regenerated_map(new PointCloud);
+      loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+      mapper_.Reset();
+      PointCloud::Ptr unused(new PointCloud);
+      mapper_.InsertPoints(regenerated_map, unused.get());
+
+      // Also reset the robot's estimated position.
+      localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+      // Publish updated map
+      mapper_.PublishMap();
+    } else {
       ROS_ERROR_STREAM("Failed to load graph from " << graph_filename);
     }
   }
