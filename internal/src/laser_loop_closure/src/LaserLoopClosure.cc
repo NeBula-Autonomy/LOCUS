@@ -725,7 +725,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         nfg_.add(factor);
         initialEstimate = isam_->calculateEstimate();
         gtsam::LevenbergMarquardtParams params;
-        params.setVerbosityLM("TRYDELTA");
+        params.setVerbosityLM("ERROR");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, initialEstimate, params).optimize();
         // result.print("LM result is: ");
       }
