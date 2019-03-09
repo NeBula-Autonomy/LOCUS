@@ -787,8 +787,9 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
     // Update with the new graph
     isam_->update(nfg_,result); 
-
-    writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
+    
+    gtsam::Values result_isam; = isam_->calculateBestEstimate();
+    writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
     
 
 
