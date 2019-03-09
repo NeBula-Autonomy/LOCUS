@@ -114,6 +114,9 @@ class LaserLoopClosure {
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 
+  // Loads pose graph and accompanying point clouds from a zip file.
+  bool Load(const std::string &zipFilename);
+
  private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);

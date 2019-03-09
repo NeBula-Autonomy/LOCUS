@@ -102,6 +102,13 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("noise/odom_position_sigma", position_covariance_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_covariance_)) return false;
 
+  std::string graph_filename;
+  if (pu::Get("load_graph", graph_filename)) {
+    if (!loop_closure_.Load(graph_filename)) {
+      ROS_ERROR_STREAM("Failed to load graph from " << graph_filename);
+    }
+  }
+
   return true;
 }
 

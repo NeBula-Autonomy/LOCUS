@@ -9,6 +9,8 @@
           type="blam_slam_node"
           output="screen">
 
+      <param name="load_graph" value="$(env HOME)/.ros/mine.zip"/>
+
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>
 
