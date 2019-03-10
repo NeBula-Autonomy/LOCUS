@@ -55,6 +55,7 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/slam/InitializePose3.h>
 
 // This new header allows us to read examples easily from .graph files
 #include <gtsam/slam/dataset.h>
