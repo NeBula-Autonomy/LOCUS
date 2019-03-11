@@ -1,19 +1,17 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
-  <machine name="nuc-remote" address="192.168.1.100" user="woody"
-           env-loader="/home/woody/localizer_blam/internal/devel/env.sh"/>
-
   <group>
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
           type="blam_slam_node"
-          output="screen"
-          machine="nuc-remote">
+          output="screen">
 
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
+      <remap from="~artifact" to="/husky/artifact_global" />
+      <remap from="~artifact_relative" to="/husky/artifact_relative" />      
 
       <!-- Initial pose -->
       <rosparam param="init">
@@ -22,6 +20,12 @@
         position_sigma: {x: 0.1, y: 0.1, z: 0.1}
         orientation_sigma: {roll: 0.02, pitch: 0.02, yaw: 0.02}
       </rosparam>
+
+      <!-- Noise parameters -->
+      <rosparam param="noise">
+        odom_position_sigma: 0.4
+        odom_attitude_sigma: 0.1
+      </rosparam>      
 
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
@@ -46,6 +50,8 @@
 
       <!-- Loop closure -->
       <rosparam file="$(find laser_loop_closure)/config/parameters.yaml"/>
+
+
     </node>
 
     <!-- Republish node with different frame_id -->

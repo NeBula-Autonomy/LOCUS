@@ -44,7 +44,7 @@ namespace gu = geometry_utils;
 
 BlamSlam::BlamSlam()
     : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
-    position_covariance_(0.01), attitude_covariance_(0.04) {}
+    position_covariance_(0.01), attitude_covariance_(0.04), marker_id_(0) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -152,6 +152,9 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   ros::NodeHandle na(n);
   artifact_pub_ = na.advertise<core_msgs::Artifact>("artifact", 10);
 
+  ros::NodeHandle nm(n);
+  marker_pub_ = nm.advertise<visualization_msgs::Marker>("artifact_markers", 10);
+
   return true;
 }
 
@@ -256,13 +259,28 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   artifact_position << msg.point.point.x, msg.point.point.y, msg.point.point.z;
 
   // Get global pose 
-  geometry_utils::Transform3 global_pose = localization_.GetIntegratedEstimate();
+  // geometry_utils::Transform3 global_pose = localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 global_pose = loop_closure_.GetPoseAtTime(msg.point.header.stamp);
+
+  // tf::StampedTransform odom_T_base_link_tf;
+  // std::string robot_name_ = "husky";
+  // listener.lookupTransform(tf::resolve(robot_name_, "map"), tf::resolve(robot_name_, "base_link"), msg.header.stamp,
+  //                              odom_T_base_link_tf);
+  // Eigen::Vector3d T_global =
+  //         Eigen::Vector3d(odom_T_base_link_tf.getOrigin().getX(), odom_T_base_link_tf.getOrigin().getY(),
+  //                         odom_T_base_link_tf.getOrigin().getZ());
+  // Eigen::Matrix3d R_global =
+  //         Eigen::Quaterniond(odom_T_base_link_tf.getRotation().w(), odom_T_base_link_tf.getRotation().x(),
+  //                            odom_T_base_link_tf.getRotation().y(), odom_T_base_link_tf.getRotation().z())
+  //             .toRotationMatrix();
 
   // todo - check the order 
+
   // Assum transform from body to global
   Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
   Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
-  std::cout << "Global position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
+  std::cout << "Global robot position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
+  std::cout << "Global robot rotation is: " << R_global << std::endl;
 
   // Apply transform 
   Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global;
@@ -386,7 +404,7 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
 }
 
 void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
-                               const core_msgs::Artifact& msg) const {
+                               const core_msgs::Artifact& msg) {
   // Publish the message with the updated position
   core_msgs::Artifact new_msg =
       msg;              // This copying may be expensive with the thumbnail
@@ -396,4 +414,72 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
   new_msg.point.point.y = W_artifact_position[1];
   new_msg.point.point.z = W_artifact_position[2];
   artifact_pub_.publish(new_msg);
+
+  // Publish Marker with new position
+  visualization_msgs::Marker marker;
+  // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+  marker.header.frame_id = fixed_frame_id_;
+  std::cout << "Get marker fixed frame id: " << fixed_frame_id_ << std::endl;
+  marker.header.stamp = ros::Time::now();
+
+  // Set the namespace and id for this marker.  This serves to create a unique ID
+  // Any marker sent with the same namespace and id will overwrite the old one
+  marker.ns = "artifact";
+  marker.id = marker_id_++;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = W_artifact_position[0];
+  marker.pose.position.y = W_artifact_position[1];
+  marker.pose.position.z = W_artifact_position[2];
+  std::cout << "Marker xyz: " << marker.pose.position.x << " "
+            << marker.pose.position.y << " " << marker.pose.position.z << std::endl;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = 0.35f;
+  marker.scale.y = 0.35f;
+  marker.scale.z = 0.35f;
+  marker.color.a = 1.0f;
+
+  if (msg.label == "backpack")
+  {
+    std::cout << "backpack marker" << std::endl;
+    marker.color.r = 1.0f;
+    marker.color.g = 0.0f;
+    marker.color.b = 0.0f;
+    marker.type = visualization_msgs::Marker::CUBE;
+  }
+  if (msg.label == "fire extinguisher")
+  {
+    std::cout << "fire extinguisher marker" << std::endl;
+    marker.color.r = 1.0f;
+    marker.color.g = 0.5f;
+    marker.color.b = 0.75f;
+    marker.type = visualization_msgs::Marker::SPHERE;
+  }
+  if (msg.label == "drill")
+  {
+    std::cout << "drill marker" << std::endl;
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.0f;
+    marker.type = visualization_msgs::Marker::CYLINDER;
+  }
+  if (msg.label == "manikin")
+  {
+    std::cout << "manikin marker" << std::endl;
+    return;
+    // marker.color.r = 1.0f;
+    // marker.color.g = 1.0f;
+    // marker.color.b = 1.0f;
+    // marker.scale.x = 0.5f;
+    // marker.scale.y = 0.5f;
+    // marker.scale.z = 0.5f;
+    // marker.type = visualization_msgs::Marker::CYLINDER;
+  }
+  marker.lifetime = ros::Duration();
+
+  marker_pub_.publish(marker);
 }
+
+

@@ -46,6 +46,8 @@
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <pcl_ros/point_cloud.h>
+#include "visualization_msgs/Marker.h"
+#include <tf/transform_listener.h>
 
 #include <core_msgs/Artifact.h>
 
@@ -63,6 +65,8 @@ class BlamSlam {
 
   // Sensor message processing.
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
+
+  int marker_id_;
 
  private:
   // Node initialization.
@@ -90,7 +94,7 @@ class BlamSlam {
 
   // Publish Artifacts
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
-                               const core_msgs::Artifact& msg) const;
+                               const core_msgs::Artifact& msg);
 
   // The node's name.
   std::string name_;
@@ -108,10 +112,13 @@ class BlamSlam {
   // Subscribers.
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
+  tf::TransformListener listener;
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
   ros::Publisher artifact_pub_;
+  ros::Publisher marker_pub_;
+  
 
   // Services
   ros::ServiceServer add_factor_srv_;

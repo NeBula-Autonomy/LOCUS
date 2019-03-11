@@ -244,6 +244,7 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   // Store this timestamp so that we can publish the pose graph later.
   keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
 
   // Update ISAM2.
   try{
@@ -301,6 +302,7 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
   if (key == 0) {
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
     keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key, stamp));
+    stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key));
   }
 
   ROS_INFO_STREAM("AddKeyScanPair " << key);
@@ -1027,4 +1029,50 @@ void LaserLoopClosure::PublishPoseGraph() {
     // Publish.
     pose_graph_pub_.publish(g);
   }
+}
+
+
+
+
+gu::Transform3 LaserLoopClosure::GetPoseAtTime(const ros::Time& stamp) const {
+
+  std::cout << "Get pose closest to input time: " << stamp.toSec() << std::endl;
+  // Find closest timestamp
+  // std::map<ros::Time, unsigned int>::iterator iterTime;
+  
+  // First key that is not less than timestamp (so the key just past the timestamp)
+  auto iterTime = stamps_keyed_.lower_bound(stamp.toSec());
+
+  std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
+
+  // TODO - interpolate - currently just take one
+  double t2 = iterTime->first;
+  double t1 = std::prev(iterTime,1)->first;
+
+  std::cout << "Time 1 is: " << t1 << ", Time 2 is: " << t2 << std::endl;
+
+  unsigned int key;
+
+  if (t2-stamp.toSec() < stamp.toSec()-t1){
+    // t2 is closer - use that key
+    std::cout << "Selecting later time: " << t2 << std::endl;
+    key = iterTime->second;
+  }else {
+    // t1 is closer - use that key
+    std::cout << "Selecting earlier time: " << t1 << std::endl;
+    key = std::prev(iterTime,1)->second;
+    iterTime--;
+  }
+  std::cout << "Key is: " << key << std::endl;
+  if (iterTime == std::prev(stamps_keyed_.begin())){
+    ROS_WARN("Invalid time for graph (before start of graph range). Choosing next value");
+    iterTime++;
+    key = iterTime->second;
+  } else if(iterTime==stamps_keyed_.end()){
+    ROS_WARN("Invalid time for graph (past end of graph range). take latest pose");
+    key = key_ -1;
+  }
+
+  // Get the pose at that key
+  return ToGu(values_.at<Pose3>(key));
 }
