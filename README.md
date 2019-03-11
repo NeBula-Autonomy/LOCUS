@@ -26,17 +26,17 @@ catkin build pose_graph_msgs
 * [GTSAM](https://collab.cc.gatech.edu/borg/gtsam)
 
 We recommend:
-    * Clone GTSAM in your *home* folder and checkout the feature branch:   
+* Clone GTSAM in your *home* folder and checkout the feature branch:   
         ```bash
         cd
         git clone -b feature/improvementsIncrementalFilter --single-branch https://bitbucket.org/gtborg/gtsam
         ```
-    * Checkout a specific commit to solve a build issue:
+* Checkout a specific commit to solve a build issue:
         ```bash
         cd gtsam
         git checkout c827d4cd6b11f78f3d2d9d52b335ac562a2757fc
         ```
-    * Build
+* Build
         ```bash
         cd gtsam 
         mkdir build
