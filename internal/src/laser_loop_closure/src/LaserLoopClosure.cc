@@ -62,6 +62,7 @@ using gtsam::Rot3;
 using gtsam::Values;
 using gtsam::Vector3;
 using gtsam::Vector6;
+using gtsam::ISAM2GaussNewtonParams;
 
 LaserLoopClosure::LaserLoopClosure()
     : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {}
@@ -149,6 +150,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
   parameters.relinearizeThreshold = relinearize_threshold_;
+  // // Set wildfire threshold
+  // ISAM2GaussNewtonParams gnparams(-1);
+  // parameters.setOptimizationParams(gnparams);
+
   isam_.reset(new ISAM2(parameters));
 
   // Set the initial position.
@@ -638,7 +643,8 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   double cost = factor.error(linPoint);
   ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
   // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
-
+  // 0)
+  writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
   // add factor to factor graph
   NonlinearFactorGraph new_factor;
   new_factor.add(factor);
@@ -729,11 +735,15 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         std::cout << "Running LM optimization" << std::endl;
         // nfg_ = isam_->getFactorsUnsafe();
         nfg_.add(factor);
-        initialEstimate = isam_->calculateEstimate();
+        // initialEstimate = isam_->calculateEstimate();
+        gtsam::Values initial = gtsam::InitializePose3::initialize(nfg_); // test
+        // writeG2o(nfg_, initial, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
         gtsam::LevenbergMarquardtParams params;
-        params.setVerbosityLM("TRYDELTA");
-        result = gtsam::LevenbergMarquardtOptimizer(nfg_, initialEstimate, params).optimize();
+        params.setVerbosityLM("TRYLAMBDA");
+        // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initialEstimate, params).optimize();
+        result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
         // result.print("LM result is: ");
+        writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
       }
         break;
       case 2 : 
@@ -783,19 +793,18 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
     parameters.relinearizeThreshold = relinearize_threshold_;
+    // // Set wildfire threshold 
+    // ISAM2GaussNewtonParams gnparams(-1);
+    // parameters.setOptimizationParams(gnparams);
+
     isam_.reset(new ISAM2(parameters));
     
     // Update with the new graph
     isam_->update(nfg_,result); 
     
-
-
-
-
+    gtsam::Values result_isam = isam_->calculateBestEstimate();
+    writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/result_manual_loop_3.g2o");
     
-
-
-
     // redirect cout to file
     std::ofstream nfgFile;
     std::string home_folder(getenv("HOME"));

@@ -135,7 +135,11 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
 
+<<<<<<< HEAD
   pcld_sub_ = nl.subscribe("pcld", 1000, &BlamSlam::PointCloudCallback, this);
+=======
+  pcld_sub_ = nl.subscribe("pcld", 10000000, &BlamSlam::PointCloudCallback, this);
+>>>>>>> d0d10b3c6ad6b84a3efac1b5f2cc840181b68bd7
 
   return CreatePublishers(n);
 }
