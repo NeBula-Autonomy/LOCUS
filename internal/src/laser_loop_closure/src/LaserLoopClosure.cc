@@ -303,7 +303,7 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
     keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key, stamp));
   }
 
-  ROS_INFO_STREAM("AddKeyScanPair " << key);
+  // ROS_INFO_STREAM("AddKeyScanPair " << key);
 
   // Add the key and scan.
   keyed_scans_.insert(std::pair<unsigned int, PointCloud::ConstPtr>(key, scan));
@@ -511,6 +511,7 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
 
   // Set up ICP.
   pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  // setVerbosityLevel(pcl::console::L_DEBUG);
   icp.setTransformationEpsilon(icp_tf_epsilon_);
   icp.setMaxCorrespondenceDistance(icp_corr_dist_);
   icp.setMaximumIterations(icp_iterations_);
@@ -558,10 +559,20 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
                                 T(2, 0), T(2, 1), T(2, 2));
 
   // Is the transform good?
-  if (!icp.hasConverged())
+  if (!icp.hasConverged()) {
+    std::cout<<"No converged, score is: "<<icp.getFitnessScore() << std::endl;
     return false;
+  }
 
-  if (icp.getFitnessScore() > max_tolerable_fitness_) {
+  if (icp.getFitnessScore() > max_tolerable_fitness_) { 
+      // std::cout<<"Trans: "<<delta_icp.translation<<std::endl;
+      // std::cout<<"Rot: "<<delta_icp.rotation<<std::endl;
+      // If the loop closure was a success, publish the two scans.
+       std::cout<<"Converged, score is: "<<icp.getFitnessScore() << std::endl;
+      // source->header.frame_id = fixed_frame_id_;
+      // target->header.frame_id = fixed_frame_id_;
+      // scan1_pub_.publish(*source);
+      // scan2_pub_.publish(*target);
     return false;
   }
 
