@@ -32,7 +32,7 @@ proximity_threshold: 4.0
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
 # the ICP "fitness score" must be less than this number.
-max_tolerable_fitness: 10.0 #0.15
+max_tolerable_fitness: 0.1 #0.15
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.

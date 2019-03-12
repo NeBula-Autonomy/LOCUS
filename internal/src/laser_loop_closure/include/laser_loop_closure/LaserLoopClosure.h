@@ -42,7 +42,7 @@
 #include <geometry_utils/Transform3.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <laser_loop_closure/ManualLoopClosure.h>
-#include <laser_loop_closure/BetweenChordalFactor.h>
+// #include <laser_loop_closure/BetweenChordalFactor.h>
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
