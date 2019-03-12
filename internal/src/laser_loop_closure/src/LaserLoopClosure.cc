@@ -150,6 +150,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
   parameters.relinearizeThreshold = relinearize_threshold_;
+  parameters.factorization = gtsam::ISAM2Params::QR; // QR
   // // Set wildfire threshold
   // ISAM2GaussNewtonParams gnparams(-1);
   // parameters.setOptimizationParams(gnparams);
@@ -176,6 +177,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
+  std::cout << "!!!!! error at LoadParameters isam: " << nfg_.error(values_) << std::endl;
   key_++;
 
   // Set the initial odometry.
@@ -276,6 +278,8 @@ bool LaserLoopClosure::AddBetweenFactor(
   values_ = isam_->calculateEstimate();
 
   nfg_ = isam_->getFactorsUnsafe();
+
+  std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
 
   // Assign output and get ready to go again!
   *key = key_++;
@@ -396,6 +400,8 @@ bool LaserLoopClosure::FindLoopClosures(
   values_ = isam_->calculateEstimate();
 
   nfg_ = isam_->getFactorsUnsafe();
+
+  std::cout << "!!!!! error at FindLoopClosures isam: " << nfg_.error(values_) << std::endl;
 
   return closed_loop;
 }
@@ -633,6 +639,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
   // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
   // 0)
+  std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
   // add factor to factor graph
   NonlinearFactorGraph new_factor;
@@ -722,17 +729,31 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
       {
         // Levenber Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
-        // nfg_ = isam_->getFactorsUnsafe();
-        nfg_.add(factor);
-        // initialEstimate = isam_->calculateEstimate();
-        gtsam::Values initial = gtsam::InitializePose3::initialize(nfg_); // test
-        // writeG2o(nfg_, initial, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
+        isam_->update(new_factor, Values());
+        initialEstimate = isam_->calculateEstimate();
+        nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
+
+        // gtsam::Values chordalInitial = gtsam::InitializePose3::initialize(nfg_); // test
+        // std::cout << "error at 1c: " << nfg_.error(chordalInitial) << std::endl;
+        // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
+        std::cout << "!!!!! error at AddFactor before LM: " << nfg_.error(initialEstimate) << std::endl;
+        writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("TRYLAMBDA");
-        // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initialEstimate, params).optimize();
-        result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
+        result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
+        // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
         // result.print("LM result is: ");
+        std::cout << "!!!!! error at AddFactor after LM: " << nfg_.error(result) << std::endl;
         writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
+
+        gtsam::NonlinearOptimizerParams param;
+        param.maxIterations = 500; /* requires a larger number of iterations to converge */
+        // param.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
+
+        gtsam::NonlinearConjugateGradientOptimizer optimizer(nfg_, linPoint, param);
+        gtsam::Values result_cgo = optimizer.optimize();
+        std::cout << "!!!!! error at AddFactor after cgo: " << nfg_.error(result_cgo) << std::endl;
+        writeG2o(nfg_, result_cgo, "/home/yunchang/Desktop/result_manual_loop_2cgo.g2o");
       }
         break;
       case 2 : 
@@ -792,6 +813,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     isam_->update(nfg_,result); 
     
     gtsam::Values result_isam = isam_->calculateBestEstimate();
+    std::cout << "!!!!! error at AddFactor after isam: " << nfg_.error(result_isam) << std::endl;
     writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/result_manual_loop_3.g2o");
     
     // redirect cout to file
