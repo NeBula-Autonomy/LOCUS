@@ -632,6 +632,18 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   gtsam::Key id2 = key2;
   gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
+  // // Use Between ChordalFactor 
+  // gtsam::Pose3 measured = gtsam::Pose3(); 
+  // gtsam::Vector12 precisions; 
+  // precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
+  // precisions.tail<2>().setConstant(manual_lc_trans_precision_);
+  // static const gtsam::SharedNoiseModel& loopClosureNoise = 
+  // gtsam::noiseModel::Diagonal::Precisions(precisions);
+
+  // gtsam::Key id1 = key1; 
+  // gtsam::Key id2 = key2; 
+  // gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+
   // TODO - remove debug messages 
   // Get the current offset and predict the error and cost
   gtsam::Pose3 p1 = values_.at<Pose3>(key1);
