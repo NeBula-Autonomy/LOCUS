@@ -301,17 +301,32 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     return false;
   }
 
-  // Add the new pose to the pose graph.
+  // // Add the new pose to the pose graph (BetweenFactor)
+  // unsigned int pose_key;
+  // gu::MatrixNxNBase<double, 6> covariance;
+  // covariance.Zeros();
+  // for (int i = 0; i < 3; ++i)
+  //   covariance(i, i) = attitude_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
+  // for (int i = 3; i < 6; ++i)
+  //   covariance(i, i) = position_covariance_; //0.4, 0.004; 0.2 m sd
+
+  // const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+  // if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
+  //                                     covariance, stamp, &pose_key)) {
+  //   return false;
+  // }
+
+  // Add the new pose to the pose graph (BetweenChordalFactor)
   unsigned int pose_key;
-  gu::MatrixNxNBase<double, 6> covariance;
+  gu::MatrixNxNBase<double, 12> covariance;
   covariance.Zeros();
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 9; ++i)
     covariance(i, i) = attitude_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
-  for (int i = 3; i < 6; ++i)
+  for (int i = 9; i < 12; ++i)
     covariance(i, i) = position_covariance_; //0.4, 0.004; 0.2 m sd
 
   const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-  if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
+  if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
                                       covariance, stamp, &pose_key)) {
     return false;
   }

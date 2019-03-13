@@ -298,6 +298,73 @@ bool LaserLoopClosure::AddBetweenFactor(
   return false;
 }
 
+bool LaserLoopClosure::AddBetweenChordalFactor(
+    const gu::Transform3& delta, const LaserLoopClosure::Mat1212& covariance,
+    const ros::Time& stamp, unsigned int* key) {
+  if (key == NULL) {
+    ROS_ERROR("%s: Output key is null.", name_.c_str());
+    return false;
+  }
+
+  // Append the new odometry.
+  Pose3 new_odometry = ToGtsam(delta);
+
+  NonlinearFactorGraph new_factor;
+  Values new_value;
+  new_factor.add(MakeBetweenChordalFactor(new_odometry, ToGtsam(covariance)));
+
+  Pose3 last_pose = values_.at<Pose3>(key_-1);
+  new_value.insert(key_, last_pose.compose(new_odometry));
+
+  // Store this timestamp so that we can publish the pose graph later.
+  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+
+  // Update ISAM2.
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
+  // Update class variables
+  values_ = isam_->calculateEstimate();
+
+  nfg_ = isam_->getFactorsUnsafe();
+
+  std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
+
+  // Assign output and get ready to go again!
+  *key = key_++;
+
+  // We always add new poses, but only return true if the pose is far enough
+  // away from the last one (keyframes). This lets the caller know when they
+  // can add a laser scan.
+
+  // Is the odometry translation large enough to add a new keyframe to the graph?
+  odometry_ = odometry_.compose(new_odometry);
+  if (odometry_.translation().norm() > translation_threshold_) {
+    odometry_ = Pose3::identity();
+    return true;
+  }
+
+  return false;
+}
+
 bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
                                       const PointCloud::ConstPtr& scan) {
   if (keyed_scans_.count(key)) {
@@ -376,12 +443,32 @@ bool LaserLoopClosure::FindLoopClosures(
       // determine if there really is a loop to close.
       const PointCloud::ConstPtr scan2 = keyed_scans_[other_key];
 
-      gu::Transform3 delta;
-      LaserLoopClosure::Mat66 covariance;
+      // gu::Transform3 delta; // (Using BetweenFactor)
+      // LaserLoopClosure::Mat66 covariance;
+      // if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+      //   // We found a loop closure. Add it to the pose graph.
+      //   NonlinearFactorGraph new_factor;
+      //   new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
+      //                                       ToGtsam(covariance)));
+      //   isam_->update(new_factor, Values());
+      //   closed_loop = true;
+      //   last_closure_key_ = key;
+
+      //   // Store for visualization and output.
+      //   loop_edges_.push_back(std::make_pair(key, other_key));
+      //   closure_keys->push_back(other_key);
+
+      //   // Send an empty message notifying any subscribers that we found a loop
+      //   // closure.
+      //   loop_closure_notifier_pub_.publish(std_msgs::Empty());
+      // }
+
+      gu::Transform3 delta; // (Using BetweenChordalFactor)
+      LaserLoopClosure::Mat1212 covariance;
       if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
         // We found a loop closure. Add it to the pose graph.
         NonlinearFactorGraph new_factor;
-        new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
+        new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
                                             ToGtsam(covariance)));
         isam_->update(new_factor, Values());
         closed_loop = true;
@@ -496,6 +583,14 @@ LaserLoopClosure::Gaussian::shared_ptr LaserLoopClosure::ToGtsam(
   return Gaussian::Covariance(gtsam_covariance);
 }
 
+LaserLoopClosure::Gaussian::shared_ptr LaserLoopClosure::ToGtsam(
+    const LaserLoopClosure::Mat1212& covariance) const {
+  gtsam::Vector12 precisions; 
+  for (int i = 0; i < 12; ++i) 
+    precisions(i) = covariance(i,i);
+  return gtsam::noiseModel::Diagonal::Precisions(precisions);
+}
+
 PriorFactor<Pose3> LaserLoopClosure::MakePriorFactor(
     const Pose3& pose,
     const LaserLoopClosure::Diagonal::shared_ptr& covariance) {
@@ -507,6 +602,13 @@ BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactor(
     const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
   odometry_edges_.push_back(std::make_pair(key_-1, key_));
   return BetweenFactor<Pose3>(key_-1, key_, delta, covariance);
+}
+
+gtsam::BetweenChordalFactor<Pose3> LaserLoopClosure::MakeBetweenChordalFactor(
+    const Pose3& delta, 
+    const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
+  odometry_edges_.push_back(std::make_pair(key_-1, key_));
+  return gtsam::BetweenChordalFactor<Pose3>(key_-1, key_, delta, covariance);
 }
 
 bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
@@ -610,6 +712,107 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   return true;
 }
 
+bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
+                                  const PointCloud::ConstPtr& scan2,
+                                  const gu::Transform3& pose1,
+                                  const gu::Transform3& pose2,
+                                  gu::Transform3* delta,
+                                  LaserLoopClosure::Mat1212* covariance) {
+  if (delta == NULL || covariance == NULL) {
+    ROS_ERROR("%s: Output pointers are null.", name_.c_str());
+    return false;
+  }
+
+  // Set up ICP.
+  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  // setVerbosityLevel(pcl::console::L_DEBUG);
+  icp.setTransformationEpsilon(icp_tf_epsilon_);
+  icp.setMaxCorrespondenceDistance(icp_corr_dist_);
+  icp.setMaximumIterations(icp_iterations_);
+  icp.setRANSACIterations(0);
+
+  // Filter the two scans. They are stored in the pose graph as dense scans for
+  // visualization.
+  PointCloud::Ptr scan1_filtered(new PointCloud);
+  PointCloud::Ptr scan2_filtered(new PointCloud);
+  filter_.Filter(scan1, scan1_filtered);
+  filter_.Filter(scan2, scan2_filtered);
+
+  // Set source point cloud. Transform it to pose 2 frame to get a delta.
+  const Eigen::Matrix<double, 3, 3> R1 = pose1.rotation.Eigen();
+  const Eigen::Matrix<double, 3, 1> t1 = pose1.translation.Eigen();
+  Eigen::Matrix4d body1_to_world;
+  body1_to_world.block(0, 0, 3, 3) = R1;
+  body1_to_world.block(0, 3, 3, 1) = t1;
+
+  const Eigen::Matrix<double, 3, 3> R2 = pose2.rotation.Eigen();
+  const Eigen::Matrix<double, 3, 1> t2 = pose2.translation.Eigen();
+  Eigen::Matrix4d body2_to_world;
+  body2_to_world.block(0, 0, 3, 3) = R2;
+  body2_to_world.block(0, 3, 3, 1) = t2;
+
+  PointCloud::Ptr source(new PointCloud);
+  pcl::transformPointCloud(*scan1_filtered, *source, body1_to_world);
+  icp.setInputSource(source);
+
+  // Set target point cloud in its own frame.
+  PointCloud::Ptr target(new PointCloud);
+  pcl::transformPointCloud(*scan2_filtered, *target, body2_to_world);
+  icp.setInputTarget(target);
+
+  // Perform ICP.
+  PointCloud unused_result;
+  icp.align(unused_result);
+
+  // Get resulting transform.
+  const Eigen::Matrix4f T = icp.getFinalTransformation();
+  gu::Transform3 delta_icp;
+  delta_icp.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
+  delta_icp.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                T(1, 0), T(1, 1), T(1, 2),
+                                T(2, 0), T(2, 1), T(2, 2));
+
+  // Is the transform good?
+  if (!icp.hasConverged()) {
+    std::cout<<"No converged, score is: "<<icp.getFitnessScore() << std::endl;
+    return false;
+  }
+
+  if (icp.getFitnessScore() > max_tolerable_fitness_) { 
+      // std::cout<<"Trans: "<<delta_icp.translation<<std::endl;
+      // std::cout<<"Rot: "<<delta_icp.rotation<<std::endl;
+      // If the loop closure was a success, publish the two scans.
+       std::cout<<"Converged, score is: "<<icp.getFitnessScore() << std::endl;
+      // source->header.frame_id = fixed_frame_id_;
+      // target->header.frame_id = fixed_frame_id_;
+      // scan1_pub_.publish(*source);
+      // scan2_pub_.publish(*target);
+    return false;
+  }
+
+  // Update the pose-to-pose odometry estimate using the output of ICP.
+  const gu::Transform3 update =
+      gu::PoseUpdate(gu::PoseInverse(pose1),
+                     gu::PoseUpdate(gu::PoseInverse(delta_icp), pose1));
+
+  *delta = gu::PoseUpdate(update, gu::PoseDelta(pose1, pose2));
+
+  // TODO: Use real ICP covariance.
+  covariance->Zeros();
+  for (int i = 0; i < 9; ++i)
+    (*covariance)(i, i) = laser_lc_rot_precision_; // 0.01
+  for (int i = 9; i < 12; ++i)
+    (*covariance)(i, i) = laser_lc_trans_precision_; // 0.04
+
+  // If the loop closure was a success, publish the two scans.
+  source->header.frame_id = fixed_frame_id_;
+  target->header.frame_id = fixed_frame_id_;
+  scan1_pub_.publish(*source);
+  scan2_pub_.publish(*target);
+
+  return true;
+}
+
 bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // Thanks to Luca for providing the code
   ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
@@ -617,32 +820,33 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // TODO - some check to see what the distance between the two poses are
   // Print that out for the operator to check - to see how large a change is being asked for
 
-  // creating relative pose factor (also works for relative positions)
-  gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
-  measured.print("Between pose is ");
+  // // Use BetweenFactor
+  // // creating relative pose factor (also works for relative positions)
+  // gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
+  // measured.print("Between pose is ");
 
-  // create Information of measured
-  gtsam::Vector6 precisions; // inverse of variances
-  precisions.head<3>().setConstant(manual_lc_rot_precision_); // rotation precision
-  precisions.tail<3>().setConstant(manual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
-  static const gtsam::SharedNoiseModel& loopClosureNoise =
-  gtsam::noiseModel::Diagonal::Precisions(precisions);
-
-  gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
-  gtsam::Key id2 = key2;
-  gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
-
-  // // Use Between ChordalFactor 
-  // gtsam::Pose3 measured = gtsam::Pose3(); 
-  // gtsam::Vector12 precisions; 
-  // precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
-  // precisions.tail<2>().setConstant(manual_lc_trans_precision_);
-  // static const gtsam::SharedNoiseModel& loopClosureNoise = 
+  // // create Information of measured
+  // gtsam::Vector6 precisions; // inverse of variances
+  // precisions.head<3>().setConstant(manual_lc_rot_precision_); // rotation precision
+  // precisions.tail<3>().setConstant(manual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
+  // static const gtsam::SharedNoiseModel& loopClosureNoise =
   // gtsam::noiseModel::Diagonal::Precisions(precisions);
 
-  // gtsam::Key id1 = key1; 
-  // gtsam::Key id2 = key2; 
-  // gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+  // gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
+  // gtsam::Key id2 = key2;
+  // gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+
+  // Use BetweenChordalFactor 
+  gtsam::Pose3 measured = gtsam::Pose3(); 
+  gtsam::Vector12 precisions; 
+  precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
+  precisions.tail<3>().setConstant(manual_lc_trans_precision_);
+  static const gtsam::SharedNoiseModel& loopClosureNoise = 
+  gtsam::noiseModel::Diagonal::Precisions(precisions);
+
+  gtsam::Key id1 = key1; 
+  gtsam::Key id2 = key2; 
+  gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
   // TODO - remove debug messages 
   // Get the current offset and predict the error and cost
@@ -768,15 +972,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         // result.print("LM result is: ");
         std::cout << "!!!!! error at AddFactor after LM: " << nfg_.error(result) << std::endl;
         writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
-
-        gtsam::NonlinearOptimizerParams param;
-        param.maxIterations = 500; /* requires a larger number of iterations to converge */
-        // param.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
-
-        gtsam::NonlinearConjugateGradientOptimizer optimizer(nfg_, linPoint, param);
-        gtsam::Values result_cgo = optimizer.optimize();
-        std::cout << "!!!!! error at AddFactor after cgo: " << nfg_.error(result_cgo) << std::endl;
-        writeG2o(nfg_, result_cgo, "/home/yunchang/Desktop/result_manual_loop_2cgo.g2o");
       }
         break;
       case 2 : 

@@ -76,6 +76,7 @@ class LaserLoopClosure {
 
   // Typedef for 6x6 covariance matrices (x, y, z, roll, pitch, yaw).
   typedef geometry_utils::MatrixNxNBase<double, 6> Mat66;
+  typedef geometry_utils::MatrixNxNBase<double, 12> Mat1212;
 
   // Typedef for stored point clouds.
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -88,6 +89,10 @@ class LaserLoopClosure {
   // AddKeyScanPair().
   bool AddBetweenFactor(const geometry_utils::Transform3& delta,
                         const Mat66& covariance, const ros::Time& stamp,
+                        unsigned int* key);
+
+  bool AddBetweenChordalFactor(const geometry_utils::Transform3& delta,
+                        const Mat1212& covariance, const ros::Time& stamp,
                         unsigned int* key);
 
   // Upon successful addition of a new between factor, call this function to
@@ -127,11 +132,14 @@ class LaserLoopClosure {
   typedef gtsam::noiseModel::Diagonal Diagonal;
   Mat66 ToGu(const Gaussian::shared_ptr& covariance) const;
   Gaussian::shared_ptr ToGtsam(const Mat66& covariance) const;
+  Gaussian::shared_ptr ToGtsam(const Mat1212& covariance) const;
 
   // Create prior and between factors.
   gtsam::PriorFactor<gtsam::Pose3> MakePriorFactor(
       const gtsam::Pose3& pose, const Diagonal::shared_ptr& covariance);
   gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenFactor(
+      const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
+  gtsam::BetweenChordalFactor<gtsam::Pose3> MakeBetweenChordalFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
 
   // Perform ICP between two laser scans.
@@ -140,6 +148,13 @@ class LaserLoopClosure {
                   const geometry_utils::Transform3& pose1,
                   const geometry_utils::Transform3& pose2,
                   geometry_utils::Transform3* delta, Mat66* covariance);
+
+  // Perform ICP between two laser scans.
+  bool PerformICP(const PointCloud::ConstPtr& scan1,
+                  const PointCloud::ConstPtr& scan2,
+                  const geometry_utils::Transform3& pose1,
+                  const geometry_utils::Transform3& pose2,
+                  geometry_utils::Transform3* delta, Mat1212* covariance);
 
   // bool AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
   //                       laser_loop_closure::ManualLoopClosureResponse &response);

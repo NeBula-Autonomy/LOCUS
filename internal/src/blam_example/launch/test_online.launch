@@ -21,9 +21,10 @@
       </rosparam>
 
       <!-- Noise parameters -->
+      <!-- these are variances -->
       <rosparam param="noise">
-        odom_position_sigma: 0.4
-        odom_attitude_sigma: 0.1
+        odom_position_sigma: 0.04
+        odom_attitude_sigma: 0.001
       </rosparam>
 
       <!-- Rates -->
