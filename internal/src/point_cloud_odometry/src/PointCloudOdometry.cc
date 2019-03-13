@@ -42,6 +42,7 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include <pcl/registration/gicp.h>
+#include <pcl/search/impl/search.hpp>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;

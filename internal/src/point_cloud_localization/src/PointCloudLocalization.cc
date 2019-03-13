@@ -40,6 +40,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 
+#include <pcl/search/impl/search.hpp>
+
 #include <pcl/registration/gicp.h>
 
 namespace gu = geometry_utils;

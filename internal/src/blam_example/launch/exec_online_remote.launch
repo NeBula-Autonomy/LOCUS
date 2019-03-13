@@ -1,17 +1,17 @@
 <launch>
-  <!-- True for simulation, false for real-time and bagfiles -->
-  <param name="/use_sim_time" value="false"/>
+  <arg name="robot_namespace" default="robot"/>
 
-  <group ns="blam">
+  <group>
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
           type="blam_slam_node"
           output="screen">
-      <env name="LD_LIBRARY_PATH" value="/opt/pcl-1.7/lib:$(optenv LD_LIBRARY_PATH)"/>
 
       <!-- Topics -->
-      <remap from="~pcld" to="/velodyne_points"/>
+      <remap from="~pcld" to="velodyne_points/transformed"/>
+      <remap from="~artifact" to="/husky/artifact_global" />
+      <remap from="~artifact_relative" to="/husky/artifact_relative" />      
 
       <!-- Initial pose -->
       <rosparam param="init">
@@ -25,13 +25,13 @@
       <rosparam param="noise">
         odom_position_sigma: 0.4
         odom_attitude_sigma: 0.1
-      </rosparam>
+      </rosparam>      
 
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
 
       <!-- Frames -->
-      <rosparam file="$(find blam_example)/config/blam_frames.yaml"/>
+      <rosparam file="$(find blam_example)/config/blam_frames.yaml" subst_value="true"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
@@ -50,7 +50,23 @@
 
       <!-- Loop closure -->
       <rosparam file="$(find laser_loop_closure)/config/parameters.yaml"/>
+
+
     </node>
+
+    <!-- Republish node with different frame_id -->
+    <node pkg="nodelet" type="nodelet" name="transform_points"
+          args="standalone pcl/PassThrough">
+      <remap from="~input" to="velodyne_points"/>
+      <remap from="~output" to="velodyne_points/transformed"/>
+      <rosparam subst_value="true">
+        filter_field_name: z
+        filter_limit_min: -100
+        filter_limit_max: 100
+        output_frame: $(arg robot_namespace)/base_link
+      </rosparam>
+    </node>
+
   </group>
 
 </launch>

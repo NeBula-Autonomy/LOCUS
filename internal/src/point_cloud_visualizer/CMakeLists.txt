@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud_visualizer)
 
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release)
+ENDIF()
+
 find_package(PCL REQUIRED COMPONENTS common)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
@@ -48,4 +52,5 @@ add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
 )

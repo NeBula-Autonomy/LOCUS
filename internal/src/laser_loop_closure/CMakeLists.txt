@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(laser_loop_closure)
 
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release)
+ENDIF()
+
 find_package(PCL REQUIRED COMPONENTS common registration)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
@@ -18,15 +22,20 @@ find_package(catkin REQUIRED COMPONENTS
   point_cloud_filter
   pose_graph_msgs
   visualization_msgs
+  message_generation
   std_msgs
   pcl_ros
 )
+
+add_service_files(FILES ManualLoopClosure.srv)
+generate_messages()
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
+    message_runtime
     geometry_utils
     parameter_utils
     point_cloud_filter
@@ -34,9 +43,17 @@ catkin_package(
     visualization_msgs
     std_msgs
     pcl_ros
-  DEPENDS
-    PCL
 )
+
+
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+FIND_PACKAGE( Boost 1.58 COMPONENTS program_options timer REQUIRED )
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -54,6 +71,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
+  ${Boost_INCLUDE_DIR}
 )
 
 link_directories(
@@ -67,4 +85,5 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   gtsam
+  ${Boost_LIBRARIES}
 )

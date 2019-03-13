@@ -35,6 +35,7 @@
  */
 
 #include <ros/ros.h>
+#include <pcl/search/impl/search.hpp>
 #include <point_cloud_localization/PointCloudLocalization.h>
 
 int main(int argc, char** argv) {

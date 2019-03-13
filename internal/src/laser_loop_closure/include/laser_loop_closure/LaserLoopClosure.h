@@ -41,16 +41,23 @@
 #include <geometry_utils/Matrix3x3.h>
 #include <geometry_utils/Transform3.h>
 #include <point_cloud_filter/PointCloudFilter.h>
+#include <laser_loop_closure/ManualLoopClosure.h>
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 #include <gtsam/linear/NoiseModel.h>
 #include <gtsam/nonlinear/ISAM2.h>
+#include <gtsam/nonlinear/GaussNewtonOptimizer.h>
+#include <gtsam/nonlinear/DoglegOptimizer.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
+
+// This new header allows us to read examples easily from .graph files
+#include <gtsam/slam/dataset.h>
 
 #include <pcl_ros/point_cloud.h>
 
@@ -96,11 +103,18 @@ class LaserLoopClosure {
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
 
+  // Get pose at an input time
+  geometry_utils::Transform3 GetPoseAtTime(const ros::Time& stamp) const;
+
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
- private:
+  // Add factor between the two keys to connect them. This function is
+  // designed for a scenario where a human operator can manually perform
+  // loop closures by adding these factors to the pose graph.
+  bool AddFactor(unsigned int key1, unsigned int key2);
 
+ private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
@@ -127,26 +141,38 @@ class LaserLoopClosure {
                   const geometry_utils::Transform3& pose2,
                   geometry_utils::Transform3* delta, Mat66* covariance);
 
+  // bool AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
+  //                       laser_loop_closure::ManualLoopClosureResponse &response);
+
   // Node name.
   std::string name_;
 
   // Keep a list of keyed laser scans and keyed timestamps.
   std::map<unsigned int, PointCloud::ConstPtr> keyed_scans_;
   std::map<unsigned int, ros::Time> keyed_stamps_;
+  std::map<double, unsigned int> stamps_keyed_;
 
   // Aggregate odometry until we can update the pose graph.
   gtsam::Pose3 odometry_;
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
+  unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;
   unsigned int relinearize_interval_;
   unsigned int skip_recent_poses_;
   unsigned int poses_before_reclosing_;
+  unsigned int n_iterations_manual_loop_close_;
   double translation_threshold_;
   double proximity_threshold_;
   double max_tolerable_fitness_;
+  double manual_lc_rot_precision_;
+  double manual_lc_trans_precision_;
+  double laser_lc_rot_precision_;
+  double laser_lc_trans_precision_;
+  unsigned int relinearize_skip_;
+  double relinearize_threshold_;
 
   // ICP parameters.
   double icp_ransac_thresh_;
@@ -156,6 +182,7 @@ class LaserLoopClosure {
 
   // ISAM2 optimizer object, and best guess pose values.
   std::unique_ptr<gtsam::ISAM2> isam_;
+  gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
 
   // Frames.
@@ -166,10 +193,13 @@ class LaserLoopClosure {
   ros::Publisher odometry_edge_pub_;
   ros::Publisher loop_edge_pub_;
   ros::Publisher graph_node_pub_;
+  ros::Publisher graph_node_id_pub_;
   ros::Publisher keyframe_node_pub_;
   ros::Publisher closure_area_pub_;
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
+
+  // ros::ServiceServer add_factor_srv_;
 
   // Pose graph publishers.
   ros::Publisher pose_graph_pub_;
