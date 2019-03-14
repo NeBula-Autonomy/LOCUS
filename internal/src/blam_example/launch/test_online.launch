@@ -17,14 +17,14 @@
         position: {x: 0.0, y: 0.0, z: 0.0}
         orientation: {roll: 0.0, pitch: 0.0, yaw: 0.0}
         position_sigma: {x: 0.1, y: 0.1, z: 0.1}
-        orientation_sigma: {roll: 0.02, pitch: 0.02, yaw: 0.02}
+        orientation_sigma: {roll: 0.001, pitch: 0.001, yaw: 0.001}
       </rosparam>
 
       <!-- Noise parameters -->
       <!-- these are variances -->
       <rosparam param="noise">
-        odom_position_sigma: 0.04
-        odom_attitude_sigma: 0.001
+        odom_position_sigma: 0.01
+        odom_attitude_sigma: 0.000001
       </rosparam>
 
       <!-- Rates -->

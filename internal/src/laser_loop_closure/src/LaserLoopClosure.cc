@@ -165,7 +165,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   // Set the covariance on initial position.
   Vector6 noise;
-  noise << sigma_x, sigma_y, sigma_z, sigma_roll, sigma_pitch, sigma_yaw;
+  noise << sigma_roll, sigma_pitch, sigma_yaw, sigma_x, sigma_y, sigma_z;
   LaserLoopClosure::Diagonal::shared_ptr covariance(
       LaserLoopClosure::Diagonal::Sigmas(noise));
 
@@ -854,7 +854,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
     gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
-    factor.print(""); 
     cost = factor.error(linPoint);
     ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
     // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
@@ -873,7 +872,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
  
     gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
-    factor.print(""); 
     cost = factor.error(linPoint);
     ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
     // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
@@ -922,7 +920,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     gtsam::ISAM2Result result_ISAM;
     // gtsam::NonlinearFactorGraph nfg;
     gtsam::Values initialEstimate;
-    gtsam::Values result;
+    gtsam::Values result, resultGN;
 
     // TODO - loop over optimizers?
     // TODO using strings or enum rather than ints
@@ -969,19 +967,26 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         isam_->update(new_factor, Values());
         initialEstimate = isam_->calculateEstimate();
         nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
-
+        nfg_.print("");
+        std::cout << "number of factors after manual loop closure: " << nfg_.size() << std::endl; 
+        std::cout << "number of poses after manual loop closure: " << initialEstimate.size() << std::endl; 
         // gtsam::Values chordalInitial = gtsam::InitializePose3::initialize(nfg_); // test
         // std::cout << "error at 1c: " << nfg_.error(chordalInitial) << std::endl;
         // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
-        std::cout << "!!!!! error at AddFactor before LM: " << nfg_.error(initialEstimate) << std::endl;
+        std::cout << "!!!!! error after isam2 update on manual loop closure: " << nfg_.error(initialEstimate) << std::endl;
         writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("TRYLAMBDA");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
         // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
         // result.print("LM result is: ");
-        std::cout << "!!!!! error at AddFactor after LM: " << nfg_.error(result) << std::endl;
+        std::cout << "!!!!! error after LM on manual loop closure: " << nfg_.error(result) << std::endl;
         writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
+
+        gtsam::GaussNewtonParams paramsGN;
+        resultGN = gtsam::GaussNewtonOptimizer(nfg_, linPoint, paramsGN).optimize();
+        std::cout << "!!!!! error after GN on manual loop closure: " << nfg_.error(resultGN) << std::endl;
+        // writeG2o(nfg_, resultGN, "/home/yunchang/Desktop/result_manual_loop_2gn.g2o");
       }
         break;
       case 2 : 
@@ -1020,7 +1025,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         // TODO handle the error
       }
     }
-    std::cout << "initial error = " << nfg_.error(initialEstimate) << std::endl;
+    std::cout << "initial error = " << nfg_.error(linPoint) << std::endl;
     std::cout << "final error = " << nfg_.error(result) << std::endl;
 
     
@@ -1034,14 +1039,11 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     // // Set wildfire threshold 
     // ISAM2GaussNewtonParams gnparams(-1);
     // parameters.setOptimizationParams(gnparams);
-
     isam_.reset(new ISAM2(parameters));
-    
     // Update with the new graph
     isam_->update(nfg_,result); 
-    
     gtsam::Values result_isam = isam_->calculateBestEstimate();
-    std::cout << "!!!!! error at AddFactor after isam: " << nfg_.error(result_isam) << std::endl;
+    std::cout << "!!!!! error after isam update from LM result: " << nfg_.error(result_isam) << std::endl;
     writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/result_manual_loop_3.g2o");
     
     // redirect cout to file

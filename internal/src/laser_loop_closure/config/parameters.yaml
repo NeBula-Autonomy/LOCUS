@@ -16,7 +16,7 @@ use_chordal_factor: false
 
 # Noise parameters (as precisions) for manual loop closure
 manual_lc_rot_precision: 0.0 # default 0.0 (no information)
-manual_lc_trans_precision: 0.1 # default 0.001 (~30 m sd)
+manual_lc_trans_precision: 1.0 # default 0.001 (~30 m sd)
 
 # Noise parameters (as variances) for Laser loop closure
 laser_lc_rot_precision: 0.001 # default 0.01
