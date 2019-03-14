@@ -187,6 +187,7 @@ class LaserLoopClosure {
   double laser_lc_trans_precision_;
   unsigned int relinearize_skip_;
   double relinearize_threshold_;
+  bool use_chordal_factor_;
 
   // ICP parameters.
   double icp_ransac_thresh_;

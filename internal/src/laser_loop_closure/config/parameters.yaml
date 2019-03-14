@@ -12,6 +12,8 @@ relinearize_threshold: 0.0 # Make this smaller (was at 0.01)
 # Number of iterations of the isam2 update when doing manual loop closures
 n_iterations_manual_loop_close: 10
 
+use_chordal_factor: false
+
 # Noise parameters (as precisions) for manual loop closure
 manual_lc_rot_precision: 0.0 # default 0.0 (no information)
 manual_lc_trans_precision: 0.1 # default 0.001 (~30 m sd)

@@ -120,6 +120,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("manual_lc_trans_precision", manual_lc_trans_precision_)) return false;
   if (!pu::Get("laser_lc_rot_precision", laser_lc_rot_precision_)) return false;
   if (!pu::Get("laser_lc_trans_precision", laser_lc_trans_precision_)) return false;
+  if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
   // Load ICP parameters.
   if (!pu::Get("icp/tf_epsilon", icp_tf_epsilon_)) return false;
@@ -443,44 +444,47 @@ bool LaserLoopClosure::FindLoopClosures(
       // determine if there really is a loop to close.
       const PointCloud::ConstPtr scan2 = keyed_scans_[other_key];
 
-      // gu::Transform3 delta; // (Using BetweenFactor)
-      // LaserLoopClosure::Mat66 covariance;
-      // if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-      //   // We found a loop closure. Add it to the pose graph.
-      //   NonlinearFactorGraph new_factor;
-      //   new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
-      //                                       ToGtsam(covariance)));
-      //   isam_->update(new_factor, Values());
-      //   closed_loop = true;
-      //   last_closure_key_ = key;
+      if (!use_chordal_factor_) {
+        gu::Transform3 delta; // (Using BetweenFactor)
+        LaserLoopClosure::Mat66 covariance;
+        if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          // We found a loop closure. Add it to the pose graph.
+          NonlinearFactorGraph new_factor;
+          new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
+                                              ToGtsam(covariance)));
+          isam_->update(new_factor, Values());
+          closed_loop = true;
+          last_closure_key_ = key;
 
-      //   // Store for visualization and output.
-      //   loop_edges_.push_back(std::make_pair(key, other_key));
-      //   closure_keys->push_back(other_key);
+          // Store for visualization and output.
+          loop_edges_.push_back(std::make_pair(key, other_key));
+          closure_keys->push_back(other_key);
 
-      //   // Send an empty message notifying any subscribers that we found a loop
-      //   // closure.
-      //   loop_closure_notifier_pub_.publish(std_msgs::Empty());
-      // }
+          // Send an empty message notifying any subscribers that we found a loop
+          // closure.
+          loop_closure_notifier_pub_.publish(std_msgs::Empty());
+        }
+      } else {
 
-      gu::Transform3 delta; // (Using BetweenChordalFactor)
-      LaserLoopClosure::Mat1212 covariance;
-      if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-        // We found a loop closure. Add it to the pose graph.
-        NonlinearFactorGraph new_factor;
-        new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
-                                            ToGtsam(covariance)));
-        isam_->update(new_factor, Values());
-        closed_loop = true;
-        last_closure_key_ = key;
+        gu::Transform3 delta; // (Using BetweenChordalFactor)
+        LaserLoopClosure::Mat1212 covariance;
+        if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          // We found a loop closure. Add it to the pose graph.
+          NonlinearFactorGraph new_factor;
+          new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
+                                              ToGtsam(covariance)));
+          isam_->update(new_factor, Values());
+          closed_loop = true;
+          last_closure_key_ = key;
 
-        // Store for visualization and output.
-        loop_edges_.push_back(std::make_pair(key, other_key));
-        closure_keys->push_back(other_key);
+          // Store for visualization and output.
+          loop_edges_.push_back(std::make_pair(key, other_key));
+          closure_keys->push_back(other_key);
 
-        // Send an empty message notifying any subscribers that we found a loop
-        // closure.
-        loop_closure_notifier_pub_.publish(std_msgs::Empty());
+          // Send an empty message notifying any subscribers that we found a loop
+          // closure.
+          loop_closure_notifier_pub_.publish(std_msgs::Empty());
+        }
       }
     }
   }
@@ -820,33 +824,34 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // TODO - some check to see what the distance between the two poses are
   // Print that out for the operator to check - to see how large a change is being asked for
 
-  // // Use BetweenFactor
-  // // creating relative pose factor (also works for relative positions)
-  // gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
-  // measured.print("Between pose is ");
+  gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
+  gtsam::Key id2 = key2;
+  gtsam::BetweenFactor<gtsam::Pose3> factor; 
+  if (!use_chordal_factor_) {
+    // Use BetweenFactor
+    // creating relative pose factor (also works for relative positions)
+    gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
+    measured.print("Between pose is ");
 
-  // // create Information of measured
-  // gtsam::Vector6 precisions; // inverse of variances
-  // precisions.head<3>().setConstant(manual_lc_rot_precision_); // rotation precision
-  // precisions.tail<3>().setConstant(manual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
-  // static const gtsam::SharedNoiseModel& loopClosureNoise =
-  // gtsam::noiseModel::Diagonal::Precisions(precisions);
+    // create Information of measured
+    gtsam::Vector6 precisions; // inverse of variances
+    precisions.head<3>().setConstant(manual_lc_rot_precision_); // rotation precision
+    precisions.tail<3>().setConstant(manual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
+    static const gtsam::SharedNoiseModel& loopClosureNoise =
+    gtsam::noiseModel::Diagonal::Precisions(precisions);
 
-  // gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
-  // gtsam::Key id2 = key2;
-  // gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
-
-  // Use BetweenChordalFactor 
-  gtsam::Pose3 measured = gtsam::Pose3(); 
-  gtsam::Vector12 precisions; 
-  precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
-  precisions.tail<3>().setConstant(manual_lc_trans_precision_);
-  static const gtsam::SharedNoiseModel& loopClosureNoise = 
-  gtsam::noiseModel::Diagonal::Precisions(precisions);
-
-  gtsam::Key id1 = key1; 
-  gtsam::Key id2 = key2; 
-  gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+    gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+  } else {
+    // Use BetweenChordalFactor 
+    gtsam::Pose3 measured = gtsam::Pose3(); 
+    gtsam::Vector12 precisions; 
+    precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
+    precisions.tail<3>().setConstant(manual_lc_trans_precision_);
+    static const gtsam::SharedNoiseModel& loopClosureNoise = 
+    gtsam::noiseModel::Diagonal::Precisions(precisions);
+ 
+    gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+  }
 
   // TODO - remove debug messages 
   // Get the current offset and predict the error and cost

@@ -85,6 +85,8 @@ class BlamSlam {
   bool AddFactorService(blam_slam::ManualLoopClosureRequest &request,
                         blam_slam::ManualLoopClosureResponse &response);
 
+  bool use_chordal_factor_;
+
   // The node's name.
   std::string name_;
 
