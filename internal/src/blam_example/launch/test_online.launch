@@ -2,12 +2,17 @@
   <!-- True for simulation, false for real-time and bagfiles -->
   <param name="/use_sim_time" value="false"/>
 
+  <!-- optional filename of the zip archive of a pose graph to be loaded -->
+  <arg name="load_pose_graph_file" default="" /> 
+
   <group ns="blam">
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
           type="blam_slam_node"
           output="screen">
+
+      <param name="load_graph" value="$(arg load_pose_graph_file)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>
@@ -17,14 +22,14 @@
         position: {x: 0.0, y: 0.0, z: 0.0}
         orientation: {roll: 0.0, pitch: 0.0, yaw: 0.0}
         position_sigma: {x: 0.1, y: 0.1, z: 0.1}
-        orientation_sigma: {roll: 0.001, pitch: 0.001, yaw: 0.001}
+        orientation_sigma: {roll: 0.01, pitch: 0.01, yaw: 0.01}
       </rosparam>
 
       <!-- Noise parameters -->
       <!-- these are variances -->
       <rosparam param="noise">
         odom_position_sigma: 0.01
-        odom_attitude_sigma: 0.000001
+        odom_attitude_sigma: 0.0001
       </rosparam>
 
       <!-- Rates -->

@@ -45,8 +45,16 @@
 
 #include <pcl/registration/gicp.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/io/pcd_io.h>
+
+#include <gtsam/slam/dataset.h>
 
 #include <fstream>
+
+#include <minizip/zip.h>
+#include <minizip/unzip.h>
+
+#include <time.h>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -60,12 +68,15 @@ using gtsam::Pose3;
 using gtsam::PriorFactor;
 using gtsam::Rot3;
 using gtsam::Values;
+using gtsam::GraphAndValues;
 using gtsam::Vector3;
 using gtsam::Vector6;
 using gtsam::ISAM2GaussNewtonParams;
 
 LaserLoopClosure::LaserLoopClosure()
-    : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {}
+    : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {
+  initial_noise_.setZero();
+}
 
 LaserLoopClosure::~LaserLoopClosure() {}
 
@@ -147,6 +158,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("init/orientation_sigma/pitch", sigma_pitch)) return false;
   if (!pu::Get("init/orientation_sigma/yaw", sigma_yaw)) return false;
 
+  std::cout << "before isam reset" << std::endl; 
+  #ifndef solver
   // Create the ISAM2 solver.
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
@@ -155,9 +168,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // // Set wildfire threshold
   // ISAM2GaussNewtonParams gnparams(-1);
   // parameters.setOptimizationParams(gnparams);
-
-  std::cout << "before isam reset" << std::endl; 
-  #ifndef solver
   isam_.reset(new ISAM2(parameters));
   #endif
   #ifdef solver
@@ -174,8 +184,9 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Set the covariance on initial position.
   Vector6 noise;
   noise << sigma_roll, sigma_pitch, sigma_yaw, sigma_x, sigma_y, sigma_z;
+
   LaserLoopClosure::Diagonal::shared_ptr covariance(
-      LaserLoopClosure::Diagonal::Sigmas(noise));
+      LaserLoopClosure::Diagonal::Sigmas(initial_noise_));
 
   // Initialize ISAM2.
   NonlinearFactorGraph new_factor;
@@ -234,9 +245,7 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 10, false);
   loop_closure_notifier_pub_ =
       nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
-
-  // add_factor_srv_ = nl.advertiseService("add_factor", &LaserLoopClosure::AddFactorService, this);
-
+      
   return true;
 }
 
@@ -970,7 +979,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         break;
       case 1 : 
       {
-        // Levenber Marquardt Optimizer
+        // Levenberg Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
         isam_->update(new_factor, Values());
         initialEstimate = isam_->calculateEstimate();
@@ -1038,8 +1047,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
     
     // ----------------------------------------------
-    // Update results in ISAM2 - replace points?
-    // Rest 
+    #ifndef solver
     // Create the ISAM2 solver.
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
@@ -1047,7 +1055,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     // // Set wildfire threshold 
     // ISAM2GaussNewtonParams gnparams(-1);
     // parameters.setOptimizationParams(gnparams);
-    #ifndef solver
     isam_.reset(new ISAM2(parameters));
     #endif
     #ifdef solver
@@ -1100,6 +1107,246 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
     throw;
   }
+}
+
+std::string absPath(const std::string &relPath) {
+  return boost::filesystem::canonical(boost::filesystem::path(relPath)).string();
+}
+
+bool writeFileToZip(zipFile &zip, const std::string &filename) {
+  // this code is inspired by http://www.vilipetek.com/2013/11/22/zippingunzipping-files-in-c/
+  static const unsigned int BUFSIZE = 2048;
+
+  zip_fileinfo zi = {0};
+  tm_zip& tmZip = zi.tmz_date;
+  time_t rawtime;
+  time(&rawtime);
+  auto timeinfo = localtime(&rawtime);
+  tmZip.tm_sec = timeinfo->tm_sec;
+  tmZip.tm_min = timeinfo->tm_min;
+  tmZip.tm_hour = timeinfo->tm_hour;
+  tmZip.tm_mday = timeinfo->tm_mday;
+  tmZip.tm_mon = timeinfo->tm_mon;
+  tmZip.tm_year = timeinfo->tm_year;
+  int err = zipOpenNewFileInZip(zip, filename.c_str(), &zi,
+      NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_DEFAULT_COMPRESSION);
+
+  if (err != ZIP_OK) {
+    ROS_ERROR_STREAM("Failed to add entry \"" << filename << "\" to zip file.");
+    return false;
+  }
+  char buf[BUFSIZE];
+  unsigned long nRead = 0;
+
+  std::ifstream is(filename);
+  if (is.bad()) {
+    ROS_ERROR_STREAM("Could not read file \"" << filename << "\" to be added to zip file.");
+    return false;
+  }
+  while (err == ZIP_OK && is.good()) {
+    is.read(buf, BUFSIZE);
+    unsigned int nRead = (unsigned int)is.gcount();
+    if (nRead)
+      err = zipWriteInFileInZip(zip, buf, nRead);
+    else
+      break;
+  }
+  is.close();
+  if (err != ZIP_OK) {
+    ROS_ERROR_STREAM("Failed to write file \"" << filename << "\" to zip file.");
+    return false;
+  }
+  return true;
+}
+
+bool LaserLoopClosure::Save(const std::string &zipFilename) const {
+  const std::string path = "pose_graph";
+  const boost::filesystem::path directory(path);
+  boost::filesystem::create_directory(directory);
+
+  writeG2o(isam_->getFactorsUnsafe(), values_, path + "/graph.g2o");
+  ROS_INFO("Saved factor graph as a g2o file.");
+
+  // keys.csv stores factor key, point cloud filename, and time stamp
+  std::ofstream info_file(path + "/keys.csv");
+  if (info_file.bad()) {
+    ROS_ERROR("Failed to write info file.");
+    return false;
+  }
+
+  auto zipFile = zipOpen64(zipFilename.c_str(), 0);
+  writeFileToZip(zipFile, path + "/graph.g2o");
+  int i = 0;
+  for (const auto &entry : keyed_scans_) {
+    info_file << entry.first << ",";
+    // save point cloud as binary PCD file
+    const std::string pcd_filename = path + "/pc_" + std::to_string(i) + ".pcd";
+    pcl::io::savePCDFile(pcd_filename, *entry.second, true);
+    writeFileToZip(zipFile, pcd_filename);
+
+    ROS_INFO("Saved point cloud %d/%d.", i+1, (int) keyed_scans_.size());
+    info_file << pcd_filename << ",";
+    info_file << keyed_stamps_.at(entry.first).toNSec() << "\n";
+    ++i;
+  }
+  info_file.close();
+  writeFileToZip(zipFile, path + "/keys.csv");
+  zipClose(zipFile, 0);
+  boost::filesystem::remove_all(directory);
+  ROS_INFO_STREAM("Successfully saved pose graph to " << absPath(zipFilename) << ".");
+}
+
+bool LaserLoopClosure::Load(const std::string &zipFilename) {
+  const std::string absFilename = absPath(zipFilename);
+  auto zipFile = unzOpen64(zipFilename.c_str());
+  if (!zipFile) {
+    ROS_ERROR_STREAM("Failed to open zip file " << absFilename);
+    return false;
+  }
+
+  unz_global_info64 oGlobalInfo;
+  int err = unzGetGlobalInfo64(zipFile, &oGlobalInfo);
+  std::vector<std::string> files;  // files to be extracted
+
+  bool foundGraph = false;
+  bool foundKeys = false;
+
+  std::string graphFilename, keysFilename;
+
+  for (unsigned long i = 0; i < oGlobalInfo.number_entry && err == UNZ_OK; ++i) {
+    char filename[256];
+    unz_file_info64 oFileInfo;
+    err = unzGetCurrentFileInfo64(zipFile, &oFileInfo, filename,
+                                  sizeof(filename), NULL, 0, NULL, 0);
+    if (err == UNZ_OK) {
+      char nLast = filename[oFileInfo.size_filename-1];
+      // this entry is a file, extract it later
+      files.emplace_back(filename);
+      if (files.back().find("graph.g2o") != std::string::npos) {
+        foundGraph = true;
+        graphFilename = files.back();
+      } else if (files.back().find("keys.csv") != std::string::npos) {
+        foundKeys = true;
+        keysFilename = files.back();
+      }
+      err = unzGoToNextFile(zipFile);
+    }
+  }
+
+  if (!foundGraph) {
+    ROS_ERROR_STREAM("Could not find pose graph g2o-file in " << absFilename);
+    return false;
+  }
+  if (!foundKeys) {
+    ROS_ERROR_STREAM("Could not find keys.csv in " << absFilename);
+    return false;
+  }
+
+  // extract files
+  int i = 1;
+  std::vector<boost::filesystem::path> folders;
+  for (const auto &filename: files) {
+    if (unzLocateFile(zipFile, filename.c_str(), 0) != UNZ_OK) {
+			ROS_ERROR_STREAM("Could not locate file " << filename << " from " << absFilename);
+      return false;
+    }
+    if (unzOpenCurrentFile(zipFile) != UNZ_OK) {
+      ROS_ERROR_STREAM("Could not open file " << filename << " from " << absFilename);
+      return false;
+    }
+    unz_file_info64 oFileInfo;
+    if (unzGetCurrentFileInfo64(zipFile, &oFileInfo, 0, 0, 0, 0, 0, 0) != UNZ_OK)
+    {
+      ROS_ERROR_STREAM("Could not determine file size of entry " << filename << " in " << absFilename);
+      return false;
+    }
+
+    boost::filesystem::path dir(filename);
+    dir = dir.parent_path();
+    if (boost::filesystem::create_directory(dir))
+      folders.emplace_back(dir);
+
+    auto size = (unsigned int) oFileInfo.uncompressed_size;
+    char* buf = new char[size];
+    size = unzReadCurrentFile(zipFile, buf, size);
+    std::ofstream os(filename);
+    if (os.bad()) {
+      ROS_ERROR_STREAM("Could not create file " << filename << " for extraction.");
+      return false;
+    }
+    if (size > 0) {
+      os.write(buf, size);
+      os.flush();
+    } else {
+      ROS_WARN_STREAM("Entry " << filename << " from " << absFilename << " is empty.");
+    }
+    os.close();
+    delete [] buf;
+    ROS_INFO_STREAM("Extracted file " << i << "/" << (int) files.size() << " -- " << filename);
+    ++i;
+  }
+  unzClose(zipFile);
+
+  // restore pose graph from g2o file
+  const GraphAndValues gv = gtsam::load3D(graphFilename);
+  nfg_ = *gv.first;
+  values_ = *gv.second;
+
+  #ifndef solver
+  ISAM2Params parameters;
+  parameters.relinearizeSkip = relinearize_skip_;
+  parameters.relinearizeThreshold = relinearize_threshold_;
+  isam_.reset(new ISAM2(parameters));
+  #endif
+  #ifdef solver
+  isam_.reset(new GenericSolver());
+  #endif
+
+  const LaserLoopClosure::Diagonal::shared_ptr covariance(
+      LaserLoopClosure::Diagonal::Sigmas(initial_noise_));
+  const gtsam::Key key0 = *nfg_.keys().begin();
+  nfg_.add(gtsam::PriorFactor<Pose3>(key0, values_.at<Pose3>(key0), covariance));
+  isam_->update(nfg_, values_); 
+
+  ROS_INFO_STREAM("Updated graph from " << graphFilename);
+
+  // info_file stores factor key, point cloud filename, and time stamp
+  std::ifstream info_file(keysFilename);
+  if (info_file.bad()) {
+    ROS_ERROR_STREAM("Failed to open " << keysFilename);
+    return false;
+  }
+
+  std::string keyStr, pcd_filename, timeStr;
+  while (info_file.good()) {
+    std::getline(info_file, keyStr, ',');
+    if (keyStr.empty())
+      break;
+    key_ = std::stoi(keyStr);
+    std::getline(info_file, pcd_filename, ',');
+    PointCloud::Ptr pc(new PointCloud);
+    if (pcl::io::loadPCDFile(pcd_filename, *pc) == -1) {
+      ROS_ERROR_STREAM("Failed to load point cloud " << pcd_filename << " from " << absFilename);
+      return false;
+    }
+    ROS_INFO_STREAM("Loaded point cloud " << pcd_filename);
+    keyed_scans_[key_] = pc;
+    std::getline(info_file, timeStr);
+    ros::Time t;
+    t.fromNSec(std::stol(timeStr));
+    keyed_stamps_[key_] = t;
+  }
+
+  ROS_INFO("Loaded all point clouds.");
+  info_file.close();
+  
+  // remove all extracted folders
+  for (const auto &folder: folders)
+    boost::filesystem::remove_all(folder);
+
+  ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
+  PublishPoseGraph();
+  return true;
 }
 
 void LaserLoopClosure::PublishPoseGraph() {
@@ -1303,11 +1550,34 @@ GenericSolver::GenericSolver():
 void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values) {
   nfg_gs_.add(nfg);
   values_gs_.insert(values);
-  #if solver==LM
-  gtsam::LevenbergMarquardtParams params;
-  params.setVerbosityLM("TRYLAMBDA");
-  values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
-  #elif solver==SEsync
-  // something
-  #endif
+  bool do_optimize = false; 
+
+  if (values.size() != 1) do_optimize = true; // for loop closure empty
+  if (values.size() > 1) {
+    ROS_WARN("Unexpected behavior: number of update poses greater than one.");
+  }
+
+  if (nfg.size() != 1) do_optimize = true; 
+  if (nfg.size() > 1) {
+    ROS_WARN("Unexpected behavior: number of update factors greater than one.");
+  }
+
+  if (nfg.size() == 0 && values.size() > 0) {
+    ROS_ERROR("Unexpected behavior: added values but no factors.");
+  }
+
+  if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
+
+  if (do_optimize) {
+    std::cout << ">>>>>>>>>>>>>>>>>>>> do optimize" << std::endl; 
+    // optimize
+    #if solver==LM
+    gtsam::LevenbergMarquardtParams params;
+    params.setVerbosityLM("TRYLAMBDA");
+    params.diagonalDamping = true; 
+    values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
+    #elif solver==SEsync
+    // something
+    #endif
+  }
 }

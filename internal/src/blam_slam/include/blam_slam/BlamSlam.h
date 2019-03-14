@@ -38,14 +38,17 @@
 #define BLAM_SLAM_H
 
 #include <ros/ros.h>
+#include <pcl_ros/point_cloud.h>
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
+
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
 #include <laser_loop_closure/LaserLoopClosure.h>
-#include <blam_slam/ManualLoopClosure.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
-#include <pcl_ros/point_cloud.h>
+
+#include <blam_slam/ManualLoopClosure.h>
+#include <blam_slam/SaveGraph.h>
 
 class BlamSlam {
  public:
@@ -87,6 +90,10 @@ class BlamSlam {
 
   bool use_chordal_factor_;
 
+  // Service to write the pose graph and all point clouds to a zip file.
+  bool SaveGraphService(blam_slam::SaveGraphRequest &request,
+                        blam_slam::SaveGraphResponse &response);
+
   // The node's name.
   std::string name_;
 
@@ -108,6 +115,7 @@ class BlamSlam {
 
   // Services
   ros::ServiceServer add_factor_srv_;
+  ros::ServiceServer save_graph_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;

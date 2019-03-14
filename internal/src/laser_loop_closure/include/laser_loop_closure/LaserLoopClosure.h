@@ -41,7 +41,6 @@
 #include <geometry_utils/Matrix3x3.h>
 #include <geometry_utils/Transform3.h>
 #include <point_cloud_filter/PointCloudFilter.h>
-#include <laser_loop_closure/ManualLoopClosure.h>
 #include <laser_loop_closure/BetweenChordalFactor.h>
 
 #include <gtsam/base/Vector.h>
@@ -58,6 +57,9 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/slam/InitializePose3.h>
 #include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
+
+// #include "SESync/SESync.h"
+// #include "SESync/SESync_utils.h"
 
 // This new header allows us to read examples easily from .graph files
 #include <gtsam/slam/dataset.h>
@@ -143,6 +145,12 @@ class LaserLoopClosure {
   // loop closures by adding these factors to the pose graph.
   bool AddFactor(unsigned int key1, unsigned int key2);
 
+  // Saves pose graph and accompanying point clouds to a zip file.
+  bool Save(const std::string &zipFilename) const;
+
+  // Loads pose graph and accompanying point clouds from a zip file.
+  bool Load(const std::string &zipFilename);
+
  private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
@@ -157,6 +165,9 @@ class LaserLoopClosure {
   Mat66 ToGu(const Gaussian::shared_ptr& covariance) const;
   Gaussian::shared_ptr ToGtsam(const Mat66& covariance) const;
   Gaussian::shared_ptr ToGtsam(const Mat1212& covariance) const;
+
+  // Diagonal of the covariance matrix of the first pose
+  gtsam::Vector6 initial_noise_;
 
   // Create prior and between factors.
   gtsam::PriorFactor<gtsam::Pose3> MakePriorFactor(

@@ -104,6 +104,25 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
 
   if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
+  std::string graph_filename;
+  if (pu::Get("load_graph", graph_filename) && !graph_filename.empty()) {
+    if (loop_closure_.Load(graph_filename)) {
+      PointCloud::Ptr regenerated_map(new PointCloud);
+      loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+      mapper_.Reset();
+      PointCloud::Ptr unused(new PointCloud);
+      mapper_.InsertPoints(regenerated_map, unused.get());
+
+      // Also reset the robot's estimated position.
+      localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+      // Publish updated map
+      mapper_.PublishMap();
+    } else {
+      ROS_ERROR_STREAM("Failed to load graph from " << graph_filename);
+    }
+  }
+
   return true;
 }
 
@@ -115,6 +134,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
       
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
+  save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -183,6 +203,13 @@ bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
 
   std::cout << "Updated the map" << std::endl;
 
+  return true;
+}
+
+bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
+                                blam_slam::SaveGraphResponse &response) {
+  std::cout << "Saving graph..." << std::endl;
+  response.success = loop_closure_.Save(request.filename);
   return true;
 }
 
