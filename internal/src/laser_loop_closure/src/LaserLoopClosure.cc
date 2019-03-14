@@ -826,7 +826,19 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
   gtsam::Key id2 = key2;
-  gtsam::BetweenFactor<gtsam::Pose3> factor; 
+
+  NonlinearFactorGraph new_factor;
+
+  std::cout << "isamgetlinearizationpoint-before" << std::endl; 
+  gtsam::Values linPoint = isam_->getLinearizationPoint();
+  std::cout << "isamgetlinearizationpoint-after" << std::endl; 
+
+  nfg_ = isam_->getFactorsUnsafe();
+  std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
+  writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
+
+  double cost; // for debugging
+
   if (!use_chordal_factor_) {
     // Use BetweenFactor
     // creating relative pose factor (also works for relative positions)
@@ -841,6 +853,15 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     gtsam::noiseModel::Diagonal::Precisions(precisions);
 
     gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+
+    factor.print(""); 
+    cost = factor.error(linPoint);
+    ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
+    // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
+
+    // add factor to factor graph
+    new_factor.add(factor);
+
   } else {
     // Use BetweenChordalFactor 
     gtsam::Pose3 measured = gtsam::Pose3(); 
@@ -851,32 +872,15 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     gtsam::noiseModel::Diagonal::Precisions(precisions);
  
     gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+
+    factor.print(""); 
+    cost = factor.error(linPoint);
+    ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
+    // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
+      
+    // add factor to factor graph
+    new_factor.add(factor);
   }
-
-  // TODO - remove debug messages 
-  // Get the current offset and predict the error and cost
-  gtsam::Pose3 p1 = values_.at<Pose3>(key1);
-  gtsam::Pose3 p2 = values_.at<Pose3>(key2);
-  gtsam::Point3 diff = p2.translation() - p1.translation();//p2.translation.distance(p1.translation);
-  double err_d = diff.norm();
-  double predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*manual_lc_trans_precision_;
-  ROS_INFO_STREAM("Vector between poses on loop closure is ");
-  diff.print();
-  ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
-  ROS_INFO_STREAM("Predicted cost is " << predicted_cost); 
-
-  std::cout << "isamgetlinearizationpoint-before" << std::endl; 
-  gtsam::Values linPoint = isam_->getLinearizationPoint();
-  std::cout << "isamgetlinearizationpoint-after" << std::endl; 
-  double cost = factor.error(linPoint);
-  ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
-  // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
-  // 0)
-  std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
-  writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
-  // add factor to factor graph
-  NonlinearFactorGraph new_factor;
-  new_factor.add(factor);
 
 
   // // save factor graph as graphviz dot file
@@ -985,7 +989,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         // Dogleg Optimizer
         std::cout << "Running Dogleg optimization" << std::endl;
         // nfg_ = isam_->getFactorsUnsafe();
-        nfg_.add(factor);
+        nfg_.add(new_factor);
         initialEstimate = isam_->calculateEstimate();
         result = gtsam::DoglegOptimizer(nfg_, initialEstimate).optimize();
       }
@@ -995,7 +999,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         // Gauss Newton Optimizer
         std::cout << "Running Gauss Newton optimization" << std::endl;
         // nfg_ = isam_->getFactorsUnsafe();
-        nfg_.add(factor);
+        nfg_.add(new_factor);
 
         // Optimise on the graph - set up parameters
         gtsam::GaussNewtonParams parameters;
@@ -1068,16 +1072,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     // Todo test calculate best estimate vs calculate estimate
     // values =  isam_->calculateBestEstimate();
 
-    // Get the current offset and predict the error and cost
-    p1 = values_.at<Pose3>(key1);
-    p2 = values_.at<Pose3>(key2);
-    diff = p2.translation() - p1.translation();//p2.translation.distance(p1.translation);
-    err_d = diff.norm();
-    predicted_cost = (diff.x()*diff.x() + diff.y()*diff.y() + diff.z()*diff.z())*manual_lc_trans_precision_;
-    ROS_INFO_STREAM("Vector between poses on loop closure is ");
-    diff.print();
-    ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
-    ROS_INFO_STREAM("Predicted cost is " << predicted_cost); 
     linPoint = isam_->getLinearizationPoint();
     // nfg = isam_->getFactorsUnsafe();
     cost = nfg_.error(linPoint);
