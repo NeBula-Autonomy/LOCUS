@@ -156,12 +156,14 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // ISAM2GaussNewtonParams gnparams(-1);
   // parameters.setOptimizationParams(gnparams);
 
-  // isam_.reset(new ISAM2(parameters));
-
   std::cout << "before isam reset" << std::endl; 
-  isam_ = std::unique_ptr<GenericSolver>(new GenericSolver());
+  #ifndef solver
+  isam_.reset(new ISAM2(parameters));
+  #endif
+  #ifdef solver
+  isam_.reset(new GenericSolver());
   isam_->print();
-  isam_->reset();
+  #endif
   std::cout << "after isam reset" << std::endl; 
 
   // Set the initial position.
@@ -1045,8 +1047,12 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     // // Set wildfire threshold 
     // ISAM2GaussNewtonParams gnparams(-1);
     // parameters.setOptimizationParams(gnparams);
-    // isam_.reset(new ISAM2(parameters));
-    isam_->reset();
+    #ifndef solver
+    isam_.reset(new ISAM2(parameters));
+    #endif
+    #ifdef solver
+    isam_.reset(new GenericSolver());
+    #endif
     // Update with the new graph
     isam_->update(nfg_,result); 
     gtsam::Values result_isam = isam_->calculateBestEstimate();
@@ -1297,7 +1303,11 @@ GenericSolver::GenericSolver():
 void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values) {
   nfg_gs_.add(nfg);
   values_gs_.insert(values);
+  #if solver==LM
   gtsam::LevenbergMarquardtParams params;
   params.setVerbosityLM("TRYLAMBDA");
   values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
+  #elif solver==SEsync
+  // something
+  #endif
 }

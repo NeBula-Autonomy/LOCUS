@@ -67,6 +67,9 @@
 #include <map>
 #include <vector>
 
+// default is isam, LM for LevenbergMarquardt
+#define solver LM 
+
 class GenericSolver {
 public:
   GenericSolver();
@@ -81,11 +84,6 @@ public:
   void print() {
     nfg_gs_.print("");
     values_gs_.print("");
-  }
-
-  void reset() {
-    nfg_gs_ = gtsam::NonlinearFactorGraph(); 
-    values_gs_ = gtsam::Values();
   }
 
 private:
@@ -222,8 +220,13 @@ class LaserLoopClosure {
   unsigned int icp_iterations_;
 
   // ISAM2 optimizer object, and best guess pose values.
-  // std::unique_ptr<gtsam::ISAM2> isam_;
+  #ifdef solver
   std::unique_ptr<GenericSolver> isam_;
+  #endif
+  #ifndef solver 
+  std::unique_ptr<gtsam::ISAM2> isam_;
+  #endif
+
   gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
 
