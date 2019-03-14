@@ -865,8 +865,9 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO_STREAM("Distance between poses on loop closure is " << err_d); 
   ROS_INFO_STREAM("Predicted cost is " << predicted_cost); 
 
-
+  std::cout << "isamgetlinearizationpoint-before" << std::endl; 
   gtsam::Values linPoint = isam_->getLinearizationPoint();
+  std::cout << "isamgetlinearizationpoint-after" << std::endl; 
   double cost = factor.error(linPoint);
   ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
   // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there

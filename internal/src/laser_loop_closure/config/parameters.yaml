@@ -7,10 +7,10 @@ loop_closure_optimizer: 1
 
 # Default parameters for the ISAM2 data structure.
 relinearize_skip: 1 # - keep this at 1 - to encourage relinearization
-relinearize_threshold: 0.0 # Make this smaller (was at 0.01)
+relinearize_threshold: 0.0001 # Make this smaller (was at 0.01)
 
 # Number of iterations of the isam2 update when doing manual loop closures
-n_iterations_manual_loop_close: 10
+n_iterations_manual_loop_close: 1
 
 use_chordal_factor: false
 
