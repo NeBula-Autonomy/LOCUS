@@ -156,7 +156,13 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // ISAM2GaussNewtonParams gnparams(-1);
   // parameters.setOptimizationParams(gnparams);
 
-  isam_.reset(new ISAM2(parameters));
+  // isam_.reset(new ISAM2(parameters));
+
+  std::cout << "before isam reset" << std::endl; 
+  isam_ = std::unique_ptr<GenericSolver>(new GenericSolver());
+  isam_->print();
+  isam_->reset();
+  std::cout << "after isam reset" << std::endl; 
 
   // Set the initial position.
   Vector3 translation(init_x, init_y, init_z);
@@ -940,12 +946,12 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
           std::cout << "Optimizing manual loop closure ISAM, iteration " << i << std::endl;
           if (i == 0){
             // Run first update with the added factors 
-            result_ISAM = isam_->update(new_factor, Values());
+            isam_->update(new_factor, Values());
           } else {
             // Run iterations of the update without adding new factors
-            result_ISAM = isam_->update(NonlinearFactorGraph(), Values());
+            isam_->update(NonlinearFactorGraph(), Values());
           }
-          result_ISAM.print("iSAM2 update result:\t");
+          // result_ISAM.print("iSAM2 update result:\t");
 
           linPoint = isam_->calculateBestEstimate();
           nfg_ = isam_->getFactorsUnsafe();
@@ -1039,7 +1045,8 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     // // Set wildfire threshold 
     // ISAM2GaussNewtonParams gnparams(-1);
     // parameters.setOptimizationParams(gnparams);
-    isam_.reset(new ISAM2(parameters));
+    // isam_.reset(new ISAM2(parameters));
+    isam_->reset();
     // Update with the new graph
     isam_->update(nfg_,result); 
     gtsam::Values result_isam = isam_->calculateBestEstimate();
@@ -1278,4 +1285,19 @@ void LaserLoopClosure::PublishPoseGraph() {
     // Publish.
     pose_graph_pub_.publish(g);
   }
+}
+
+GenericSolver::GenericSolver(): 
+  nfg_gs_(gtsam::NonlinearFactorGraph()),
+  values_gs_(gtsam::Values()) {
+  
+  std::cout << "instantiated generic solver." << std::endl; 
+}
+
+void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values) {
+  nfg_gs_.add(nfg);
+  values_gs_.insert(values);
+  gtsam::LevenbergMarquardtParams params;
+  params.setVerbosityLM("TRYLAMBDA");
+  values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
 }

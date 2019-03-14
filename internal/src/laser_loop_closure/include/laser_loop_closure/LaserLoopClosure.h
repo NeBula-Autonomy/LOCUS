@@ -67,6 +67,32 @@
 #include <map>
 #include <vector>
 
+class GenericSolver {
+public:
+  GenericSolver();
+  void update(gtsam::NonlinearFactorGraph nfg=gtsam::NonlinearFactorGraph(), 
+              gtsam::Values values=gtsam::Values());
+
+  gtsam::Values calculateEstimate() { return values_gs_; }
+  gtsam::Values calculateBestEstimate() { return values_gs_; }
+  gtsam::Values getLinearizationPoint() { return values_gs_; }
+  gtsam::NonlinearFactorGraph getFactorsUnsafe(){ return nfg_gs_; }
+
+  void print() {
+    nfg_gs_.print("");
+    values_gs_.print("");
+  }
+
+  void reset() {
+    nfg_gs_ = gtsam::NonlinearFactorGraph(); 
+    values_gs_ = gtsam::Values();
+  }
+
+private:
+  gtsam::Values values_gs_;
+  gtsam::NonlinearFactorGraph nfg_gs_;
+};
+
 class LaserLoopClosure {
  public:
   LaserLoopClosure();
@@ -196,7 +222,8 @@ class LaserLoopClosure {
   unsigned int icp_iterations_;
 
   // ISAM2 optimizer object, and best guess pose values.
-  std::unique_ptr<gtsam::ISAM2> isam_;
+  // std::unique_ptr<gtsam::ISAM2> isam_;
+  std::unique_ptr<GenericSolver> isam_;
   gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
 
