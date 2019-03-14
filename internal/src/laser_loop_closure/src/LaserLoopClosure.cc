@@ -607,6 +607,7 @@ LaserLoopClosure::Gaussian::shared_ptr LaserLoopClosure::ToGtsam(
 LaserLoopClosure::Gaussian::shared_ptr LaserLoopClosure::ToGtsam(
     const LaserLoopClosure::Mat1212& covariance) const {
   gtsam::Vector12 precisions; 
+  // TODO CHECK
   for (int i = 0; i < 12; ++i) 
     precisions(i) = covariance(i,i);
   return gtsam::noiseModel::Diagonal::Precisions(precisions);
@@ -718,6 +719,7 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   *delta = gu::PoseUpdate(update, gu::PoseDelta(pose1, pose2));
 
   // TODO: Use real ICP covariance.
+  // TODO: Use sigma laser_lc_rot_sigmas_
   covariance->Zeros();
   for (int i = 0; i < 3; ++i)
     (*covariance)(i, i) = laser_lc_rot_precision_; // 0.01
@@ -819,6 +821,7 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   *delta = gu::PoseUpdate(update, gu::PoseDelta(pose1, pose2));
 
   // TODO: Use real ICP covariance.
+  // TODO: Sigmas
   covariance->Zeros();
   for (int i = 0; i < 9; ++i)
     (*covariance)(i, i) = laser_lc_rot_precision_; // 0.01
@@ -854,13 +857,14 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
 
+  gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3::Ypr(3.14, 0, 0), gtsam::Point3()); // gtsam::Rot3(), gtsam::Point3();
+  measured.print("Between pose is ");
+
   double cost; // for debugging
 
   if (!use_chordal_factor_) {
     // Use BetweenFactor
     // creating relative pose factor (also works for relative positions)
-    gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
-    measured.print("Between pose is ");
 
     // create Information of measured
     gtsam::Vector6 precisions; // inverse of variances
@@ -879,8 +883,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     new_factor.add(factor);
 
   } else {
-    // Use BetweenChordalFactor 
-    gtsam::Pose3 measured = gtsam::Pose3(); 
+    // Use BetweenChordalFactor  
     gtsam::Vector12 precisions; 
     precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
     precisions.tail<3>().setConstant(manual_lc_trans_precision_);
@@ -1551,6 +1554,8 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values
   nfg_gs_.add(nfg);
   values_gs_.insert(values);
   bool do_optimize = false; 
+
+  std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
 
   if (values.size() != 1) do_optimize = true; // for loop closure empty
   if (values.size() > 1) {

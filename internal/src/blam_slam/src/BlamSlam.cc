@@ -334,6 +334,7 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
 
   if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)
+    // TODO rename to attitude and position sigma 
     gu::MatrixNxNBase<double, 6> covariance;
     covariance.Zeros();
     for (int i = 0; i < 3; ++i)
