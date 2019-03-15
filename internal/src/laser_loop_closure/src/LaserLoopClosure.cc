@@ -1573,6 +1573,20 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values
 
   if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
 
+  if (nfg.size() == 1) {
+    boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
+            boost::dynamic_pointer_cast<gtsam::BetweenFactor<Pose3> >(nfg[0]);
+
+    boost::shared_ptr<gtsam::BetweenChordalFactor<Pose3> > pose3BetweenChordal =
+            boost::dynamic_pointer_cast<gtsam::BetweenChordalFactor<Pose3> >(nfg[0]);
+
+    if (pose3Between || pose3BetweenChordal) {
+      do_optimize = false;
+    } else {
+      ROS_WARN("Unexpected behavior: single not BetweenFactor factor added");
+    }
+  }
+
   if (do_optimize) {
     std::cout << ">>>>>>>>>>>>>>>>>>>> do optimize" << std::endl; 
     // optimize
