@@ -1,7 +1,7 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
-  <group>
+  <group ns="$(arg robot_namespace)">
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
@@ -83,7 +83,6 @@
       <param name="map_frame" value="$(arg robot_namespace)/map"/>
       <param name="blam_frame" value="$(arg robot_namespace)/blam"/>
     </node>
-
 
   </group>
 
