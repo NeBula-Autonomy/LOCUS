@@ -67,6 +67,24 @@
       </rosparam>
     </node>
 
+    <!-- Convert output PoseStamped message to Odometry -->
+    <node pkg="topic_tools" type="transform" name="pose_to_odom"
+          respawn="true"
+          args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate
+                /$(arg robot_namespace)/odometry
+                nav_msgs/Odometry
+                'nav_msgs.msg.Odometry(header=m.header, pose=geometry_msgs.msg.PoseWithCovariance(pose=m.pose))' --import nav_msgs geometry_msgs">
+    </node>
+
+    <!-- BLAM frame/process manager -->
+    <node pkg="blam_slam"
+          name="blam_manager"
+          type="reinit_blam.py">
+      <param name="map_frame" value="$(arg robot_namespace)/map"/>
+      <param name="blam_frame" value="$(arg robot_namespace)/blam"/>
+    </node>
+
+
   </group>
 
 </launch>
