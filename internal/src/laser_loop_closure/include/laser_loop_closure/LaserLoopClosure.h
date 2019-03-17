@@ -218,8 +218,8 @@ class LaserLoopClosure {
   double max_tolerable_fitness_;
   double manual_lc_rot_precision_;
   double manual_lc_trans_precision_;
-  double laser_lc_rot_precision_;
-  double laser_lc_trans_precision_;
+  double laser_lc_rot_sigma_;
+  double laser_lc_trans_sigma_;
   unsigned int relinearize_skip_;
   double relinearize_threshold_;
   bool use_chordal_factor_;

@@ -103,9 +103,9 @@ class BlamSlam {
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
-  // Covariances
-  double position_covariance_;
-  double attitude_covariance_;
+  // Sigmas
+  double position_sigma_;
+  double attitude_sigma_;
 
   // Subscribers.
   ros::Subscriber pcld_sub_;

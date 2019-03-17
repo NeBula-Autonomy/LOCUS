@@ -129,8 +129,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("poses_before_reclosing", poses_before_reclosing_)) return false;
   if (!pu::Get("manual_lc_rot_precision", manual_lc_rot_precision_)) return false;
   if (!pu::Get("manual_lc_trans_precision", manual_lc_trans_precision_)) return false;
-  if (!pu::Get("laser_lc_rot_precision", laser_lc_rot_precision_)) return false;
-  if (!pu::Get("laser_lc_trans_precision", laser_lc_trans_precision_)) return false;
+  if (!pu::Get("laser_lc_rot_sigma", laser_lc_rot_sigma_)) return false;
+  if (!pu::Get("laser_lc_trans_sigma", laser_lc_trans_sigma_)) return false;
   if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
   // Load ICP parameters.
@@ -606,11 +606,11 @@ LaserLoopClosure::Gaussian::shared_ptr LaserLoopClosure::ToGtsam(
 
 LaserLoopClosure::Gaussian::shared_ptr LaserLoopClosure::ToGtsam(
     const LaserLoopClosure::Mat1212& covariance) const {
-  gtsam::Vector12 precisions; 
+  gtsam::Vector12 gtsam_covariance; 
   // TODO CHECK
   for (int i = 0; i < 12; ++i) 
-    precisions(i) = covariance(i,i);
-  return gtsam::noiseModel::Diagonal::Precisions(precisions);
+    gtsam_covariance(i) = covariance(i,i);
+  return gtsam::noiseModel::Diagonal::Covariance(gtsam_covariance);
 }
 
 PriorFactor<Pose3> LaserLoopClosure::MakePriorFactor(
@@ -719,12 +719,11 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   *delta = gu::PoseUpdate(update, gu::PoseDelta(pose1, pose2));
 
   // TODO: Use real ICP covariance.
-  // TODO: Use sigma laser_lc_rot_sigmas_
   covariance->Zeros();
   for (int i = 0; i < 3; ++i)
-    (*covariance)(i, i) = laser_lc_rot_precision_; // 0.01
+    (*covariance)(i, i) = laser_lc_rot_sigma_*laser_lc_rot_sigma_; 
   for (int i = 3; i < 6; ++i)
-    (*covariance)(i, i) = laser_lc_trans_precision_; // 0.04
+    (*covariance)(i, i) = laser_lc_trans_sigma_*laser_lc_trans_sigma_; 
 
   // If the loop closure was a success, publish the two scans.
   source->header.frame_id = fixed_frame_id_;
@@ -821,12 +820,11 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   *delta = gu::PoseUpdate(update, gu::PoseDelta(pose1, pose2));
 
   // TODO: Use real ICP covariance.
-  // TODO: Sigmas
   covariance->Zeros();
   for (int i = 0; i < 9; ++i)
-    (*covariance)(i, i) = laser_lc_rot_precision_; // 0.01
+    (*covariance)(i, i) = laser_lc_rot_sigma_*laser_lc_rot_sigma_;
   for (int i = 9; i < 12; ++i)
-    (*covariance)(i, i) = laser_lc_trans_precision_; // 0.04
+    (*covariance)(i, i) = laser_lc_trans_sigma_*laser_lc_trans_sigma_;
 
   // If the loop closure was a success, publish the two scans.
   source->header.frame_id = fixed_frame_id_;
@@ -987,12 +985,13 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         isam_->update(new_factor, Values());
         initialEstimate = isam_->calculateEstimate();
         nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
-        nfg_.print("");
+        // nfg_.print(""); // print whole factor graph
         std::cout << "number of factors after manual loop closure: " << nfg_.size() << std::endl; 
         std::cout << "number of poses after manual loop closure: " << initialEstimate.size() << std::endl; 
         // gtsam::Values chordalInitial = gtsam::InitializePose3::initialize(nfg_); // test
         // std::cout << "error at 1c: " << nfg_.error(chordalInitial) << std::endl;
         // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
+
         std::cout << "!!!!! error after isam2 update on manual loop closure: " << nfg_.error(initialEstimate) << std::endl;
         writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
         gtsam::LevenbergMarquardtParams params;
@@ -1003,9 +1002,10 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         std::cout << "!!!!! error after LM on manual loop closure: " << nfg_.error(result) << std::endl;
         writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
 
-        gtsam::GaussNewtonParams paramsGN;
-        resultGN = gtsam::GaussNewtonOptimizer(nfg_, linPoint, paramsGN).optimize();
-        std::cout << "!!!!! error after GN on manual loop closure: " << nfg_.error(resultGN) << std::endl;
+        //// Testing GN results 
+        // gtsam::GaussNewtonParams paramsGN;
+        // resultGN = gtsam::GaussNewtonOptimizer(nfg_, linPoint, paramsGN).optimize();
+        // std::cout << "!!!!! error after GN on manual loop closure: " << nfg_.error(resultGN) << std::endl;
         // writeG2o(nfg_, resultGN, "/home/yunchang/Desktop/result_manual_loop_2gn.g2o");
       }
         break;
@@ -1555,6 +1555,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values
   values_gs_.insert(values);
   bool do_optimize = false; 
 
+  // print number of loop closures
   std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
 
   if (values.size() != 1) do_optimize = true; // for loop closure empty
@@ -1588,7 +1589,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values
   }
 
   if (do_optimize) {
-    std::cout << ">>>>>>>>>>>>>>>>>>>> do optimize" << std::endl; 
+    ROS_INFO(">>>>>>>>>>>> Run Optimizer <<<<<<<<<<<<");
     // optimize
     #if solver==LM
     gtsam::LevenbergMarquardtParams params;
