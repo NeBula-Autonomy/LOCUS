@@ -853,7 +853,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
 
   nfg_ = isam_->getFactorsUnsafe();
   std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
-  writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
+  // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
 
   gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3::Ypr(3.14, 0, 0), gtsam::Point3()); // gtsam::Rot3(), gtsam::Point3();
   measured.print("Between pose is ");
@@ -993,20 +993,20 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
         // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
 
         std::cout << "!!!!! error after isam2 update on manual loop closure: " << nfg_.error(initialEstimate) << std::endl;
-        writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
+        // writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/mlc_isam2.g2o");
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("TRYLAMBDA");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
         // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
         // result.print("LM result is: ");
         std::cout << "!!!!! error after LM on manual loop closure: " << nfg_.error(result) << std::endl;
-        writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
+        // writeG2o(nfg_, result, "/home/yunchang/Desktop/mlc_lm.g2o");
 
-        //// Testing GN results 
+        // // Testing GN results 
         // gtsam::GaussNewtonParams paramsGN;
         // resultGN = gtsam::GaussNewtonOptimizer(nfg_, linPoint, paramsGN).optimize();
         // std::cout << "!!!!! error after GN on manual loop closure: " << nfg_.error(resultGN) << std::endl;
-        // writeG2o(nfg_, resultGN, "/home/yunchang/Desktop/result_manual_loop_2gn.g2o");
+        // writeG2o(nfg_, resultGN, "/home/yunchang/Desktop/mlc_gn.g2o");
       }
         break;
       case 2 : 
@@ -1067,7 +1067,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     isam_->update(nfg_,result); 
     gtsam::Values result_isam = isam_->calculateBestEstimate();
     std::cout << "!!!!! error after isam update from LM result: " << nfg_.error(result_isam) << std::endl;
-    writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/result_manual_loop_3.g2o");
+    // writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/mlc_isam2.g2o");
     
     // redirect cout to file
     std::ofstream nfgFile;

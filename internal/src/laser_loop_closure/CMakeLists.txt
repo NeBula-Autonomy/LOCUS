@@ -11,11 +11,6 @@ if (NOT GTSAM_FOUND)
   message(FATAL_ERROR "This program requires the GTSAM library.")
 endif(NOT GTSAM_FOUND)
 
-find_package(SESync REQUIRED)
-if (NOT SESync_FOUND)
-  message(FATAL_ERROR "This program required the SESync library.")
-endif(NOT SESync_FOUND)
-
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   geometry_utils
@@ -70,7 +65,6 @@ include_directories(
   ${GTSAM_INCLUDE_DIR}
   ${Boost_INCLUDE_DIR}
   ${ZLIB_INCLUDE_DIR}
-  ${SESync_INCLUDE_DIR}
 )
 
 link_directories(
@@ -78,8 +72,11 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
   ${GTSAM_LIBRARY_DIRS}
   ${ZLIB_LIBRARY_DIRS}
-  ${SESync_LIBRARY_DIR}
 )
+
+find_package(SESync REQUIRED)
+include_directories(${SESync_INCLUDES})
+link_directories(${SESync_SRCS})
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
 target_link_libraries(${PROJECT_NAME}
