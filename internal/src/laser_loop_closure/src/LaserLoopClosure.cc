@@ -207,27 +207,27 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
 
   odometry_edge_pub_ =
-      nl.advertise<visualization_msgs::Marker>("odometry_edges", 10, false);
+      nl.advertise<visualization_msgs::Marker>("odometry_edges", 1000, false);
   loop_edge_pub_ =
-      nl.advertise<visualization_msgs::Marker>("loop_edges", 10, false);
+      nl.advertise<visualization_msgs::Marker>("loop_edges", 1000, false);
   graph_node_pub_ =
-      nl.advertise<visualization_msgs::Marker>("graph_nodes", 10, false);
+      nl.advertise<visualization_msgs::Marker>("graph_nodes", 1000, false);
   graph_node_id_pub_ =
-      nl.advertise<visualization_msgs::Marker>("graph_node_ids", 10, false);
+      nl.advertise<visualization_msgs::Marker>("graph_node_ids", 1000, false);
   keyframe_node_pub_ =
-      nl.advertise<visualization_msgs::Marker>("keyframe_nodes", 10, false);
+      nl.advertise<visualization_msgs::Marker>("keyframe_nodes", 1000, false);
   closure_area_pub_ =
-      nl.advertise<visualization_msgs::Marker>("closure_area", 10, false);
+      nl.advertise<visualization_msgs::Marker>("closure_area", 1000, false);
 
-  scan1_pub_ = nl.advertise<PointCloud>("loop_closure_scan1", 10, false);
-  scan2_pub_ = nl.advertise<PointCloud>("loop_closure_scan2", 10, false);
+  scan1_pub_ = nl.advertise<PointCloud>("loop_closure_scan1", 1000, false);
+  scan2_pub_ = nl.advertise<PointCloud>("loop_closure_scan2", 1000, false);
 
   pose_graph_pub_ =
-      nl.advertise<pose_graph_msgs::PoseGraph>("pose_graph", 10, false);
+      nl.advertise<pose_graph_msgs::PoseGraph>("pose_graph", 1000, false);
   keyed_scan_pub_ =
-      nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 10, false);
+      nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 1000, false);
   loop_closure_notifier_pub_ =
-      nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
+      nl.advertise<std_msgs::Empty>("loop_closure", 1000, false);
       
   return true;
 }
@@ -596,7 +596,7 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   return true;
 }
 
-bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
+bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw, double qx, double qy, double qz) {
   // Thanks to Luca for providing the code
   ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
 
@@ -604,7 +604,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   // Print that out for the operator to check - to see how large a change is being asked for
 
   // creating relative pose factor (also works for relative positions)
-  gtsam::Pose3 measured = gtsam::Pose3(); // gtsam::Rot3(), gtsam::Point3();
+  const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
   measured.print("Between pose is ");
 
   // create Information of measured
@@ -905,9 +905,9 @@ bool LaserLoopClosure::Save(const std::string &zipFilename) const {
   ROS_INFO("Saved factor graph as a g2o file.");
 
   // keys.csv stores factor key, point cloud filename, and time stamp
-  std::ofstream info_file(path + "/keys.csv");
-  if (info_file.bad()) {
-    ROS_ERROR("Failed to write info file.");
+  std::ofstream keys_file(path + "/keys.csv");
+  if (keys_file.bad()) {
+    ROS_ERROR("Failed to write keys file.");
     return false;
   }
 
@@ -915,19 +915,44 @@ bool LaserLoopClosure::Save(const std::string &zipFilename) const {
   writeFileToZip(zipFile, path + "/graph.g2o");
   int i = 0;
   for (const auto &entry : keyed_scans_) {
-    info_file << entry.first << ",";
+    keys_file << entry.first << ",";
     // save point cloud as binary PCD file
     const std::string pcd_filename = path + "/pc_" + std::to_string(i) + ".pcd";
     pcl::io::savePCDFile(pcd_filename, *entry.second, true);
     writeFileToZip(zipFile, pcd_filename);
 
     ROS_INFO("Saved point cloud %d/%d.", i+1, (int) keyed_scans_.size());
-    info_file << pcd_filename << ",";
-    info_file << keyed_stamps_.at(entry.first).toNSec() << "\n";
+    keys_file << pcd_filename << ",";
+    keys_file << keyed_stamps_.at(entry.first).toNSec() << "\n";
     ++i;
   }
-  info_file.close();
+  keys_file.close();
   writeFileToZip(zipFile, path + "/keys.csv");
+
+  // save odometry edges
+  std::ofstream odometry_edges_file(path + "/odometry_edges.csv");
+  if (odometry_edges_file.bad()) {
+    ROS_ERROR("Failed to write odometry_edges file.");
+    return false;
+  }
+  for (const auto &entry : odometry_edges_) {
+    odometry_edges_file << entry.first << ',' << entry.second << '\n';
+  }
+  odometry_edges_file.close();
+  writeFileToZip(zipFile, path + "/odometry_edges.csv");
+
+  // save loop edges
+  std::ofstream loop_edges_file(path + "/loop_edges.csv");
+  if (loop_edges_file.bad()) {
+    ROS_ERROR("Failed to write loop_edges file.");
+    return false;
+  }
+  for (const auto &entry : loop_edges_) {
+    loop_edges_file << entry.first << ',' << entry.second << '\n';
+  }
+  loop_edges_file.close();
+  writeFileToZip(zipFile, path + "/loop_edges.csv");
+
   zipClose(zipFile, 0);
   boost::filesystem::remove_all(directory);
   ROS_INFO_STREAM("Successfully saved pose graph to " << absPath(zipFilename) << ".");
@@ -945,10 +970,8 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
   int err = unzGetGlobalInfo64(zipFile, &oGlobalInfo);
   std::vector<std::string> files;  // files to be extracted
 
-  bool foundGraph = false;
-  bool foundKeys = false;
-
-  std::string graphFilename, keysFilename;
+  std::string graphFilename{""}, keysFilename{""},
+              odometryEdgesFilename{""}, loopEdgesFilename{""};
 
   for (unsigned long i = 0; i < oGlobalInfo.number_entry && err == UNZ_OK; ++i) {
     char filename[256];
@@ -960,21 +983,23 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
       // this entry is a file, extract it later
       files.emplace_back(filename);
       if (files.back().find("graph.g2o") != std::string::npos) {
-        foundGraph = true;
         graphFilename = files.back();
       } else if (files.back().find("keys.csv") != std::string::npos) {
-        foundKeys = true;
         keysFilename = files.back();
+      } else if (files.back().find("odometry_edges.csv") != std::string::npos) {
+        odometryEdgesFilename = files.back();
+      } else if (files.back().find("loop_edges.csv") != std::string::npos) {
+        loopEdgesFilename = files.back();
       }
       err = unzGoToNextFile(zipFile);
     }
   }
 
-  if (!foundGraph) {
+  if (graphFilename.empty()) {
     ROS_ERROR_STREAM("Could not find pose graph g2o-file in " << absFilename);
     return false;
   }
-  if (!foundKeys) {
+  if (keysFilename.empty()) {
     ROS_ERROR_STREAM("Could not find keys.csv in " << absFilename);
     return false;
   }
@@ -1069,8 +1094,50 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     keyed_stamps_[key_] = t;
   }
 
-  ROS_INFO("Loaded all point clouds.");
+  ROS_INFO("Restored all point clouds.");
   info_file.close();
+
+  if (!odometryEdgesFilename.empty()) {
+    std::ifstream edge_file(odometryEdgesFilename);
+    if (edge_file.bad()) {
+      ROS_ERROR_STREAM("Failed to open " << odometryEdgesFilename);
+      return false;
+    }
+    std::string edgeStr;
+    while (edge_file.good()) {
+      Edge edge;
+      std::getline(edge_file, edgeStr, ',');
+      if (edgeStr.empty())
+        break;
+      edge.first = static_cast<unsigned int>(std::stoi(edgeStr));
+      std::getline(edge_file, edgeStr);
+      edge.second = static_cast<unsigned int>(std::stoi(edgeStr));
+      odometry_edges_.emplace_back(edge);
+    }
+    edge_file.close();
+    ROS_INFO("Restored odometry edges.");
+  }
+
+  if (!loopEdgesFilename.empty()) {
+    std::ifstream edge_file(loopEdgesFilename);
+    if (edge_file.bad()) {
+      ROS_ERROR_STREAM("Failed to open " << loopEdgesFilename);
+      return false;
+    }
+    std::string edgeStr;
+    while (edge_file.good()) {
+      Edge edge;
+      std::getline(edge_file, edgeStr, ',');
+      if (edgeStr.empty())
+        break;
+      edge.first = static_cast<unsigned int>(std::stoi(edgeStr));
+      std::getline(edge_file, edgeStr);
+      edge.second = static_cast<unsigned int>(std::stoi(edgeStr));
+      loop_edges_.emplace_back(edge);
+    }
+    edge_file.close();
+    ROS_INFO("Restored loop closure edges.");
+  }
   
   // remove all extracted folders
   for (const auto &folder: folders)
@@ -1108,6 +1175,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p2));
     }
     odometry_edge_pub_.publish(m);
+    ros::spinOnce();
+    ros::Duration(0.5).sleep();
   }
 
   // Publish loop closure edges.
@@ -1135,6 +1204,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p2));
     }
     loop_edge_pub_.publish(m);
+    ros::spinOnce();
+    ros::Duration(0.5).sleep();
   }
 
   // Publish nodes in the pose graph.
@@ -1158,6 +1229,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p));
     }
     graph_node_pub_.publish(m);
+    ros::spinOnce();
+    ros::Duration(0.5).sleep();
   }
 
   // Publish node IDs in the pose graph.
@@ -1175,7 +1248,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.scale.z = 0.02; // Only Scale z is used - height of capital A in the text
 
     int id_base = 100;
-
+    int counter = 0;
     for (const auto& keyed_pose : values_) {
       gu::Transform3 p = ToGu(values_.at<Pose3>(keyed_pose.key));
       m.pose = gr::ToRosPose(p);
@@ -1183,6 +1256,11 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.text = std::to_string(keyed_pose.key);
       m.id = id_base + keyed_pose.key;
       graph_node_id_pub_.publish(m);
+      if (counter % 500 == 0) {
+        // throttle
+        ros::spinOnce();
+        ros::Duration(0.5).sleep();
+      }
     }
     
   }
@@ -1210,6 +1288,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       }
     }
     keyframe_node_pub_.publish(m);
+    ros::spinOnce();
+    ros::Duration(0.5).sleep();
   }
 
   // Draw a sphere around the current sensor frame to show the area in which we
@@ -1230,6 +1310,8 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.scale.z = proximity_threshold_ * 2.0;
     m.pose = gr::ToRosPose(gu::Transform3::Identity());
     closure_area_pub_.publish(m);
+    ros::spinOnce();
+    ros::Duration(0.5).sleep();
   }
 
   // Construct and send the pose graph.
