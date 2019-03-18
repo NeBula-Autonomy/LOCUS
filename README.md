@@ -6,6 +6,11 @@
 
 ## Build Instructions
 ### Updated Instructions for This Branch
+This package requires `minizip` to be available globally. It can be installed from the package manager via:
+```bash
+apt install libminizip-dev
+```
+
 This repository contains the checked-out repositories that were installed via rosinstall in the original ***BLAM!*** repository.
 With these changes, the following commands build the entire ***BLAM!*** stack:
 ```bash
