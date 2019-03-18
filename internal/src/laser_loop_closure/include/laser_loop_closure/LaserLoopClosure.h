@@ -41,7 +41,7 @@
 #include <geometry_utils/Matrix3x3.h>
 #include <geometry_utils/Transform3.h>
 #include <point_cloud_filter/PointCloudFilter.h>
-#include <laser_loop_closure/ManualLoopClosure.h>
+#include <laser_loop_closure/BetweenChordalFactor.h>
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
@@ -55,6 +55,11 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/slam/InitializePose3.h>
+#include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
+
+// #include "SESync/SESync.h"
+// #include "SESync/SESync_utils.h"
 
 // This new header allows us to read examples easily from .graph files
 #include <gtsam/slam/dataset.h>
@@ -63,6 +68,30 @@
 
 #include <map>
 #include <vector>
+
+// default is isam, LM for LevenbergMarquardt
+#define solver LM 
+
+class GenericSolver {
+public:
+  GenericSolver();
+  void update(gtsam::NonlinearFactorGraph nfg=gtsam::NonlinearFactorGraph(), 
+              gtsam::Values values=gtsam::Values());
+
+  gtsam::Values calculateEstimate() { return values_gs_; }
+  gtsam::Values calculateBestEstimate() { return values_gs_; }
+  gtsam::Values getLinearizationPoint() { return values_gs_; }
+  gtsam::NonlinearFactorGraph getFactorsUnsafe(){ return nfg_gs_; }
+
+  void print() {
+    nfg_gs_.print("");
+    values_gs_.print("");
+  }
+
+private:
+  gtsam::Values values_gs_;
+  gtsam::NonlinearFactorGraph nfg_gs_;
+};
 
 class LaserLoopClosure {
  public:
@@ -73,6 +102,7 @@ class LaserLoopClosure {
 
   // Typedef for 6x6 covariance matrices (x, y, z, roll, pitch, yaw).
   typedef geometry_utils::MatrixNxNBase<double, 6> Mat66;
+  typedef geometry_utils::MatrixNxNBase<double, 12> Mat1212;
 
   // Typedef for stored point clouds.
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -85,6 +115,10 @@ class LaserLoopClosure {
   // AddKeyScanPair().
   bool AddBetweenFactor(const geometry_utils::Transform3& delta,
                         const Mat66& covariance, const ros::Time& stamp,
+                        unsigned int* key);
+
+  bool AddBetweenChordalFactor(const geometry_utils::Transform3& delta,
+                        const Mat1212& covariance, const ros::Time& stamp,
                         unsigned int* key);
 
   // Upon successful addition of a new between factor, call this function to
@@ -133,6 +167,7 @@ class LaserLoopClosure {
   typedef gtsam::noiseModel::Diagonal Diagonal;
   Mat66 ToGu(const Gaussian::shared_ptr& covariance) const;
   Gaussian::shared_ptr ToGtsam(const Mat66& covariance) const;
+  Gaussian::shared_ptr ToGtsam(const Mat1212& covariance) const;
 
   // Diagonal of the covariance matrix of the first pose
   gtsam::Vector6 initial_noise_;
@@ -142,6 +177,8 @@ class LaserLoopClosure {
       const gtsam::Pose3& pose, const Diagonal::shared_ptr& covariance);
   gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
+  gtsam::BetweenChordalFactor<gtsam::Pose3> MakeBetweenChordalFactor(
+      const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
 
   // Perform ICP between two laser scans.
   bool PerformICP(const PointCloud::ConstPtr& scan1,
@@ -149,6 +186,13 @@ class LaserLoopClosure {
                   const geometry_utils::Transform3& pose1,
                   const geometry_utils::Transform3& pose2,
                   geometry_utils::Transform3* delta, Mat66* covariance);
+
+  // Perform ICP between two laser scans.
+  bool PerformICP(const PointCloud::ConstPtr& scan1,
+                  const PointCloud::ConstPtr& scan2,
+                  const geometry_utils::Transform3& pose1,
+                  const geometry_utils::Transform3& pose2,
+                  geometry_utils::Transform3* delta, Mat1212* covariance);
 
   // bool AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
   //                       laser_loop_closure::ManualLoopClosureResponse &response);
@@ -177,10 +221,11 @@ class LaserLoopClosure {
   double max_tolerable_fitness_;
   double manual_lc_rot_precision_;
   double manual_lc_trans_precision_;
-  double laser_lc_rot_precision_;
-  double laser_lc_trans_precision_;
+  double laser_lc_rot_sigma_;
+  double laser_lc_trans_sigma_;
   unsigned int relinearize_skip_;
   double relinearize_threshold_;
+  bool use_chordal_factor_;
 
   // ICP parameters.
   double icp_ransac_thresh_;
@@ -189,7 +234,13 @@ class LaserLoopClosure {
   unsigned int icp_iterations_;
 
   // ISAM2 optimizer object, and best guess pose values.
+  #ifdef solver
+  std::unique_ptr<GenericSolver> isam_;
+  #endif
+  #ifndef solver 
   std::unique_ptr<gtsam::ISAM2> isam_;
+  #endif
+
   gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
 

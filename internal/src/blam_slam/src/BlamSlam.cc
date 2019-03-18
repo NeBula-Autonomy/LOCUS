@@ -44,7 +44,7 @@ namespace gu = geometry_utils;
 
 BlamSlam::BlamSlam()
     : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
-    position_covariance_(0.01), attitude_covariance_(0.04) {}
+    position_sigma_(0.1), attitude_sigma_(0.2) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -99,8 +99,10 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
 
   // Covariance for odom factors
-  if (!pu::Get("noise/odom_position_sigma", position_covariance_)) return false;
-  if (!pu::Get("noise/odom_attitude_sigma", attitude_covariance_)) return false;
+  if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
+  if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
+
+  if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
   std::string graph_filename;
   if (pu::Get("load_graph", graph_filename) && !graph_filename.empty()) {
@@ -155,7 +157,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
 
-  pcld_sub_ = nl.subscribe("pcld", 100, &BlamSlam::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 10000000, &BlamSlam::PointCloudCallback, this);
 
   return CreatePublishers(n);
 }
@@ -330,19 +332,38 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     return false;
   }
 
-  // Add the new pose to the pose graph.
   unsigned int pose_key;
-  gu::MatrixNxNBase<double, 6> covariance;
-  covariance.Zeros();
-  for (int i = 0; i < 3; ++i)
-    covariance(i, i) = position_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
-  for (int i = 3; i < 6; ++i)
-    covariance(i, i) = attitude_covariance_; //0.4, 0.004; 0.2 m sd
 
-  const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-  if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
-                                      covariance, stamp, &pose_key)) {
-    return false;
+  if (!use_chordal_factor_) {
+    // Add the new pose to the pose graph (BetweenFactor)
+    // TODO rename to attitude and position sigma 
+    gu::MatrixNxNBase<double, 6> covariance;
+    covariance.Zeros();
+    for (int i = 0; i < 3; ++i)
+      covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+    for (int i = 3; i < 6; ++i)
+      covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
+
+    const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+    if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key)) {
+      return false;
+    }
+
+  } else {
+    // Add the new pose to the pose graph (BetweenChordalFactor)
+    gu::MatrixNxNBase<double, 12> covariance;
+    covariance.Zeros();
+    for (int i = 0; i < 9; ++i)
+      covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+    for (int i = 9; i < 12; ++i)
+      covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
+
+    const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+    if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key)) {
+      return false;
+    }
   }
   
   *new_keyframe = true;

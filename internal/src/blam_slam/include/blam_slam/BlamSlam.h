@@ -88,6 +88,7 @@ class BlamSlam {
   bool AddFactorService(blam_slam::ManualLoopClosureRequest &request,
                         blam_slam::ManualLoopClosureResponse &response);
 
+  bool use_chordal_factor_;
 
   // Service to write the pose graph and all point clouds to a zip file.
   bool SaveGraphService(blam_slam::SaveGraphRequest &request,
@@ -102,9 +103,9 @@ class BlamSlam {
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
-  // Covariances
-  double position_covariance_;
-  double attitude_covariance_;
+  // Sigmas
+  double position_sigma_;
+  double attitude_sigma_;
 
   // Subscribers.
   ros::Subscriber pcld_sub_;

@@ -48,14 +48,14 @@ find_package(Boost 1.58 COMPONENTS filesystem program_options timer REQUIRED)
 find_package(ZLIB REQUIRED)
 
 include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
+check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
 check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if (COMPILER_SUPPORTS_CXX11)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+if (COMPILER_SUPPORTS_CXX14)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 elseif(COMPILER_SUPPORTS_CXX0X)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 else()
-  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
+  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++14 support.")
 endif()
 
 include_directories(
@@ -74,6 +74,10 @@ link_directories(
   ${ZLIB_LIBRARY_DIRS}
 )
 
+find_package(SESync REQUIRED)
+include_directories(${SESync_INCLUDES})
+link_directories(${SESync_SRCS})
+
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
@@ -82,4 +86,5 @@ target_link_libraries(${PROJECT_NAME}
   minizip
   ${Boost_LIBRARIES}
   ${ZLIB_LIBRARIES}
+  SESync
 )
