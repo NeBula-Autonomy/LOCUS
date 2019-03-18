@@ -10,8 +10,8 @@
 
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
-      <remap from="~artifact" to="/husky/artifact_global" />
-      <remap from="~artifact_relative" to="/husky/artifact_relative" />      
+      <remap from="~artifact" to="artifact_global" />
+      <remap from="~artifact_relative" to="artifact_relative" />      
 
       <!-- Initial pose -->
       <rosparam param="init">
@@ -98,5 +98,9 @@
     </node>
 
   </group>
+
+  <!-- Publish Odometry -->
+  <node pkg="topic_tools" type="transform" name="blam_odom_publisher" respawn="true"
+        args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate /$(arg robot_namespace)/odometry nav_msgs/Odometry 'nav_msgs.msg.Odometry(header=m.header, pose=geometry_msgs.msg.PoseWithCovariance(pose=m.pose))' --import nav_msgs geometry_msgs"/>
 
 </launch>
