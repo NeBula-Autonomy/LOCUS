@@ -1176,7 +1176,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     }
     odometry_edge_pub_.publish(m);
     ros::spinOnce();
-    ros::Duration(0.5).sleep();
+    ros::Duration(0.005).sleep();
   }
 
   // Publish loop closure edges.
@@ -1205,7 +1205,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     }
     loop_edge_pub_.publish(m);
     ros::spinOnce();
-    ros::Duration(0.5).sleep();
+    ros::Duration(0.005).sleep();
   }
 
   // Publish nodes in the pose graph.
@@ -1230,7 +1230,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     }
     graph_node_pub_.publish(m);
     ros::spinOnce();
-    ros::Duration(0.5).sleep();
+    ros::Duration(0.005).sleep();
   }
 
   // Publish node IDs in the pose graph.
@@ -1259,7 +1259,7 @@ void LaserLoopClosure::PublishPoseGraph() {
       if (counter % 500 == 0) {
         // throttle
         ros::spinOnce();
-        ros::Duration(0.5).sleep();
+        ros::Duration(0.005).sleep();
       }
     }
     
@@ -1289,7 +1289,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     }
     keyframe_node_pub_.publish(m);
     ros::spinOnce();
-    ros::Duration(0.5).sleep();
+    ros::Duration(0.005).sleep();
   }
 
   // Draw a sphere around the current sensor frame to show the area in which we
@@ -1311,7 +1311,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.pose = gr::ToRosPose(gu::Transform3::Identity());
     closure_area_pub_.publish(m);
     ros::spinOnce();
-    ros::Duration(0.5).sleep();
+    ros::Duration(0.005).sleep();
   }
 
   // Construct and send the pose graph.
