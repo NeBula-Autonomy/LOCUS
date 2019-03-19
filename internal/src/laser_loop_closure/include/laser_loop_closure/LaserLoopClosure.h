@@ -143,7 +143,10 @@ class LaserLoopClosure {
   // Add factor between the two keys to connect them. This function is
   // designed for a scenario where a human operator can manually perform
   // loop closures by adding these factors to the pose graph.
-  bool AddFactor(unsigned int key1, unsigned int key2);
+  // Optionally, a quaternion defining the attitude of the loop closure
+  // can be specified via the qw, qx, qy, qz coordinates (in radians).
+  bool AddFactor(unsigned int key1, unsigned int key2,
+                 double qw=1, double qx=0, double qy=0, double qz=0);
 
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
