@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.1)
 project(laser_loop_closure)
 
 find_package(PCL REQUIRED COMPONENTS common registration)
@@ -74,9 +74,7 @@ link_directories(
   ${ZLIB_LIBRARY_DIRS}
 )
 
-find_package(SESync REQUIRED)
-include_directories(${SESync_INCLUDES})
-link_directories(${SESync_SRCS})
+include(${SESync_DIR}/SESyncConfig.cmake)
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
 target_link_libraries(${PROJECT_NAME}
