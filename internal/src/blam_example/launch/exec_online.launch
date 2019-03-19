@@ -99,8 +99,4 @@
 
   </group>
 
-  <!-- Publish Odometry -->
-  <node pkg="topic_tools" type="transform" name="blam_odom_publisher" respawn="true"
-        args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate /$(arg robot_namespace)/odometry nav_msgs/Odometry 'nav_msgs.msg.Odometry(header=m.header, pose=geometry_msgs.msg.PoseWithCovariance(pose=m.pose))' --import nav_msgs geometry_msgs"/>
-
 </launch>
