@@ -72,19 +72,32 @@ The following significant changes were made to the build process:
 Robot Operating System ([ROS](http://ros.org)). Input LiDAR data should be
 provided to the `/velodyne_points` topic using message type `sensor_msgs::PointCloud2`.
 
-To run in for SubT operations, use (replacing "husky" with the robot name)
+To run, use (replacing "husky" with the robot name)
 
 ```bash
 roslaunch blam_example exec_online.launch robot_namespace:=husky
 ```
 
 When running with a bagfile, the lidar data should be on `/husky/velodyne_points` when the `robot_namespace` is `husky`.
+
+To remap the bagfile, run
+
+```bash
+rosbag play bagfile.bag --prefix husky
+```
+
 Also, when running on a bagfile, a static transform publisher is needed, to take place of the robot description:
 
 ```bash
 static_transform_publisher 0 0 0 0 0 0 1 /husky/base_link /velodyne
 ```
 
+To visualize in RViz, use the husky rviz file:
+```bash
+rviz -d {filepath}/localizer_blam/internal/src/blam_example/rviz/lidar_slam_husky.rviz
+```
+
+# OLD
 To run in online mode (e.g. by replaying a bag file from another terminal or
 using a real-time sensor stream), use
 
