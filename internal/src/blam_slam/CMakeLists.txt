@@ -30,6 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   core_msgs
   message_generation
 )
+set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
 
 add_service_files(FILES ManualLoopClosure.srv)
 generate_messages()

@@ -118,6 +118,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
     return RegisterLogCallbacks(n);
   else
     return RegisterOnlineCallbacks(n);
+
 }
 
 bool BlamSlam::RegisterLogCallbacks(const ros::NodeHandle& n) {
@@ -134,7 +135,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
 
-  pcld_sub_ = nl.subscribe("pcld", 100, &BlamSlam::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 1000, &BlamSlam::PointCloudCallback, this);
 
   ros::NodeHandle na(n);
   artifact_sub_ = na.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
@@ -376,15 +377,16 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   gu::MatrixNxNBase<double, 6> covariance;
   covariance.Zeros();
   for (int i = 0; i < 3; ++i)
-    covariance(i, i) = attitude_covariance_; //0.4, 0.004; 0.2 m sd
+    covariance(i, i) = attitude_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
   for (int i = 3; i < 6; ++i)
-    covariance(i, i) = position_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
+    covariance(i, i) = position_covariance_; //0.4, 0.004; 0.2 m sd
 
   const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
   if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
                                       covariance, stamp, &pose_key)) {
     return false;
   }
+  
   *new_keyframe = true;
 
   if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {

@@ -18,7 +18,7 @@ tmux split-window -h
 tmux send-keys -t 0 "roscore" C-m
 
 # Start ORBSLAM
-tmux send-keys -t 2 "sleep 1; source $WORKSPACE/devel/setup.bash;roslaunch blam_example exec_online_remote.launch robot_namespace:=husky" C-m
+tmux send-keys -t 2 "sleep 3; source $WORKSPACE/devel/setup.bash;roslaunch blam_example exec_online.launch robot_namespace:=husky" C-m
 
 # Place rosbag
 tmux send-keys -t 1 "rosbag play -r 1 -s 2 $BAGFILE --prefix=husky" 

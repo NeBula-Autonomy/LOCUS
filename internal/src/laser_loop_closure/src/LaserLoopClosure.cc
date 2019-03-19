@@ -43,7 +43,9 @@
 #include <std_msgs/Empty.h>
 #include <visualization_msgs/Marker.h>
 
+
 #include <pcl/registration/gicp.h>
+
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <fstream>
@@ -62,6 +64,7 @@ using gtsam::Rot3;
 using gtsam::Values;
 using gtsam::Vector3;
 using gtsam::Vector6;
+using gtsam::ISAM2GaussNewtonParams;
 
 LaserLoopClosure::LaserLoopClosure()
     : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {}
@@ -149,6 +152,11 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
   parameters.relinearizeThreshold = relinearize_threshold_;
+  parameters.factorization = gtsam::ISAM2Params::QR; // QR
+  // // Set wildfire threshold
+  // ISAM2GaussNewtonParams gnparams(-1);
+  // parameters.setOptimizationParams(gnparams);
+
   isam_.reset(new ISAM2(parameters));
 
   // Set the initial position.
@@ -171,6 +179,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
+  // std::cout << "!!!!! error at LoadParameters isam: " << nfg_.error(values_) << std::endl;
   key_++;
 
   // Set the initial odometry.
@@ -273,6 +282,8 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   nfg_ = isam_->getFactorsUnsafe();
 
+  // std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
+
   // Assign output and get ready to go again!
   *key = key_++;
 
@@ -305,7 +316,7 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
     stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key));
   }
 
-  ROS_INFO_STREAM("AddKeyScanPair " << key);
+  // ROS_INFO_STREAM("AddKeyScanPair " << key);
 
   // Add the key and scan.
   keyed_scans_.insert(std::pair<unsigned int, PointCloud::ConstPtr>(key, scan));
@@ -393,6 +404,8 @@ bool LaserLoopClosure::FindLoopClosures(
   values_ = isam_->calculateEstimate();
 
   nfg_ = isam_->getFactorsUnsafe();
+
+  // std::cout << "!!!!! error at FindLoopClosures isam: " << nfg_.error(values_) << std::endl;
 
   return closed_loop;
 }
@@ -513,6 +526,10 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
 
   // Set up ICP.
   pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  //pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp; //make sure to include the header file
+  //pcl::JointIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp; //make sure to include the header file
+
+  // setVerbosityLevel(pcl::console::L_DEBUG);
   icp.setTransformationEpsilon(icp_tf_epsilon_);
   icp.setMaxCorrespondenceDistance(icp_corr_dist_);
   icp.setMaximumIterations(icp_iterations_);
@@ -541,11 +558,13 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   PointCloud::Ptr source(new PointCloud);
   pcl::transformPointCloud(*scan1_filtered, *source, body1_to_world);
   icp.setInputSource(source);
+  //icp.addInputSource(source);
 
   // Set target point cloud in its own frame.
   PointCloud::Ptr target(new PointCloud);
   pcl::transformPointCloud(*scan2_filtered, *target, body2_to_world);
   icp.setInputTarget(target);
+  //icp.addInputTarget(target);
 
   // Perform ICP.
   PointCloud unused_result;
@@ -560,10 +579,20 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
                                 T(2, 0), T(2, 1), T(2, 2));
 
   // Is the transform good?
-  if (!icp.hasConverged())
+  if (!icp.hasConverged()) {
+    // std::cout<<"No converged, score is: "<<icp.getFitnessScore() << std::endl;
     return false;
+  }
 
-  if (icp.getFitnessScore() > max_tolerable_fitness_) {
+  if (icp.getFitnessScore() > max_tolerable_fitness_) { 
+      // std::cout<<"Trans: "<<delta_icp.translation<<std::endl;
+      // std::cout<<"Rot: "<<delta_icp.rotation<<std::endl;
+      // If the loop closure was a success, publish the two scans.
+      // std::cout<<"Converged, score is: "<<icp.getFitnessScore() << std::endl;
+      // source->header.frame_id = fixed_frame_id_;
+      // target->header.frame_id = fixed_frame_id_;
+      // scan1_pub_.publish(*source);
+      // scan2_pub_.publish(*target);
     return false;
   }
 
@@ -629,7 +658,9 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
   double cost = factor.error(linPoint);
   ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
   // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
-
+  // 0)
+  // std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
+  writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/result_manual_loop_0.g2o");
   // add factor to factor graph
   NonlinearFactorGraph new_factor;
   new_factor.add(factor);
@@ -701,7 +732,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
           }
           result_ISAM.print("iSAM2 update result:\t");
 
-          linPoint = isam_->getLinearizationPoint();
+          linPoint = isam_->calculateBestEstimate();
           nfg_ = isam_->getFactorsUnsafe();
           cost = nfg_.error(linPoint);
           ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
@@ -718,13 +749,31 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
       {
         // Levenber Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
-        // nfg_ = isam_->getFactorsUnsafe();
-        nfg_.add(factor);
+        isam_->update(new_factor, Values());
         initialEstimate = isam_->calculateEstimate();
+        nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
+
+        // gtsam::Values chordalInitial = gtsam::InitializePose3::initialize(nfg_); // test
+        // std::cout << "error at 1c: " << nfg_.error(chordalInitial) << std::endl;
+        // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
+        // std::cout << "!!!!! error at AddFactor before LM: " << nfg_.error(initialEstimate) << std::endl;
+        writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/result_manual_loop_1.g2o");
         gtsam::LevenbergMarquardtParams params;
-        params.setVerbosityLM("TRYDELTA");
-        result = gtsam::LevenbergMarquardtOptimizer(nfg_, initialEstimate, params).optimize();
+        //params.setVerbosityLM("TRYLAMBDA");
+        result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
+        // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
         // result.print("LM result is: ");
+        // std::cout << "!!!!! error at AddFactor after LM: " << nfg_.error(result) << std::endl;
+        writeG2o(nfg_, result, "/home/yunchang/Desktop/result_manual_loop_2.g2o");
+
+        gtsam::NonlinearOptimizerParams param;
+        param.maxIterations = 500; /* requires a larger number of iterations to converge */
+        // param.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
+
+        gtsam::NonlinearConjugateGradientOptimizer optimizer(nfg_, linPoint, param);
+        gtsam::Values result_cgo = optimizer.optimize();
+        // std::cout << "!!!!! error at AddFactor after cgo: " << nfg_.error(result_cgo) << std::endl;
+        writeG2o(nfg_, result_cgo, "/home/yunchang/Desktop/result_manual_loop_2cgo.g2o");
       }
         break;
       case 2 : 
@@ -774,19 +823,19 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2) {
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
     parameters.relinearizeThreshold = relinearize_threshold_;
+    // // Set wildfire threshold 
+    // ISAM2GaussNewtonParams gnparams(-1);
+    // parameters.setOptimizationParams(gnparams);
+
     isam_.reset(new ISAM2(parameters));
     
     // Update with the new graph
     isam_->update(nfg_,result); 
     
-
-
-
-
+    gtsam::Values result_isam = isam_->calculateBestEstimate();
+    // std::cout << "!!!!! error at AddFactor after isam: " << nfg_.error(result_isam) << std::endl;
+    writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/result_manual_loop_3.g2o");
     
-
-
-
     // redirect cout to file
     std::ofstream nfgFile;
     std::string home_folder(getenv("HOME"));
