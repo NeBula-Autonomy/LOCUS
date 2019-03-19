@@ -44,7 +44,7 @@ namespace gu = geometry_utils;
 
 BlamSlam::BlamSlam()
     : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
-    position_covariance_(0.01), attitude_covariance_(0.04), marker_id_(0) {}
+    position_sigma_(0.1), attitude_sigma_(0.2), marker_id_(0) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -99,8 +99,29 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
 
   // Covariance for odom factors
-  if (!pu::Get("noise/odom_position_sigma", position_covariance_)) return false;
-  if (!pu::Get("noise/odom_attitude_sigma", attitude_covariance_)) return false;
+  if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
+  if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
+
+  if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
+
+  std::string graph_filename;
+  if (pu::Get("load_graph", graph_filename) && !graph_filename.empty()) {
+    if (loop_closure_.Load(graph_filename)) {
+      PointCloud::Ptr regenerated_map(new PointCloud);
+      loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+      mapper_.Reset();
+      PointCloud::Ptr unused(new PointCloud);
+      mapper_.InsertPoints(regenerated_map, unused.get());
+
+      // Also reset the robot's estimated position.
+      localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+      // Publish updated map
+      mapper_.PublishMap();
+    } else {
+      ROS_ERROR_STREAM("Failed to load graph from " << graph_filename);
+    }
+  }
 
   return true;
 }
@@ -113,6 +134,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
       
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
+  save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -135,7 +157,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
 
-  pcld_sub_ = nl.subscribe("pcld", 1000, &BlamSlam::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 1000000, &BlamSlam::PointCloudCallback, this);
 
   ros::NodeHandle na(n);
   artifact_sub_ = na.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
@@ -162,8 +184,10 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
 bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
                                         blam_slam::ManualLoopClosureResponse &response) {
   // TODO - bring the service creation into this node?
-  response.success = loop_closure_.AddFactor(static_cast<unsigned int>(request.key_from),
-                               static_cast<unsigned int>(request.key_to));
+  response.success = loop_closure_.AddFactor(
+    static_cast<unsigned int>(request.key_from),
+    static_cast<unsigned int>(request.key_to),
+    request.qw, request.qx, request.qy, request.qz);
   if (response.success){
     std::cout << "adding factor for loop closure succeeded" << std::endl;
   }else{
@@ -190,6 +214,13 @@ bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
 
   std::cout << "Updated the map" << std::endl;
 
+  return true;
+}
+
+bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
+                                blam_slam::SaveGraphResponse &response) {
+  std::cout << "Saving graph..." << std::endl;
+  response.success = loop_closure_.Save(request.filename);
   return true;
 }
 
@@ -377,14 +408,40 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   gu::MatrixNxNBase<double, 6> covariance;
   covariance.Zeros();
   for (int i = 0; i < 3; ++i)
-    covariance(i, i) = attitude_covariance_; //0.1, 0.01; sqrt(0.01) rad sd
+    covariance(i, i) = position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
   for (int i = 3; i < 6; ++i)
-    covariance(i, i) = position_covariance_; //0.4, 0.004; 0.2 m sd
+    covariance(i, i) = position_sigma_; //0.4, 0.004; 0.2 m sd
 
-  const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-  if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
-                                      covariance, stamp, &pose_key)) {
-    return false;
+  if (!use_chordal_factor_) {
+    // Add the new pose to the pose graph (BetweenFactor)
+    // TODO rename to attitude and position sigma 
+    gu::MatrixNxNBase<double, 6> covariance;
+    covariance.Zeros();
+    for (int i = 0; i < 3; ++i)
+      covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+    for (int i = 3; i < 6; ++i)
+      covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
+
+    const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+    if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key)) {
+      return false;
+    }
+
+  } else {
+    // Add the new pose to the pose graph (BetweenChordalFactor)
+    gu::MatrixNxNBase<double, 12> covariance;
+    covariance.Zeros();
+    for (int i = 0; i < 9; ++i)
+      covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+    for (int i = 9; i < 12; ++i)
+      covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
+
+    const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+    if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key)) {
+      return false;
+    }
   }
   
   *new_keyframe = true;
@@ -483,5 +540,3 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
 
   marker_pub_.publish(marker);
 }
-
-

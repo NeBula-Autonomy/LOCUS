@@ -51,6 +51,9 @@
 
 #include <core_msgs/Artifact.h>
 
+#include <blam_slam/ManualLoopClosure.h>
+#include <blam_slam/SaveGraph.h>
+
 class BlamSlam {
  public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -96,6 +99,12 @@ class BlamSlam {
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
                                const core_msgs::Artifact& msg);
 
+  bool use_chordal_factor_;
+
+  // Service to write the pose graph and all point clouds to a zip file.
+  bool SaveGraphService(blam_slam::SaveGraphRequest &request,
+                        blam_slam::SaveGraphResponse &response);
+
   // The node's name.
   std::string name_;
 
@@ -105,9 +114,9 @@ class BlamSlam {
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
-  // Covariances
-  double position_covariance_;
-  double attitude_covariance_;
+  // Sigmas
+  double position_sigma_;
+  double attitude_sigma_;
 
   // Subscribers.
   ros::Subscriber pcld_sub_;
@@ -122,6 +131,7 @@ class BlamSlam {
 
   // Services
   ros::ServiceServer add_factor_srv_;
+  ros::ServiceServer save_graph_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;
