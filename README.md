@@ -98,6 +98,11 @@ To visualize in RViz, use the husky rviz file:
 rviz -d {filepath}/localizer_blam/internal/src/blam_example/rviz/lidar_slam_husky.rviz
 ```
 
+Alternatively, just run the tmux script (after modifying the parameters at the top of the file):
+```bash
+./run_blam.sh
+```
+
 # OLD
 To run in online mode (e.g. by replaying a bag file from another terminal or
 using a real-time sensor stream), use
