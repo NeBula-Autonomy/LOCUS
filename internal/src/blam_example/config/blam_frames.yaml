@@ -1,4 +1,4 @@
 frame_id:
   fixed: $(arg robot_namespace)/blam
-  base: $(arg robot_namespace)/base_link
+  base: $(arg robot_namespace)/base_link_3d
   odometry: $(arg robot_namespace)/base_link_blam_odometry
