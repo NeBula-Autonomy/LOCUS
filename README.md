@@ -67,10 +67,23 @@ The following significant changes were made to the build process:
 
 
 
-## Run Instructions (From original repo)
+## Run Instructions
 ***BLAM!*** is written in C++ with some Python interface elements, wrapped by
 Robot Operating System ([ROS](http://ros.org)). Input LiDAR data should be
 provided to the `/velodyne_points` topic using message type `sensor_msgs::PointCloud2`.
+
+To run in for SubT operations, use (replacing "husky" with the robot name)
+
+```bash
+roslaunch blam_example exec_online.launch robot_namespace:=husky
+```
+
+When running with a bagfile, the lidar data should be on `/husky/velodyne_points` when the `robot_namespace` is `husky`.
+Also, when running on a bagfile, a static transform publisher is needed, to take place of the robot description:
+
+```bash
+static_transform_publisher 0 0 0 0 0 0 1 /husky/base_link /velodyne
+```
 
 To run in online mode (e.g. by replaying a bag file from another terminal or
 using a real-time sensor stream), use
