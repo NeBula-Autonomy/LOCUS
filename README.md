@@ -26,27 +26,28 @@ catkin build pose_graph_msgs
 * [GTSAM](https://collab.cc.gatech.edu/borg/gtsam)
 
 We recommend:
-* Clone GTSAM in your *home* folder and checkout the feature branch:   
-        ```bash
-        cd
-        git clone -b feature/improvementsIncrementalFilter --single-branch https://bitbucket.org/gtborg/gtsam
-        ```
-* Checkout a specific commit to solve a build issue:
-        ```bash
-        cd gtsam
-        git checkout c827d4cd6b11f78f3d2d9d52b335ac562a2757fc
-        ```
-* Build
-        ```bash
-        cd gtsam 
-        mkdir build
-        cd build
-        cmake ..
-        $ optional: sudo make check
-        sudo make install
-        ```
+Clone GTSAM in your *home* folder and checkout the feature branch:   
+```bash
+cd
+git clone -b feature/improvementsIncrementalFilter --single-branch https://bitbucket.org/gtborg/gtsam
+```
+Checkout a specific commit to solve a build issue:
+```bash
+cd gtsam
+git checkout c827d4cd6b11f78f3d2d9d52b335ac562a2757fc
+```
+Build
+```bash
+cd gtsam 
+mkdir build
+cd build
+cmake ..
+$ optional: sudo make check
+sudo make install
+```
 
 `OLD ADVICE ON BLAM`:
+
 GTSAM in particular should be installed from source using the latest version of the develop branch from https://bitbucket.org/gtborg/gtsam. GTSAM relies on Boost, an incorrect version of which will interfere with some of ROS' packages if ROS is not upgraded to at least Indigo. ROS Indigo, in turn, relies on Ubuntu 14.04.
 
 
