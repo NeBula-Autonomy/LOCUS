@@ -42,6 +42,7 @@
 #include <geometry_utils/Transform3.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <laser_loop_closure/ManualLoopClosure.h>
+// #include <laser_loop_closure/BetweenChordalFactor.h>
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
@@ -55,6 +56,8 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/slam/InitializePose3.h>
+#include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
 
 // This new header allows us to read examples easily from .graph files
 #include <gtsam/slam/dataset.h>
