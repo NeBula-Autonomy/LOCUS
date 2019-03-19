@@ -43,7 +43,7 @@ if __name__ == '__main__':
         elif len(sys.argv) == 6:
             import transforms3d
             yaw, pitch, roll = float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5])
-            quat = transforms3d.euler.euler2quat(yaw, pitch, roll)
+            quat = transforms3d.euler.euler2quat(roll, pitch, yaw)
             connect(int(sys.argv[1]), int(sys.argv[2]), quat)
         elif len(sys.argv) == 8:
             if sys.argv[3].lower() == "quat":

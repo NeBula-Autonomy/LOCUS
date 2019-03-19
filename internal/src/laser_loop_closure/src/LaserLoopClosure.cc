@@ -854,7 +854,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   nfg_ = isam_->getFactorsUnsafe();
   std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
-
+  std::cout << "?????????????????? QUATERNION: " << qw << " " << qx << " " << qy << " " << qz << std::endl; 
   const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
   measured.print("Between pose is ");
 
@@ -1446,8 +1446,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p2));
     }
     odometry_edge_pub_.publish(m);
-    ros::spinOnce();
-    ros::Duration(0.005).sleep();
+    // ros::spinOnce();
+    // ros::Duration(0.005).sleep();
   }
 
   // Publish loop closure edges.
@@ -1475,8 +1475,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p2));
     }
     loop_edge_pub_.publish(m);
-    ros::spinOnce();
-    ros::Duration(0.005).sleep();
+    // ros::spinOnce();
+    // ros::Duration(0.005).sleep();
   }
 
   // Publish nodes in the pose graph.
@@ -1500,8 +1500,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p));
     }
     graph_node_pub_.publish(m);
-    ros::spinOnce();
-    ros::Duration(0.005).sleep();
+    // ros::spinOnce();
+    // ros::Duration(0.005).sleep();
   }
 
   // Publish node IDs in the pose graph.
@@ -1527,11 +1527,11 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.text = std::to_string(keyed_pose.key);
       m.id = id_base + keyed_pose.key;
       graph_node_id_pub_.publish(m);
-      if (counter % 500 == 0) {
+      // if (counter % 500 == 0) {
         // throttle
-        ros::spinOnce();
-        ros::Duration(0.005).sleep();
-      }
+        // ros::spinOnce();
+        // ros::Duration(0.005).sleep();
+      // }
     }
     
   }
@@ -1559,8 +1559,8 @@ void LaserLoopClosure::PublishPoseGraph() {
       }
     }
     keyframe_node_pub_.publish(m);
-    ros::spinOnce();
-    ros::Duration(0.005).sleep();
+    // ros::spinOnce();
+    // ros::Duration(0.005).sleep();
   }
 
   // Draw a sphere around the current sensor frame to show the area in which we
@@ -1581,8 +1581,8 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.scale.z = proximity_threshold_ * 2.0;
     m.pose = gr::ToRosPose(gu::Transform3::Identity());
     closure_area_pub_.publish(m);
-    ros::spinOnce();
-    ros::Duration(0.005).sleep();
+    // ros::spinOnce();
+    // ros::Duration(0.005).sleep();
   }
 
   // Construct and send the pose graph.
