@@ -1112,6 +1112,14 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   }
 }
 
+bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
+  ROS_INFO("Removing factor between %i and %i from the pose graph...", key1, key2);
+
+  // TODO implement
+
+  return true;
+}
+
 std::string absPath(const std::string &relPath) {
   return boost::filesystem::canonical(boost::filesystem::path(relPath)).string();
 }

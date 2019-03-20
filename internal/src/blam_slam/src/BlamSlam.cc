@@ -134,6 +134,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
       
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
+  remove_factor_srv_ = nl.advertiseService("remove_factor", &BlamSlam::RemoveFactorService, this);
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
 
   if (from_log)
@@ -172,8 +173,8 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
-bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
-                                        blam_slam::ManualLoopClosureResponse &response) {
+bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
+                                blam_slam::AddFactorResponse &response) {
   // TODO - bring the service creation into this node?
   response.success = loop_closure_.AddFactor(
     static_cast<unsigned int>(request.key_from),
@@ -183,6 +184,41 @@ bool BlamSlam::AddFactorService(blam_slam::ManualLoopClosureRequest &request,
     std::cout << "adding factor for loop closure succeeded" << std::endl;
   }else{
     std::cout << "adding factor for loop closure failed" << std::endl;
+  }
+
+  // Update the map from the loop closures
+  std::cout << "Updating the map" << std::endl;
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+  // Visualize the pose graph and current loop closure radius.
+  loop_closure_.PublishPoseGraph();
+
+  // Publish updated map
+  mapper_.PublishMap();
+
+  std::cout << "Updated the map" << std::endl;
+
+  return true;
+}
+
+bool BlamSlam::RemoveFactorService(blam_slam::RemoveFactorRequest &request,
+                                   blam_slam::RemoveFactorResponse &response) {
+  // TODO - bring the service creation into this node?
+  response.success = loop_closure_.RemoveFactor(
+    static_cast<unsigned int>(request.key_from),
+    static_cast<unsigned int>(request.key_to));
+  if (response.success){
+    std::cout << "removing factor from pose graph succeeded" << std::endl;
+  }else{
+    std::cout << "removing factor from pose graph failed" << std::endl;
   }
 
   // Update the map from the loop closures
