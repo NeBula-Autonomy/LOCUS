@@ -151,6 +151,9 @@ class LaserLoopClosure {
   bool AddFactor(unsigned int key1, unsigned int key2,
                  double qw=1, double qx=0, double qy=0, double qz=0);
 
+  // Removes the factor between the two keys from the pose graph.
+  bool RemoveFactor(unsigned int key1, unsigned int key2);
+
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 

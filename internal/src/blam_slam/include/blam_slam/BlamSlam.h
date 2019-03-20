@@ -51,7 +51,9 @@
 
 #include <core_msgs/Artifact.h>
 
-#include <blam_slam/ManualLoopClosure.h>
+// loop closure services
+#include <blam_slam/AddFactor.h>
+#include <blam_slam/RemoveFactor.h>
 #include <blam_slam/SaveGraph.h>
 
 class BlamSlam {
@@ -92,8 +94,11 @@ class BlamSlam {
   bool HandleLoopClosures(const PointCloud::ConstPtr& scan, bool* new_keyframe);
 
   // Generic add Factor service - for human loop closures to start
-  bool AddFactorService(blam_slam::ManualLoopClosureRequest &request,
-                        blam_slam::ManualLoopClosureResponse &response);
+  bool AddFactorService(blam_slam::AddFactorRequest &request,
+                        blam_slam::AddFactorResponse &response);
+  // Generic remove Factor service - removes edges from pose graph
+  bool RemoveFactorService(blam_slam::RemoveFactorRequest &request,
+                           blam_slam::RemoveFactorResponse &response);
 
   // Publish Artifacts
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
@@ -131,6 +136,7 @@ class BlamSlam {
 
   // Services
   ros::ServiceServer add_factor_srv_;
+  ros::ServiceServer remove_factor_srv_;
   ros::ServiceServer save_graph_srv_;
 
   // Names of coordinate frames.

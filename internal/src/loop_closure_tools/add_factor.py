@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import rospy, sys
-from blam_slam.srv import ManualLoopClosure
+from blam_slam.srv import AddFactor
 
 def connect(key_from, key_to, quat):
-    rospy.init_node('human_operator_loop_closure')
-    add_factor = rospy.ServiceProxy('/blam/blam_slam/add_factor', ManualLoopClosure)
+    rospy.init_node('add_factor_client')
+    add_factor = rospy.ServiceProxy('/blam/blam_slam/add_factor', AddFactor)
     if add_factor(key_from, key_to, quat[0], quat[1], quat[2], quat[3]).success:
         print('Successfully added a factor between %i and %i to the graph.' % (key_from, key_to))
     else:
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         elif len(sys.argv) == 6:
             import transforms3d
             yaw, pitch, roll = float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5])
-            quat = transforms3d.euler.euler2quat(yaw, pitch, roll)
+            quat = transforms3d.euler.euler2quat(roll, pitch, yaw)
             connect(int(sys.argv[1]), int(sys.argv[2]), quat)
         elif len(sys.argv) == 8:
             if sys.argv[3].lower() == "quat":
