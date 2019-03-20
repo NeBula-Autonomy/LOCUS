@@ -5,10 +5,6 @@ IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
 
-IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release)
-ENDIF()
-
 find_package(GTSAM REQUIRED)
 if (NOT GTSAM_FOUND)
   message(FATAL_ERROR "This program requires the GTSAM library.")
@@ -30,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
   core_msgs
   message_generation
 )
-set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
+# set(catkin_LIBRARIES ${catkin_LIBRARIES} gtsam)
 
 add_service_files(FILES AddFactor.srv RemoveFactor.srv SaveGraph.srv)
 generate_messages()

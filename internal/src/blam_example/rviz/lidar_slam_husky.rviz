@@ -68,8 +68,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 11.7167377
-        Min Value: -0.718991458
+        Max Value: 1.68983233
+        Min Value: -3.01748204
         Value: true
       Axis: Z
       Channel Name: ring
@@ -331,12 +331,20 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
+      Marker Topic: /husky/blam_slam/graph_node_ids
+      Name: NodeIDs
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: false
       Marker Topic: /husky/blam_slam/closure_area
       Name: Closure Area
       Namespaces:
-        husky/base_link: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -438,16 +446,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 208.398468
+      Distance: 46.3691978
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 40.717144
-        Y: -2.97272158
-        Z: 5.15485334
+        X: 100.991722
+        Y: -5.91916418
+        Z: 5.16387081
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
