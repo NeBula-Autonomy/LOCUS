@@ -3,7 +3,7 @@ import rospy, sys
 from blam_slam.srv import SaveGraph
 
 def connect(filename):
-    rospy.init_node('human_operator_loop_closure')
+    rospy.init_node('save_graph_client')
     save_graph = rospy.ServiceProxy('/blam/blam_slam/save_graph', SaveGraph)
     if save_graph(filename).success:
         print('Successfully saved the pose graph to %s.' % filename)
