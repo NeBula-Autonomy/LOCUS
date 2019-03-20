@@ -74,7 +74,9 @@ link_directories(
   ${ZLIB_LIBRARY_DIRS}
 )
 
-include(${SESync_DIR}/SESyncConfig.cmake)
+find_package(SESync REQUIRED COMPONENTS)
+include_directories(${SESync_INCLUDE_DIR})
+link_directories(${SESync_LIBRARY_DIRS})
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
 target_link_libraries(${PROJECT_NAME}
