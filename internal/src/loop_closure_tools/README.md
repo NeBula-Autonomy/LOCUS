@@ -21,7 +21,7 @@ add_factor.py key1 key2
 `key1` and `key2` are unsigned integers that represent the keys of the two pose graph nodes to be connected.
 
 It is furthermore possible to define the attitude of the pose which is used to initialize the loop closure
-optimization via the following parameterizations:
+optimization via the following parameterizations: (yaw is around the z axis)
 
 ```sh
 python add_factor.py <from_key> <to_key> <yaw> <pitch> <roll>
