@@ -18,6 +18,11 @@ Allows the user to add a `BetweenEdge` to the graph that connects two keys in th
 add_factor.py key1 key2
 ```
 
+When running with robot namespaces, run with:
+```sh
+ROS_NAMESPACE=husky add_factor.py key1 key2
+```
+
 `key1` and `key2` are unsigned integers that represent the keys of the two pose graph nodes to be connected.
 
 It is furthermore possible to define the attitude of the pose which is used to initialize the loop closure

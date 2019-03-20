@@ -4,7 +4,7 @@ from blam_slam.srv import AddFactor
 
 def connect(key_from, key_to, quat):
     rospy.init_node('add_factor_client')
-    add_factor = rospy.ServiceProxy('/blam/blam_slam/add_factor', AddFactor)
+    add_factor = rospy.ServiceProxy('blam_slam/add_factor', AddFactor)
     if add_factor(key_from, key_to, quat[0], quat[1], quat[2], quat[3]).success:
         print('Successfully added a factor between %i and %i to the graph.' % (key_from, key_to))
     else:
