@@ -18,9 +18,9 @@ use_chordal_factor: false
 manual_lc_rot_precision: 0.1 # default 0.0 (no information)
 manual_lc_trans_precision: 1.0 # default 0.001 (~30 m sd)
 
-# Noise parameters (as variances) for Laser loop closure
-laser_lc_rot_sigma: 0.1 # 0.1 0.01 # default 0.01
-laser_lc_trans_sigma: 0.4 # 0.4 0.01 # default 0.04 
+# Noise parameters (as variances) for Laser loop closure - sigma is sqrt of variance
+laser_lc_rot_sigma: 0.316 # 0.1 0.01 # default 0.01
+laser_lc_trans_sigma: 0.632 # 0.4 0.01 # default 0.04 
 
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures

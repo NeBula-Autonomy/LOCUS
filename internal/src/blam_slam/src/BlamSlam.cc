@@ -441,12 +441,6 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
 
   // Add the new pose to the pose graph.
   unsigned int pose_key;
-  gu::MatrixNxNBase<double, 6> covariance;
-  covariance.Zeros();
-  for (int i = 0; i < 3; ++i)
-    covariance(i, i) = position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
-  for (int i = 3; i < 6; ++i)
-    covariance(i, i) = position_sigma_; //0.4, 0.004; 0.2 m sd
 
   if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)

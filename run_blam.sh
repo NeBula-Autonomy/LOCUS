@@ -21,7 +21,7 @@ tmux send-keys -t 0 "roscore" C-m
 tmux send-keys -t 2 "sleep 3; source $WORKSPACE/devel/setup.bash;roslaunch blam_example exec_online.launch robot_namespace:=husky" C-m
 
 # Place rosbag
-tmux send-keys -t 1 "rosbag play -r 1 -s 2 $BAGFILE --prefix=husky" 
+tmux send-keys -t 1 "rosbag play -r 1 -s 10 BAGFILE --prefix=husky" 
 
 
 # Prep tf record script
@@ -29,7 +29,7 @@ tmux send-keys -t 3 "sleep 2; rviz -d $WORKSPACE/src/localizer_blam/internal/src
 
 # Prep close script
 tmux send-keys -t 4 "source $WORKSPACE/devel/setup.bash; cd $WORKSPACE/src/localizer/localizer_blam/internal/src/human_loop_closure" C-m
-tmux send-keys -t 4 "python manual_graph_edge.py "
+tmux send-keys -t 4 "ROS_NAMESPACE=husky python add_factor.py "
 
 # Static transform publisher
 tmux select-pane -t 4
