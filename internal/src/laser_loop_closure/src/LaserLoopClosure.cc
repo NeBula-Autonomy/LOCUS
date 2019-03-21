@@ -845,19 +845,24 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
   gtsam::Key id2 = key2;
 
-  NonlinearFactorGraph new_factor;
-
   // std::cout << "isamgetlinearizationpoint-before" << std::endl; 
   gtsam::Values linPoint = isam_->getLinearizationPoint();
   // std::cout << "isamgetlinearizationpoint-after" << std::endl; 
+
+  // check keys are already in factor graph 
+  if (!linPoint.exists(key1) || !linPoint.exists(key2)) { 
+    ROS_WARN("AddFactor: Trying to add manual loop closure involving at least one nonexisting key");
+    return false;
+  }
 
   nfg_ = isam_->getFactorsUnsafe();
   // std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
   const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
-  measured.print("Between pose is ");
 
   double cost; // for debugging
+
+  NonlinearFactorGraph new_factor;
 
   if (!use_chordal_factor_) {
     // Use BetweenFactor
@@ -872,6 +877,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
 
     gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
+    factor.print("manual loop closure factor \n");
     cost = factor.error(linPoint);
     ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
     // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
@@ -889,6 +895,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
  
     gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
 
+    factor.print("manual loop closure factor \n");
     cost = factor.error(linPoint);
     ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
     // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
@@ -1114,6 +1121,12 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
 bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO("Removing factor between %i and %i from the pose graph...", key1, key2);
 
+  // Prevent removing odometry edges 
+  if ((key1 == key2 - 1) || (key2 == key1 - 1)) {
+    ROS_WARN("RemoveFactor: Removing edges from consecutive poses (odometry) is currently forbidden (disable if condition to allow)");
+    return false; 
+  }
+
   // 1. Get factor graph 
   NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
   // 2. Search for the two keys
@@ -1149,6 +1162,11 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
 
     }
 
+  }
+
+  if (factorsToRemove.size() == 0) {
+    ROS_WARN("RemoveFactor: Factor not found between given keys");
+    return false; 
   }
   
   // 3. Remove factors and update
