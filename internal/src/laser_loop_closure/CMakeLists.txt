@@ -27,6 +27,9 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
+add_service_files(FILES ManualLoopClosure.srv)
+generate_messages()
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -44,22 +47,23 @@ catkin_package(
 
 
 find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-find_package(Boost 1.58 COMPONENTS filesystem program_options timer REQUIRED)
+FIND_PACKAGE( Boost 1.58 COMPONENTS program_options timer REQUIRED )
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
-find_package(ZLIB REQUIRED)
 
 include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
+check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
 check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if (COMPILER_SUPPORTS_CXX14)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+if (COMPILER_SUPPORTS_CXX11)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 elseif(COMPILER_SUPPORTS_CXX0X)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 else()
-  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++14 support.")
+  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
 endif()
 
 include_directories(
@@ -68,27 +72,18 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
   ${Boost_INCLUDE_DIR}
-  ${ZLIB_INCLUDE_DIR}
 )
 
 link_directories(
   ${catkin_LIBRARY_DIRS}
   ${PCL_LIBRARY_DIRS}
   ${GTSAM_LIBRARY_DIRS}
-  ${ZLIB_LIBRARY_DIRS}
 )
-
-# find_package(SESync REQUIRED)
-# include_directories(${SESync_INCLUDES})
-# link_directories(${SESync_SRCS})
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   gtsam
-  minizip
   ${Boost_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  # SESync
 )

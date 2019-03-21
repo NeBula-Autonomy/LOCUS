@@ -42,6 +42,7 @@
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
 #include <laser_loop_closure/LaserLoopClosure.h>
+#include <blam_slam/ManualLoopClosure.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <pcl_ros/point_cloud.h>
@@ -49,11 +50,6 @@
 #include <tf/transform_listener.h>
 
 #include <core_msgs/Artifact.h>
-
-// loop closure services
-#include <blam_slam/AddFactor.h>
-#include <blam_slam/RemoveFactor.h>
-#include <blam_slam/SaveGraph.h>
 
 class BlamSlam {
  public:
@@ -93,21 +89,12 @@ class BlamSlam {
   bool HandleLoopClosures(const PointCloud::ConstPtr& scan, bool* new_keyframe);
 
   // Generic add Factor service - for human loop closures to start
-  bool AddFactorService(blam_slam::AddFactorRequest &request,
-                        blam_slam::AddFactorResponse &response);
-  // Generic remove Factor service - removes edges from pose graph
-  bool RemoveFactorService(blam_slam::RemoveFactorRequest &request,
-                           blam_slam::RemoveFactorResponse &response);
+  bool AddFactorService(blam_slam::ManualLoopClosureRequest &request,
+                        blam_slam::ManualLoopClosureResponse &response);
 
   // Publish Artifacts
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
                                const core_msgs::Artifact& msg);
-
-  bool use_chordal_factor_;
-
-  // Service to write the pose graph and all point clouds to a zip file.
-  bool SaveGraphService(blam_slam::SaveGraphRequest &request,
-                        blam_slam::SaveGraphResponse &response);
 
   // The node's name.
   std::string name_;
@@ -118,9 +105,9 @@ class BlamSlam {
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
-  // Sigmas
-  double position_sigma_;
-  double attitude_sigma_;
+  // Covariances
+  double position_covariance_;
+  double attitude_covariance_;
 
   // Subscribers.
   ros::Subscriber pcld_sub_;
@@ -135,8 +122,6 @@ class BlamSlam {
 
   // Services
   ros::ServiceServer add_factor_srv_;
-  ros::ServiceServer remove_factor_srv_;
-  ros::ServiceServer save_graph_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;

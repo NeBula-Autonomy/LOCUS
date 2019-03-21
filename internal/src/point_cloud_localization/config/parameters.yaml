@@ -7,7 +7,6 @@ localization:
   # at least this far from one another.
   corr_dist: 0.5
 
-
   # Iterate ICP this many times.
   iterations: 20
 

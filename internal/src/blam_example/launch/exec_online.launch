@@ -23,8 +23,8 @@
 
       <!-- Noise parameters -->
       <rosparam param="noise">
-        odom_attitude_sigma: 0.316 <!--0.6  0.1 -->
-        odom_position_sigma: 0.632 <!-- 0.9, 0.4 -->
+        odom_position_sigma: 0.4
+        odom_attitude_sigma: 0.1
       </rosparam>      
 
       <!-- Rates -->
