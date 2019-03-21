@@ -9,7 +9,7 @@
           output="screen">
 
       <!-- Topics -->
-      <remap from="~pcld" to="velodyne_points/transformed"/>
+      <remap from="~pcld" to="velodyne_points/transformed_base_link"/>
       <remap from="~artifact" to="artifact_global" />
       <remap from="~artifact_relative" to="artifact_relative" />      
 
@@ -54,19 +54,7 @@
 
     </node>
 
-    <!-- Republish node with different frame_id -->
-    <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
-          args="standalone pcl/PassThrough">
-      <remap from="~input" to="velodyne_points"/>
-      <remap from="~output" to="velodyne_points/transformed"/>
-      <rosparam subst_value="true">
-        filter_field_name: z
-        filter_limit_min: -100
-        filter_limit_max: 100
-        output_frame: $(arg robot_namespace)/base_link
-      </rosparam>
-    </node>
-
+    <!-- Downsample output point cloud -->
     <node pkg="nodelet" type="nodelet" name="transform_points_world"
           args="standalone pcl/VoxelGrid">
       <remap from="~input" to="blam_slam/octree_map"/>
