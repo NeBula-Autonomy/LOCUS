@@ -21,7 +21,7 @@ tmux send-keys -t 0 "roscore" C-m
 tmux send-keys -t 2 "sleep 3; source $WORKSPACE/devel/setup.bash;roslaunch blam_example exec_online.launch robot_namespace:=husky" C-m
 
 # Place rosbag
-tmux send-keys -t 1 "rosbag play -r 1 -s 10 BAGFILE --prefix=husky" 
+tmux send-keys -t 1 "rosbag play -r 1 -s 10 $BAGFILE --prefix=husky" 
 
 
 # Prep tf record script
