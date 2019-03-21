@@ -1,44 +1,15 @@
 cmake_minimum_required(VERSION 3.1)
 project(laser_loop_closure)
 
-find_package(PCL REQUIRED COMPONENTS common registration)
-if(NOT PCL_FOUND)
-  message(FATAL_ERROR "This program requires the PCL library.")
-endif(NOT PCL_FOUND)
-
 find_package(GTSAM REQUIRED)
 if (NOT GTSAM_FOUND)
   message(FATAL_ERROR "This program requires the GTSAM library.")
 endif(NOT GTSAM_FOUND)
 
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  geometry_utils
-  parameter_utils
-  point_cloud_filter
-  pose_graph_msgs
-  visualization_msgs
-  message_generation
-  std_msgs
-  pcl_ros
-)
-
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS
-    roscpp
-    message_runtime
-    geometry_utils
-    parameter_utils
-    point_cloud_filter
-    pose_graph_msgs
-    visualization_msgs
-    std_msgs
-    pcl_ros
-)
-
 find_package(PCL 1.7 REQUIRED)
+if(NOT PCL_FOUND)
+  message(FATAL_ERROR "This program requires the PCL library.")
+endif(NOT PCL_FOUND)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
@@ -46,11 +17,35 @@ find_package(Boost 1.58 COMPONENTS filesystem program_options timer REQUIRED)
 
 find_package(ZLIB REQUIRED)
 
-if (NOT TARGET sesync)
-  find_package(SESync REQUIRED)
-  add_library(sesync INTERFACE IMPORTED)
-  set_target_properties(sesync PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${SESync_INCLUDE_DIR}")
+if (NOT TARGET rosComponents)
+  find_package(catkin REQUIRED COMPONENTS
+    roscpp
+    geometry_utils
+    parameter_utils
+    point_cloud_filter
+    pose_graph_msgs
+    visualization_msgs
+    message_generation
+    std_msgs
+    pcl_ros)
+
+  catkin_package(
+    INCLUDE_DIRS include
+    LIBRARIES ${PROJECT_NAME}
+    CATKIN_DEPENDS
+      roscpp
+      message_runtime
+      geometry_utils
+      parameter_utils
+      point_cloud_filter
+      pose_graph_msgs
+      visualization_msgs
+      std_msgs
+      pcl_ros)
+  add_library(rosComponents INTERFACE IMPORTED)
+  set_target_properties(rosComponents PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${catkin_INCLUDE_DIRS}"
+  INTERFACE_LINK_LIBRARIS "${catkin_LIBRARIES}")
 endif()
 
 include(CheckCXXCompilerFlag)
@@ -80,9 +75,10 @@ link_directories(
   ${ZLIB_LIBRARY_DIRS}
 )
 
-link_directories(${SESync_LIBRARY_DIRS})
-
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
+
+find_package(SESync REQUIRED)
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
@@ -90,5 +86,6 @@ target_link_libraries(${PROJECT_NAME}
   minizip
   ${Boost_LIBRARIES}
   ${ZLIB_LIBRARIES}
-  sesync
+  rosComponents
+  SESync
 )
