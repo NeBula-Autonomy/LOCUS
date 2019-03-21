@@ -847,14 +847,13 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
 
   NonlinearFactorGraph new_factor;
 
-  std::cout << "isamgetlinearizationpoint-before" << std::endl; 
+  // std::cout << "isamgetlinearizationpoint-before" << std::endl; 
   gtsam::Values linPoint = isam_->getLinearizationPoint();
-  std::cout << "isamgetlinearizationpoint-after" << std::endl; 
+  // std::cout << "isamgetlinearizationpoint-after" << std::endl; 
 
   nfg_ = isam_->getFactorsUnsafe();
-  std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
+  // std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
-  std::cout << "?????????????????? QUATERNION: " << qw << " " << qx << " " << qy << " " << qz << std::endl; 
   const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
   measured.print("Between pose is ");
 
@@ -986,20 +985,20 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
         initialEstimate = isam_->calculateEstimate();
         nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
         // nfg_.print(""); // print whole factor graph
-        std::cout << "number of factors after manual loop closure: " << nfg_.size() << std::endl; 
-        std::cout << "number of poses after manual loop closure: " << initialEstimate.size() << std::endl; 
+        // std::cout << "number of factors after manual loop closure: " << nfg_.size() << std::endl; 
+        // std::cout << "number of poses after manual loop closure: " << initialEstimate.size() << std::endl; 
         // gtsam::Values chordalInitial = gtsam::InitializePose3::initialize(nfg_); // test
         // std::cout << "error at 1c: " << nfg_.error(chordalInitial) << std::endl;
         // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
 
-        std::cout << "!!!!! error after isam2 update on manual loop closure: " << nfg_.error(initialEstimate) << std::endl;
+        // std::cout << "!!!!! error after isam2 update on manual loop closure: " << nfg_.error(initialEstimate) << std::endl;
         // writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/mlc_isam2.g2o");
         gtsam::LevenbergMarquardtParams params;
-        params.setVerbosityLM("TRYLAMBDA");
+        params.setVerbosityLM("SUMMARY");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
         // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
         // result.print("LM result is: ");
-        std::cout << "!!!!! error after LM on manual loop closure: " << nfg_.error(result) << std::endl;
+        // std::cout << "!!!!! error after LM on manual loop closure: " << nfg_.error(result) << std::endl;
         // writeG2o(nfg_, result, "/home/yunchang/Desktop/mlc_lm.g2o");
 
         // // Testing GN results 
@@ -1066,7 +1065,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
     // Update with the new graph
     isam_->update(nfg_,result); 
     gtsam::Values result_isam = isam_->calculateBestEstimate();
-    std::cout << "!!!!! error after isam update from LM result: " << nfg_.error(result_isam) << std::endl;
+    // std::cout << "!!!!! error after isam update from LM result: " << nfg_.error(result_isam) << std::endl;
     // writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/mlc_isam2.g2o");
     
     // redirect cout to file
@@ -1115,9 +1114,58 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
 bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO("Removing factor between %i and %i from the pose graph...", key1, key2);
 
-  // TODO implement
+  // 1. Get factor graph 
+  NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+  // 2. Search for the two keys
+  gtsam::FactorIndices factorsToRemove;
+  for (size_t slot = 0; slot < nfg.size(); ++slot) {
+    const gtsam::NonlinearFactor::shared_ptr& f = nfg[slot];
+    if (f) {
 
-  return true;
+      if (!use_chordal_factor_) {
+        boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
+              boost::dynamic_pointer_cast<gtsam::BetweenFactor<Pose3> >(nfg[slot]);
+
+        if (pose3Between) {
+          if ((pose3Between->key1() == key1 && pose3Between->key2() == key2) ||
+              (pose3Between->key1() == key2 && pose3Between->key2() == key1)) {
+            factorsToRemove.push_back(slot);
+            nfg[slot]->print("");
+          }
+        }
+
+      } else { // using BetweenChordalFactor
+        boost::shared_ptr<gtsam::BetweenChordalFactor<Pose3> > pose3Between =
+              boost::dynamic_pointer_cast<gtsam::BetweenChordalFactor<Pose3> >(nfg[slot]);
+
+        if (pose3Between) {
+          if ((pose3Between->key1() == key1 && pose3Between->key2() == key2) ||
+              (pose3Between->key1() == key2 && pose3Between->key2() == key1)) {
+            factorsToRemove.push_back(slot);
+            nfg[slot]->print("");
+          }
+        }
+      }
+
+    }
+
+  }
+  
+  // 3. Remove factors and update
+  std::cout << "Before remove update" << std::endl; 
+  isam_->update(gtsam::NonlinearFactorGraph(), gtsam::Values(), factorsToRemove);
+
+  // Send an empty message notifying any subscribers that we found a loop
+  // closure.
+  loop_closure_notifier_pub_.publish(std_msgs::Empty());
+
+  // Update values
+  values_ = isam_->calculateEstimate();
+
+  // Publish
+  PublishPoseGraph();
+
+  return true; //result.getVariablesReeliminated() > 0;
 }
 
 std::string absPath(const std::string &relPath) {
@@ -1640,7 +1688,15 @@ GenericSolver::GenericSolver():
   std::cout << "instantiated generic solver." << std::endl; 
 }
 
-void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values) {
+void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, 
+                           gtsam::Values values, 
+                           gtsam::FactorIndices factorsToRemove) {
+  // remove factors
+  for (size_t index : factorsToRemove) {
+    nfg_gs_[index].reset();
+  }
+
+  // add new values and factors
   nfg_gs_.add(nfg);
   values_gs_.insert(values);
   bool do_optimize = false; 
@@ -1662,7 +1718,8 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values
     ROS_ERROR("Unexpected behavior: added values but no factors.");
   }
 
-  if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
+  if (nfg.size() == 0 && values.size() == 0)
+    do_optimize = false;
 
   if (nfg.size() == 1) {
     boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
@@ -1678,12 +1735,15 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg, gtsam::Values values
     }
   }
 
+  if (factorsToRemove.size() > 0) 
+    do_optimize = true;
+
   if (do_optimize) {
     ROS_INFO(">>>>>>>>>>>> Run Optimizer <<<<<<<<<<<<");
     // optimize
     #if solver==LM
     gtsam::LevenbergMarquardtParams params;
-    params.setVerbosityLM("TRYLAMBDA");
+    params.setVerbosityLM("SUMMARY");
     params.diagonalDamping = true; 
     values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
     #elif solver==SEsync

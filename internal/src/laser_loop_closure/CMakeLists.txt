@@ -38,7 +38,6 @@ catkin_package(
     pcl_ros
 )
 
-
 find_package(PCL 1.7 REQUIRED)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -46,6 +45,13 @@ add_definitions(${PCL_DEFINITIONS})
 find_package(Boost 1.58 COMPONENTS filesystem program_options timer REQUIRED)
 
 find_package(ZLIB REQUIRED)
+
+if (NOT TARGET sesync)
+  find_package(SESync REQUIRED)
+  add_library(sesync INTERFACE IMPORTED)
+  set_target_properties(sesync PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${SESync_INCLUDE_DIR}")
+endif()
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
@@ -74,8 +80,6 @@ link_directories(
   ${ZLIB_LIBRARY_DIRS}
 )
 
-find_package(SESync REQUIRED COMPONENTS)
-include_directories(${SESync_INCLUDE_DIR})
 link_directories(${SESync_LIBRARY_DIRS})
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
@@ -86,5 +90,5 @@ target_link_libraries(${PROJECT_NAME}
   minizip
   ${Boost_LIBRARIES}
   ${ZLIB_LIBRARIES}
-  SESync
+  sesync
 )

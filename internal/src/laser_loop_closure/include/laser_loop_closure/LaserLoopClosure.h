@@ -76,7 +76,8 @@ class GenericSolver {
 public:
   GenericSolver();
   void update(gtsam::NonlinearFactorGraph nfg=gtsam::NonlinearFactorGraph(), 
-              gtsam::Values values=gtsam::Values());
+              gtsam::Values values=gtsam::Values(),
+              gtsam::FactorIndices factorsToRemove=gtsam::FactorIndices());
 
   gtsam::Values calculateEstimate() { return values_gs_; }
   gtsam::Values calculateBestEstimate() { return values_gs_; }
