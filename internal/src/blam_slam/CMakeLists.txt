@@ -28,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   core_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -52,6 +53,7 @@ catkin_package(
     pcl_ros
     pcl_conversions
     core_msgs
+    geometry_msgs
 )
 
 include(CheckCXXCompilerFlag)
