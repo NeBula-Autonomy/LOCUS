@@ -176,13 +176,27 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
 bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
                                 blam_slam::AddFactorResponse &response) {
   // TODO - bring the service creation into this node?
+  if (!request.confirmed) {
+    if (request.key_from == request.key_to) {
+      loop_closure_.RemoveConfirmFactorVisualization();
+      return true;
+    } else {
+      response.confirm = true;
+      response.success = loop_closure_.VisualizeConfirmFactor(
+        static_cast<unsigned int>(request.key_from),
+        static_cast<unsigned int>(request.key_to));
+      return true;
+    }
+  }
+
   response.success = loop_closure_.AddFactor(
     static_cast<unsigned int>(request.key_from),
     static_cast<unsigned int>(request.key_to),
     request.qw, request.qx, request.qy, request.qz);
+  response.confirm = false;
   if (response.success){
     std::cout << "adding factor for loop closure succeeded" << std::endl;
-  }else{
+  } else {
     std::cout << "adding factor for loop closure failed" << std::endl;
   }
 
@@ -212,6 +226,19 @@ bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
 bool BlamSlam::RemoveFactorService(blam_slam::RemoveFactorRequest &request,
                                    blam_slam::RemoveFactorResponse &response) {
   // TODO - bring the service creation into this node?
+  if (!request.confirmed) {
+    if (request.key_from == request.key_to) {
+      loop_closure_.RemoveConfirmFactorVisualization();
+      return true;
+    } else {
+      response.confirm = true;
+      response.success = loop_closure_.VisualizeConfirmFactor(
+        static_cast<unsigned int>(request.key_from),
+        static_cast<unsigned int>(request.key_to));
+      return true;
+    }
+  }
+
   response.success = loop_closure_.RemoveFactor(
     static_cast<unsigned int>(request.key_from),
     static_cast<unsigned int>(request.key_to));

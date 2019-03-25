@@ -235,6 +235,8 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<visualization_msgs::Marker>("keyframe_nodes", 10, false);
   closure_area_pub_ =
       nl.advertise<visualization_msgs::Marker>("closure_area", 10, false);
+  confirm_edge_pub_ =
+  nl.advertise<visualization_msgs::Marker>("confirm_edge", 10, false);
 
   scan1_pub_ = nl.advertise<PointCloud>("loop_closure_scan1", 10, false);
   scan2_pub_ = nl.advertise<PointCloud>("loop_closure_scan2", 10, false);
@@ -839,6 +841,9 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   // Thanks to Luca for providing the code
   ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
 
+  // Remove visualization of edge to be confirmed
+  RemoveConfirmFactorVisualization();
+
   // TODO - some check to see what the distance between the two poses are
   // Print that out for the operator to check - to see how large a change is being asked for
 
@@ -1121,6 +1126,9 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
 bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO("Removing factor between %i and %i from the pose graph...", key1, key2);
 
+  // Remove visualization of edge to be confirmed
+  RemoveConfirmFactorVisualization();
+
   // Prevent removing odometry edges 
   if ((key1 == key2 - 1) || (key2 == key1 - 1)) {
     ROS_WARN("RemoveFactor: Removing edges from consecutive poses (odometry) is currently forbidden (disable if condition to allow)");
@@ -1184,6 +1192,67 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   PublishPoseGraph();
 
   return true; //result.getVariablesReeliminated() > 0;
+}
+
+bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int key2) {
+  ROS_INFO("Visualizing factor between %i and %i.", key1, key2);
+
+  if (!values_.exists(key1) || !values_.exists(key2)) {
+    ROS_WARN("Key %i or %i does not exist.", key1, key2);
+    return false;
+  }
+
+  if ((key1 == key2 - 1) || (key2 == key1 - 1)) {
+    ROS_WARN("Cannot add/remove factor between two consecutive keys.", key1, key2);
+    return false;
+  }
+
+  visualization_msgs::Marker m;
+  m.header.frame_id = fixed_frame_id_;
+  m.ns = fixed_frame_id_;
+  m.id = 0;
+  m.action = visualization_msgs::Marker::ADD;
+  m.type = visualization_msgs::Marker::LINE_LIST;
+  m.color.r = 1.0;
+  m.color.g = 1.0;
+  m.color.b = 0.0;
+  m.color.a = 1.0;
+  m.scale.x = 0.05;
+  const gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
+  const gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
+
+  m.points.push_back(gr::ToRosPoint(p1));
+  m.points.push_back(gr::ToRosPoint(p2));
+  confirm_edge_pub_.publish(m);
+  
+  m.header.frame_id = fixed_frame_id_;
+  m.ns = fixed_frame_id_;
+  m.action = visualization_msgs::Marker::ADD;
+  m.type = visualization_msgs::Marker::SPHERE;
+  m.color.r = 1.0;
+  m.color.g = 0.0;
+  m.color.b = 0.0;
+  m.color.a = 1.0;
+  m.scale.x = 0.27;
+  m.scale.y = 0.27;
+  m.scale.z = 0.27;
+  m.id = 1;
+  m.pose.position = gr::ToRosPoint(p1);
+  confirm_edge_pub_.publish(m);
+  m.id = 2;
+  m.pose.position = gr::ToRosPoint(p2);
+  confirm_edge_pub_.publish(m);
+
+  return true;
+}
+
+void LaserLoopClosure::RemoveConfirmFactorVisualization() {
+  visualization_msgs::Marker m;
+  m.header.frame_id = fixed_frame_id_;
+  m.ns = fixed_frame_id_;
+  m.id = 0;
+  m.action = visualization_msgs::Marker::DELETEALL;
+  confirm_edge_pub_.publish(m);
 }
 
 std::string absPath(const std::string &relPath) {

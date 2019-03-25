@@ -2,13 +2,37 @@
 import rospy, sys
 from blam_slam.srv import AddFactor
 
+def yes_or_no(question):
+    answer = raw_input(question + " (y/n): ").lower().strip()
+    print("")
+    while not(answer == "y" or answer == "yes" or \
+    answer == "n" or answer == "no"):
+        print("Input yes or no")
+        answer = raw_input(question + " (y/n):").lower().strip()
+        print("")
+    if answer[0] == "y":
+        return True
+    else:
+        return False
+
 def connect(key_from, key_to, quat):
     rospy.init_node('add_factor_client')
     add_factor = rospy.ServiceProxy('/blam/blam_slam/add_factor', AddFactor)
-    if add_factor(key_from, key_to, quat[0], quat[1], quat[2], quat[3]).success:
-        print('Successfully added a factor between %i and %i to the graph.' % (key_from, key_to))
-    else:
-        print('An error occurred while trying to add a factor between %i and %i.' % (key_from, key_to))
+    response = add_factor(key_from, key_to, quat[0], quat[1], quat[2], quat[3], False)
+    if response.confirm:
+        if response.success:
+            if yes_or_no('The factor to be added to the factor graph is now visualized in RViz.\nDo you confirm this loop closure?'):
+                response = add_factor(key_from, key_to, quat[0], quat[1], quat[2], quat[3], True)
+                if response.success:
+                    print('Successfully added a factor between %i and %i to the graph.' % (key_from, key_to))
+                else:
+                    print('An error occurred while trying to add a factor between %i and %i.' % (key_from, key_to))
+            else:
+                print('Aborted manual loop closure.')
+                add_factor(0, 0, 0, 0, 0, 0, False)  # remove edge visualization
+        else:
+            print('Error: One or more of the keys %i and %i do not exist.' % (key_from, key_to))
+            add_factor(0, 0, 0, 0, 0, 0, False)  # remove edge visualization
 
 if __name__ == '__main__':
     try:

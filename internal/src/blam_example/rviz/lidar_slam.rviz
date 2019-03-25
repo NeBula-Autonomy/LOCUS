@@ -7,8 +7,9 @@ Panels:
         - /TF1/Frames1
         - /3D Octree1/Autocompute Value Bounds1
         - /3D Incremental Octree1/Autocompute Value Bounds1
+        - /Loop Edges1
       Splitter Ratio: 0.5
-    Tree Height: 359
+    Tree Height: 743
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -27,7 +28,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 2
-    SyncSource: 3D Octree
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -54,47 +55,13 @@ Visualization Manager:
       Frame Timeout: 100000000
       Frames:
         All Enabled: false
-        base:
-          Value: true
-        camera_aligned_depth_to_color_frame:
-          Value: true
-        camera_aligned_depth_to_infra1_frame:
-          Value: true
-        camera_aligned_depth_to_infra2_frame:
-          Value: true
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_infra1_frame:
-          Value: true
-        camera_infra1_optical_frame:
-          Value: true
-        camera_infra2_frame:
-          Value: true
-        camera_infra2_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
-        odometry:
-          Value: false
-        world:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          base:
-            {}
-          odometry:
-            {}
+        {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -350,7 +317,7 @@ Visualization Manager:
       Marker Topic: /blam/blam_slam/loop_edges
       Name: Loop Edges
       Namespaces:
-        world: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -358,7 +325,7 @@ Visualization Manager:
       Marker Topic: /blam/blam_slam/graph_nodes
       Name: Graph Nodes
       Namespaces:
-        world: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -366,7 +333,7 @@ Visualization Manager:
       Marker Topic: /blam/blam_slam/graph_node_ids
       Name: Node IDs
       Namespaces:
-        world: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -374,7 +341,7 @@ Visualization Manager:
       Marker Topic: /blam/blam_slam/keyframe_nodes
       Name: Key Frames
       Namespaces:
-        world: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -382,7 +349,7 @@ Visualization Manager:
       Marker Topic: /blam/blam_slam/closure_area
       Name: Closure Area
       Namespaces:
-        base: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -445,6 +412,14 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /blam/blam_slam/confirm_edge
+      Name: Confirm Edge
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -496,7 +471,7 @@ Window Geometry:
   Height: 1028
   Hide Left Dock: true
   Hide Right Dock: true
-  QMainWindow State: 000000ff00000000fd00000004000000000000016a000003befc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006100fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730000000028000003be000000d700fffffffb0000000800540069006d00650000000328000000da0000003b00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c0000026100000001000002c5000003dafc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000028000003da000000ad00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000002d00000003efc0100000001fb0000000800540069006d006501000000000000045000000000000000000000074d000003be00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000020200000397fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006f00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000004000000397000000f800fffffffb0000000800540069006d00650000000328000000da0000005800fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c0000026100000001000002c5000003dafc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000028000003da000000e300fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000002d00000003efc0100000001fb0000000800540069006d006501000000000000045000000000000000000000074d0000039700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:

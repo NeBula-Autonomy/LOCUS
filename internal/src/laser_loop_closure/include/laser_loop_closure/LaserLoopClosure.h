@@ -152,6 +152,12 @@ class LaserLoopClosure {
   // Removes the factor between the two keys from the pose graph.
   bool RemoveFactor(unsigned int key1, unsigned int key2);
 
+  // Visualizes an edge between the two nodes for the user to confirm.
+  bool VisualizeConfirmFactor(unsigned int key1, unsigned int key2);
+
+  // Removes the factor that was visualized for confirmation.
+  void RemoveConfirmFactorVisualization();
+
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 
@@ -261,6 +267,7 @@ class LaserLoopClosure {
   ros::Publisher closure_area_pub_;
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
+  ros::Publisher confirm_edge_pub_;
 
   // ros::ServiceServer add_factor_srv_;
 
