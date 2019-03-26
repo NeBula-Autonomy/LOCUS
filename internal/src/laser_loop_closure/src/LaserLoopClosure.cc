@@ -271,6 +271,7 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   // Store this timestamp so that we can publish the pose graph later.
   keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
 
   // Update ISAM2.
   try{
@@ -397,6 +398,7 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
   if (key == 0) {
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
     keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key, stamp));
+    stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key));
   }
 
   // ROS_INFO_STREAM("AddKeyScanPair " << key);
@@ -864,6 +866,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   // std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
   const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
+  measured.print("Between pose is ");
 
   double cost; // for debugging
 
@@ -1203,7 +1206,7 @@ bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int ke
   }
 
   if ((key1 == key2 - 1) || (key2 == key1 - 1)) {
-    ROS_WARN("Cannot add/remove factor between two consecutive keys.", key1, key2);
+    ROS_WARN("Cannot add/remove factor between two consecutive keys.");
     return false;
   }
 
@@ -1805,8 +1808,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
     ROS_ERROR("Unexpected behavior: added values but no factors.");
   }
 
-  if (nfg.size() == 0 && values.size() == 0)
-    do_optimize = false;
+  if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
 
   if (nfg.size() == 1) {
     boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
@@ -1822,19 +1824,59 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
     }
   }
 
-  if (factorsToRemove.size() > 0) 
-    do_optimize = true;
-
   if (do_optimize) {
     ROS_INFO(">>>>>>>>>>>> Run Optimizer <<<<<<<<<<<<");
     // optimize
     #if solver==LM
     gtsam::LevenbergMarquardtParams params;
-    params.setVerbosityLM("SUMMARY");
+    params.setVerbosityLM("TRYLAMBDA");
     params.diagonalDamping = true; 
     values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
     #elif solver==SEsync
     // something
     #endif
   }
+}
+
+gu::Transform3 LaserLoopClosure::GetPoseAtTime(const ros::Time& stamp) const {
+
+  std::cout << "Get pose closest to input time: " << stamp.toSec() << std::endl;
+  // Find closest timestamp
+  // std::map<ros::Time, unsigned int>::iterator iterTime;
+  
+  // First key that is not less than timestamp (so the key just past the timestamp)
+  auto iterTime = stamps_keyed_.lower_bound(stamp.toSec());
+
+  std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
+
+  // TODO - interpolate - currently just take one
+  double t2 = iterTime->first;
+  double t1 = std::prev(iterTime,1)->first;
+
+  std::cout << "Time 1 is: " << t1 << ", Time 2 is: " << t2 << std::endl;
+
+  unsigned int key;
+
+  if (t2-stamp.toSec() < stamp.toSec()-t1){
+    // t2 is closer - use that key
+    std::cout << "Selecting later time: " << t2 << std::endl;
+    key = iterTime->second;
+  }else {
+    // t1 is closer - use that key
+    std::cout << "Selecting earlier time: " << t1 << std::endl;
+    key = std::prev(iterTime,1)->second;
+    iterTime--;
+  }
+  std::cout << "Key is: " << key << std::endl;
+  if (iterTime == std::prev(stamps_keyed_.begin())){
+    ROS_WARN("Invalid time for graph (before start of graph range). Choosing next value");
+    iterTime++;
+    key = iterTime->second;
+  } else if(iterTime==stamps_keyed_.end()){
+    ROS_WARN("Invalid time for graph (past end of graph range). take latest pose");
+    key = key_ -1;
+  }
+
+  // Get the pose at that key
+  return ToGu(values_.at<Pose3>(key));
 }

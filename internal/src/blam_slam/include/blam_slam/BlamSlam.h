@@ -38,19 +38,22 @@
 #define BLAM_SLAM_H
 
 #include <ros/ros.h>
-#include <pcl_ros/point_cloud.h>
-#include <measurement_synchronizer/MeasurementSynchronizer.h>
 
+#include <blam_slam/AddFactor.h>
+#include <blam_slam/RemoveFactor.h>
+#include <blam_slam/SaveGraph.h>
+
+#include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
 #include <laser_loop_closure/LaserLoopClosure.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
+#include <pcl_ros/point_cloud.h>
+#include <visualization_msgs/Marker.h>
+#include <tf/transform_listener.h>
 
-// loop closure services
-#include <blam_slam/AddFactor.h>
-#include <blam_slam/RemoveFactor.h>
-#include <blam_slam/SaveGraph.h>
+#include <core_msgs/Artifact.h>
 
 class BlamSlam {
  public:
@@ -67,6 +70,8 @@ class BlamSlam {
   // Sensor message processing.
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
 
+  int marker_id_;
+
  private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -77,6 +82,7 @@ class BlamSlam {
 
   // Sensor callbacks.
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
+  void ArtifactCallback(const core_msgs::Artifact& msg);
 
   // Timer callbacks.
   void EstimateTimerCallback(const ros::TimerEvent& ev);
@@ -99,6 +105,10 @@ class BlamSlam {
   bool SaveGraphService(blam_slam::SaveGraphRequest &request,
                         blam_slam::SaveGraphResponse &response);
 
+  // Publish Artifacts
+  void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
+                       const core_msgs::Artifact& msg);
+
   // The node's name.
   std::string name_;
 
@@ -108,16 +118,20 @@ class BlamSlam {
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
-  // Sigmas
+  // Covariances
   double position_sigma_;
   double attitude_sigma_;
 
   // Subscribers.
   ros::Subscriber pcld_sub_;
+  ros::Subscriber artifact_sub_;
+  tf::TransformListener listener;
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
-
+  ros::Publisher artifact_pub_;
+  ros::Publisher marker_pub_;
+  
   // Services
   ros::ServiceServer add_factor_srv_;
   ros::ServiceServer remove_factor_srv_;

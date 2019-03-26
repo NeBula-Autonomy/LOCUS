@@ -10,7 +10,6 @@ internal/devel
 internal/build_isolated
 internal/devel_isolated
 internal/install_isolated
-internal/.catkin_tools
 #internal/src
 *.catkin_workspace
 
@@ -44,4 +43,3 @@ internal/.catkin_tools
 
 # CSV files
 *.csv
-

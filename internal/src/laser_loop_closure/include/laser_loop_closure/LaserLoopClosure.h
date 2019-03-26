@@ -138,6 +138,9 @@ class LaserLoopClosure {
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
 
+  // Get pose at an input time
+  geometry_utils::Transform3 GetPoseAtTime(const ros::Time& stamp) const;
+
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
@@ -213,6 +216,7 @@ class LaserLoopClosure {
   // Keep a list of keyed laser scans and keyed timestamps.
   std::map<unsigned int, PointCloud::ConstPtr> keyed_scans_;
   std::map<unsigned int, ros::Time> keyed_stamps_;
+  std::map<double, unsigned int> stamps_keyed_;
 
   // Aggregate odometry until we can update the pose graph.
   gtsam::Pose3 odometry_;
