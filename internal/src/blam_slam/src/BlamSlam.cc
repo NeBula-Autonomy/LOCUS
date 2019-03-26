@@ -419,6 +419,7 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
   new_msg.point.point.x = W_artifact_position[0];
   new_msg.point.point.y = W_artifact_position[1];
   new_msg.point.point.z = W_artifact_position[2];
+  new_msg.point.header.frame_id = fixed_frame_id_;
 
   // Transform to world frame from map frame
   new_msg.point = tf_buffer_.transform(
