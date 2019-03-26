@@ -38,13 +38,18 @@
 #include <geometry_utils/Transform3.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <visualization_msgs/Marker.h>
 
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
 BlamSlam::BlamSlam()
-    : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
-    position_sigma_(0.01), attitude_sigma_(0.04), marker_id_(0) {}
+  : estimate_update_rate_(0.0),
+    visualization_update_rate_(0.0),
+    position_sigma_(0.01),
+    attitude_sigma_(0.04),
+    marker_id_(0),
+    tf_listener_(tf_buffer_) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -141,7 +146,6 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
     return RegisterLogCallbacks(n);
   else
     return RegisterOnlineCallbacks(n);
-
 }
 
 bool BlamSlam::RegisterLogCallbacks(const ros::NodeHandle& n) {
@@ -363,7 +367,9 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Apply transform 
   Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global;
 
-  std::cout << "Artifact position in global is: " << W_artifact_position[0] << ", " << W_artifact_position[1] << ", " << W_artifact_position[2] << std::endl;
+  std::cout << "Artifact position in map is: " << W_artifact_position[0] << ", "
+            << W_artifact_position[1] << ", " << W_artifact_position[2]
+            << std::endl;
 
   PublishArtifact(W_artifact_position, msg); 
 }
@@ -450,7 +456,6 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   }
 
   unsigned int pose_key;
-
   if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)
     // TODO rename to attitude and position sigma 
@@ -482,7 +487,6 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
       return false;
     }
   }
-  
   *new_keyframe = true;
 
   if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {
@@ -511,6 +515,18 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
   new_msg.point.point.x = W_artifact_position[0];
   new_msg.point.point.y = W_artifact_position[1];
   new_msg.point.point.z = W_artifact_position[2];
+  new_msg.point.header.frame_id = fixed_frame_id_;
+
+  // Transform to world frame from map frame
+  new_msg.point = tf_buffer_.transform(
+      new_msg.point, "world", new_msg.point.header.stamp, "world");
+  // Transform at time of message
+
+  std::cout << "Artifact position in world is: " << new_msg.point.point.x
+            << ", " << new_msg.point.point.y << ", " << new_msg.point.point.z
+            << std::endl;
+  std::cout << "Frame ID is: " << new_msg.point.header.frame_id << std::endl;
+
   artifact_pub_.publish(new_msg);
 
   // Publish Marker with new position
@@ -525,9 +541,10 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
   marker.ns = "artifact";
   marker.id = marker_id_++;
   marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position.x = W_artifact_position[0];
-  marker.pose.position.y = W_artifact_position[1];
-  marker.pose.position.z = W_artifact_position[2];
+  marker.pose.position = new_msg.point.point;
+  // marker.pose.position.x = W_artifact_position[0];
+  // marker.pose.position.y = W_artifact_position[1];
+  // marker.pose.position.z = W_artifact_position[2];
   std::cout << "Marker xyz: " << marker.pose.position.x << " "
             << marker.pose.position.y << " " << marker.pose.position.z << std::endl;
   marker.pose.orientation.x = 0.0;
