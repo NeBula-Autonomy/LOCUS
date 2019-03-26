@@ -2,13 +2,17 @@
   <!-- True for simulation, false for real-time and bagfiles -->
   <param name="/use_sim_time" value="false"/>
 
+  <!-- optional filename of the zip archive of a pose graph to be loaded -->
+  <arg name="load_pose_graph_file" default="" /> 
+
   <group ns="blam">
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
           type="blam_slam_node"
           output="screen">
-      <env name="LD_LIBRARY_PATH" value="/opt/pcl-1.7/lib:$(optenv LD_LIBRARY_PATH)"/>
+
+      <param name="load_graph" value="$(arg load_pose_graph_file)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>
@@ -18,13 +22,14 @@
         position: {x: 0.0, y: 0.0, z: 0.0}
         orientation: {roll: 0.0, pitch: 0.0, yaw: 0.0}
         position_sigma: {x: 0.1, y: 0.1, z: 0.1}
-        orientation_sigma: {roll: 0.02, pitch: 0.02, yaw: 0.02}
+        orientation_sigma: {roll: 0.01, pitch: 0.01, yaw: 0.01}
       </rosparam>
 
       <!-- Noise parameters -->
+      <!-- these are variances -->
       <rosparam param="noise">
-        odom_position_sigma: 0.4
-        odom_attitude_sigma: 0.1
+        odom_position_sigma: 0.1
+        odom_attitude_sigma: 0.01
       </rosparam>
 
       <!-- Rates -->
@@ -52,5 +57,8 @@
       <rosparam file="$(find laser_loop_closure)/config/parameters.yaml"/>
     </node>
   </group>
+
+  <!-- launch rviz  -->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find blam_example)/rviz/lidar_slam.rviz" />
 
 </launch>

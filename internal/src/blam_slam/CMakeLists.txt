@@ -14,6 +14,17 @@ if (NOT GTSAM_FOUND)
   message(FATAL_ERROR "This program requires the GTSAM library.")
 endif(NOT GTSAM_FOUND)
 
+FIND_PACKAGE(Boost REQUIRED
+  date_time
+  serialization
+  thread
+  filesystem
+  system
+  regex
+  timer
+  chrono
+)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rosbag
@@ -32,7 +43,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
-add_service_files(FILES ManualLoopClosure.srv)
+add_service_files(FILES AddFactor.srv RemoveFactor.srv SaveGraph.srv)
 generate_messages()
 
 catkin_package(
@@ -54,6 +65,8 @@ catkin_package(
     pcl_conversions
     core_msgs
     geometry_msgs
+  DEPENDS
+    Boost
 )
 
 include(CheckCXXCompilerFlag)
@@ -67,15 +80,20 @@ else()
   message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
 endif()
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR})
-link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 add_library(${PROJECT_NAME} src/BlamSlam.cc)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} gtsam)
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+  gtsam
+)
 
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
   gtsam
 )
 
@@ -83,5 +101,6 @@ add_executable(${PROJECT_NAME}_offline src/${PROJECT_NAME}_offline.cc)
 target_link_libraries(${PROJECT_NAME}_offline
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
   gtsam
 )
