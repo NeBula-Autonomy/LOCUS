@@ -50,7 +50,7 @@ find_package(ZLIB REQUIRED)
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
 check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if (COMPILER_SUPPORTS_CXX14)
+if (COMPILER_SUPPORTS_CXX11)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 elseif(COMPILER_SUPPORTS_CXX0X)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
@@ -74,9 +74,9 @@ link_directories(
   ${ZLIB_LIBRARY_DIRS}
 )
 
-find_package(SESync REQUIRED COMPONENTS)
-include_directories(${SESync_INCLUDE_DIR})
-link_directories(${SESync_LIBRARY_DIRS})
+#find_package(SESync REQUIRED COMPONENTS)
+#include_directories(${SESync_INCLUDE_DIR})
+#link_directories(${SESync_LIBRARY_DIRS})
 
 add_library(${PROJECT_NAME} src/LaserLoopClosure.cc)
 target_link_libraries(${PROJECT_NAME}
@@ -86,5 +86,5 @@ target_link_libraries(${PROJECT_NAME}
   minizip
   ${Boost_LIBRARIES}
   ${ZLIB_LIBRARIES}
-  SESync
+  #SESync
 )

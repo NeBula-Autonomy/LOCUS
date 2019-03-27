@@ -1,12 +1,18 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
+  <!-- optional filename of the zip archive of a pose graph to be loaded -->
+  <arg name="load_pose_graph_file" default="" /> 
+
   <group ns="$(arg robot_namespace)">
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
           type="blam_slam_node"
           output="screen">
+
+      <!-- Load graph -->
+      <param name="load_graph" value="$(arg load_pose_graph_file)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
