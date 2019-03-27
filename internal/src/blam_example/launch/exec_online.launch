@@ -1,6 +1,12 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
+  <!-- Map processing params -->
+  <arg name="process_map" default="true"/>
+  <arg name="map_update_freq" default="1.0"/><!-- Hz -->
+  <arg name="map_topic_input" default="blam_slam/octree_map"/>
+  <arg name="map_topic_output" default="blam_slam/octree_map_downsampled"/>
+
   <!-- optional filename of the zip archive of a pose graph to be loaded -->
   <arg name="load_pose_graph_file" default="" /> 
 
@@ -74,19 +80,14 @@
     </node>
 
 
-    <!-- Downsample output point cloud -->
-    <node pkg="nodelet" type="nodelet" name="transform_points_world"
-          args="standalone pcl/VoxelGrid">
-      <remap from="~input" to="blam_slam/octree_map"/>
-      <remap from="~output" to="blam_slam/octree_map_downsampled"/>
-      <rosparam subst_value="true">
-        filter_field_name: z
-        filter_limit_min: -100
-        filter_limit_max: 100
-        output_frame: world
-        leaf_size: 0.1
-      </rosparam>
-    </node>
+    <!-- PC throttling and filtering -->
+    <group if="$(arg process_map)">
+        <include file="$(find blam_example)/launch/map_processing.launch">
+          <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+          <arg name="map_update_freq" value="$(arg map_update_freq)"/>
+          <arg name="map_topic_input" value="$(arg map_topic_input)"/>
+        </include>
+    </group>
 
     <!-- Convert output PoseStamped message to Odometry -->
     <node pkg="topic_tools" type="transform" name="pose_to_odom"
