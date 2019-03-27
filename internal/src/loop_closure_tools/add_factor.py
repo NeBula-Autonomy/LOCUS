@@ -17,7 +17,7 @@ def yes_or_no(question):
 
 def connect(key_from, key_to, quat):
     rospy.init_node('add_factor_client')
-    add_factor = rospy.ServiceProxy('/blam/blam_slam/add_factor', AddFactor)
+    add_factor = rospy.ServiceProxy('/husky/blam_slam/add_factor', AddFactor)
     response = add_factor(key_from, key_to, quat[0], quat[1], quat[2], quat[3], False)
     if response.confirm:
         if response.success:

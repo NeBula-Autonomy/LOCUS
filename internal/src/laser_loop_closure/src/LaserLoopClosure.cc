@@ -42,6 +42,8 @@
 #include <pose_graph_msgs/PoseGraph.h>
 #include <std_msgs/Empty.h>
 #include <visualization_msgs/Marker.h>
+#include <interactive_markers/interactive_marker_server.h>
+#include <interactive_markers/menu_handler.h>
 
 #include <pcl/registration/gicp.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -72,6 +74,8 @@ using gtsam::GraphAndValues;
 using gtsam::Vector3;
 using gtsam::Vector6;
 using gtsam::ISAM2GaussNewtonParams;
+
+boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 
 LaserLoopClosure::LaserLoopClosure()
     : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {
@@ -197,11 +201,14 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
-  std::cout << "!!!!! error at LoadParameters isam: " << nfg_.error(values_) << std::endl;
   key_++;
 
   // Set the initial odometry.
   odometry_ = Pose3::identity();
+
+
+	//Initilize interactive marker server
+  server.reset( new interactive_markers::InteractiveMarkerServer("interactive_node", "", false) );
 
   return true;
 }
@@ -300,8 +307,6 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   nfg_ = isam_->getFactorsUnsafe();
 
-  std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
-
   // Assign output and get ready to go again!
   *key = key_++;
 
@@ -366,8 +371,6 @@ bool LaserLoopClosure::AddBetweenChordalFactor(
   values_ = isam_->calculateEstimate();
 
   nfg_ = isam_->getFactorsUnsafe();
-
-  std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
 
   // Assign output and get ready to go again!
   *key = key_++;
@@ -512,8 +515,6 @@ bool LaserLoopClosure::FindLoopClosures(
   values_ = isam_->calculateEstimate();
 
   nfg_ = isam_->getFactorsUnsafe();
-
-  std::cout << "!!!!! error at FindLoopClosures isam: " << nfg_.error(values_) << std::endl;
 
   return closed_loop;
 }
@@ -863,7 +864,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   }
 
   nfg_ = isam_->getFactorsUnsafe();
-  // std::cout << "!!!!! error at AddFactor linpt: " << nfg_.error(linPoint) << std::endl;
   // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
   const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
   measured.print("Between pose is ");
@@ -1565,6 +1565,40 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
   return true;
 }
 
+//Interactive Marker Menu
+void LaserLoopClosure::makeMenuMarker( gu::Transform3 position, const std::string id_number )
+{
+  interactive_markers::MenuHandler menu_handler;
+
+  visualization_msgs::InteractiveMarker int_marker;
+  int_marker.header.frame_id = LaserLoopClosure::fixed_frame_id_;
+  int_marker.scale = 1.0;
+  int_marker.pose = gr::ToRosPose(position);
+  int_marker.name = id_number;
+
+  visualization_msgs::Marker marker;
+  marker.type = visualization_msgs::Marker::SPHERE;
+  marker.scale.x = 0.3;
+  marker.scale.y = 0.3;
+  marker.scale.z = 0.3;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 1.0;
+  marker.color.a = 0.5;
+
+  visualization_msgs::InteractiveMarkerControl control;
+  control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MENU;
+  control.name = id_number;
+  control.markers.push_back( marker );
+  control.always_visible = true;
+  int_marker.controls.push_back(control);
+
+  menu_handler.insert(id_number);
+  server->insert(int_marker);
+  menu_handler.apply(*server, int_marker.name );
+  server->applyChanges();
+}
+
 void LaserLoopClosure::PublishPoseGraph() {
 
   // Publish odometry edges.
@@ -1768,6 +1802,14 @@ void LaserLoopClosure::PublishPoseGraph() {
 
     // Publish.
     pose_graph_pub_.publish(g);
+  }
+  //Interactive Marker
+  for (const auto& keyed_pose : values_) {
+    if (keyed_pose.key % 20 == 0 ) { 
+      gu::Transform3 position = ToGu(values_.at<Pose3>(keyed_pose.key));
+      const std::string id_number = std::to_string(keyed_pose.key);
+      LaserLoopClosure::makeMenuMarker( position, id_number );
+    }
   }
 }
 
