@@ -19,8 +19,8 @@ manual_lc_rot_precision: 0.0 # default 0.0 (no information)
 manual_lc_trans_precision: 10.0 # default 0.001 (~30 m sd)
 
 # Noise parameters (as variances) for Laser loop closure
-laser_lc_rot_sigma: 0.01 # default 0.01
-laser_lc_trans_sigma: 0.01 # default 0.04 
+laser_lc_rot_sigma: 0.01 #0.316 # default 0.01
+laser_lc_trans_sigma: 0.04 #0.6324 # default 0.04 
 
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures
@@ -34,13 +34,13 @@ proximity_threshold: 3
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
 # the ICP "fitness score" must be less than this number.
-max_tolerable_fitness: 0.08
+max_tolerable_fitness: 10.0
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.
-skip_recent_poses: 100
+skip_recent_poses: 200
 
 # If a loop has recently been closed, don't close a new one for at least this
 # many poses (i.e. the sensor would have to move translation_threshold *
 # poses_before_reclosing meters in order to close a new loop).
-poses_before_reclosing: 200
+poses_before_reclosing: 300
