@@ -144,6 +144,9 @@ class LaserLoopClosure {
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
+  // makeMenuMaker
+  void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;
+
   // Add factor between the two keys to connect them. This function is
   // designed for a scenario where a human operator can manually perform
   // loop closures by adding these factors to the pose graph.
