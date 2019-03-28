@@ -580,17 +580,17 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
     marker.color.b = 0.0f;
     marker.type = visualization_msgs::Marker::CYLINDER;
   }
-  if (msg.label == "manikin")
+  if (msg.label == "survivor")
   {
-    std::cout << "manikin marker" << std::endl;
+    std::cout << "survivor marker" << std::endl;
     return;
-    // marker.color.r = 1.0f;
-    // marker.color.g = 1.0f;
-    // marker.color.b = 1.0f;
-    // marker.scale.x = 0.5f;
-    // marker.scale.y = 0.5f;
-    // marker.scale.z = 0.5f;
-    // marker.type = visualization_msgs::Marker::CYLINDER;
+    marker.color.r = 1.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 1.0f;
+    marker.scale.x = 2.0f;
+    marker.scale.y = 2.0f;
+    marker.scale.z = 2.0f;
+    marker.type = visualization_msgs::Marker::CYLINDER;
   }
   marker.lifetime = ros::Duration();
 
