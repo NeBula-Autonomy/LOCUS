@@ -327,8 +327,6 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Add new node - from latest relative poses from LIO
   // AddNewNode(timestamp_lkf_nsec, msg.header, false);
 
-
-
   std::cout << "Artifact message received is for id " << msg.id << std::endl;
   std::cout << "\t Confidence: " << msg.confidence << std::endl;
   std::cout << "\t Position:\n[" << msg.point.point.x << ", "
