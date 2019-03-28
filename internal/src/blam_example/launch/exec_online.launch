@@ -86,7 +86,7 @@
           <arg name="robot_namespace" value="$(arg robot_namespace)"/>
           <arg name="map_update_freq" value="$(arg map_update_freq)"/>
           <arg name="map_topic_input" value="$(arg map_topic_input)"/>
-          <arg name="map_topic_input" value="$(arg map_topic_output)"/>
+          <arg name="map_topic_output" value="$(arg map_topic_output)"/>
         </include>
     </group>
 
