@@ -18,8 +18,8 @@
      filter_limit_min: -100
      filter_limit_max: 100
      filter_limit_negative: False
-     leaf_size: 0.1
-     output_frame: $(arg robot_namespace)/blam
+     leaf_size: 0.3
+     output_frame: world
     </rosparam>
   </node> 
 
