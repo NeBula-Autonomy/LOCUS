@@ -223,6 +223,7 @@ class LaserLoopClosure {
 
   // Aggregate odometry until we can update the pose graph.
   gtsam::Pose3 odometry_;
+  gtsam::Pose3 odometry_kf_;
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
@@ -233,7 +234,8 @@ class LaserLoopClosure {
   unsigned int skip_recent_poses_;
   unsigned int poses_before_reclosing_;
   unsigned int n_iterations_manual_loop_close_;
-  double translation_threshold_;
+  double translation_threshold_nodes_;
+  double translation_threshold_kf_;
   double proximity_threshold_;
   double max_tolerable_fitness_;
   double manual_lc_rot_precision_;
@@ -243,6 +245,7 @@ class LaserLoopClosure {
   unsigned int relinearize_skip_;
   double relinearize_threshold_;
   bool use_chordal_factor_;
+  bool publish_interactive_markers_;
 
   // ICP parameters.
   double icp_ransac_thresh_;

@@ -126,7 +126,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("n_iterations_manual_loop_close", n_iterations_manual_loop_close_)) return false;
 
   // Load loop closing parameters.
-  if (!pu::Get("translation_threshold", translation_threshold_)) return false;
+  if (!pu::Get("translation_threshold_kf", translation_threshold_kf_))
+    return false;
+  if (!pu::Get("translation_threshold_nodes", translation_threshold_nodes_))
+    return false;
   if (!pu::Get("proximity_threshold", proximity_threshold_)) return false;
   if (!pu::Get("max_tolerable_fitness", max_tolerable_fitness_)) return false;
   if (!pu::Get("skip_recent_poses", skip_recent_poses_)) return false;
@@ -135,7 +138,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("manual_lc_trans_precision", manual_lc_trans_precision_)) return false;
   if (!pu::Get("laser_lc_rot_sigma", laser_lc_rot_sigma_)) return false;
   if (!pu::Get("laser_lc_trans_sigma", laser_lc_trans_sigma_)) return false;
-  if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
+  if (!pu::Get("use_chordal_factor", use_chordal_factor_))
+    return false;
+  if (!pu::Get("publish_interactive_markers", publish_interactive_markers_))
+    return false;
 
   // Load ICP parameters.
   if (!pu::Get("icp/tf_epsilon", icp_tf_epsilon_)) return false;
@@ -208,7 +214,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
 
 	//Initilize interactive marker server
-  server.reset( new interactive_markers::InteractiveMarkerServer("interactive_node", "", false) );
+  if (publish_interactive_markers_) {
+    server.reset(new interactive_markers::InteractiveMarkerServer(
+        "interactive_node", "", false));
+  }
 
   return true;
 }
@@ -269,12 +278,29 @@ bool LaserLoopClosure::AddBetweenFactor(
   // Append the new odometry.
   Pose3 new_odometry = ToGtsam(delta);
 
+  // CHANGE TO CONFLICT THE BELOW STATEMENT
+  // We always add new poses, but only return true if the pose is far enough
+  // away from the last one (keyframes). This lets the caller know when they
+  // can add a laser scan.
+
+  // Is the odometry translation large enough to add a new node to the graph
+  odometry_ = odometry_.compose(new_odometry);
+  odometry_kf_ = odometry_kf_.compose(new_odometry);
+
+  if (odometry_.translation().norm() < translation_threshold_nodes_) {
+    // No new pose - translation is not enough to add a new node
+    return false;
+  }
+
+  // Else - add a new factor
+
   NonlinearFactorGraph new_factor;
   Values new_value;
-  new_factor.add(MakeBetweenFactor(new_odometry, ToGtsam(covariance)));
+  new_factor.add(MakeBetweenFactor(odometry_, ToGtsam(covariance)));
+  // TODO Compose covariances at the same time as odometry
 
   Pose3 last_pose = values_.at<Pose3>(key_-1);
-  new_value.insert(key_, last_pose.compose(new_odometry));
+  new_value.insert(key_, last_pose.compose(odometry_));
 
   // Store this timestamp so that we can publish the pose graph later.
   keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
@@ -310,14 +336,14 @@ bool LaserLoopClosure::AddBetweenFactor(
   // Assign output and get ready to go again!
   *key = key_++;
 
-  // We always add new poses, but only return true if the pose is far enough
-  // away from the last one (keyframes). This lets the caller know when they
-  // can add a laser scan.
+  // Reset odometry to identity
+  odometry_ = Pose3::identity();
 
-  // Is the odometry translation large enough to add a new keyframe to the graph?
-  odometry_ = odometry_.compose(new_odometry);
-  if (odometry_.translation().norm() > translation_threshold_) {
-    odometry_ = Pose3::identity();
+  // Return true to store a key frame
+  if (odometry_kf_.translation().norm() > translation_threshold_kf_) {
+    // True for a new key frame
+    // Reset odometry to identity
+    odometry_kf_ = Pose3::identity();
     return true;
   }
 
@@ -381,7 +407,7 @@ bool LaserLoopClosure::AddBetweenChordalFactor(
 
   // Is the odometry translation large enough to add a new keyframe to the graph?
   odometry_ = odometry_.compose(new_odometry);
-  if (odometry_.translation().norm() > translation_threshold_) {
+  if (odometry_.translation().norm() > translation_threshold_kf_) {
     odometry_ = Pose3::identity();
     return true;
   }
@@ -1810,11 +1836,13 @@ void LaserLoopClosure::PublishPoseGraph() {
     pose_graph_pub_.publish(g);
   }
   //Interactive Marker
-  for (const auto& keyed_pose : values_) {
-    if (keyed_pose.key % 20 == 0 ) { 
-      gu::Transform3 position = ToGu(values_.at<Pose3>(keyed_pose.key));
-      const std::string id_number = std::to_string(keyed_pose.key);
-      LaserLoopClosure::makeMenuMarker( position, id_number );
+  if (publish_interactive_markers_) {
+    for (const auto& keyed_pose : values_) {
+      if (keyed_pose.key % 20 == 0) {
+        gu::Transform3 position = ToGu(values_.at<Pose3>(keyed_pose.key));
+        const std::string id_number = std::to_string(keyed_pose.key);
+        LaserLoopClosure::makeMenuMarker(position, id_number);
+      }
     }
   }
 }
