@@ -1866,6 +1866,9 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
     }
   }
 
+  if (factorsToRemove.size() > 0) 
+    do_optimize = true;
+
   if (do_optimize) {
     ROS_INFO(">>>>>>>>>>>> Run Optimizer <<<<<<<<<<<<");
     // optimize

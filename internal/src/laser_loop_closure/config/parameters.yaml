@@ -29,7 +29,7 @@ translation_threshold: 1.0
 
 # When searching through old poses for loop closures, only consider old poses
 # that are within this distance of the current pose.
-proximity_threshold: 4
+proximity_threshold: 3
 
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
@@ -38,7 +38,7 @@ max_tolerable_fitness: 10.0
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.
-skip_recent_poses: 200
+skip_recent_poses: 100
 
 # If a loop has recently been closed, don't close a new one for at least this
 # many poses (i.e. the sensor would have to move translation_threshold *

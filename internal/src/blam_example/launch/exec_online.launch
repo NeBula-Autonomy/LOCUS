@@ -1,12 +1,6 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
-  <!-- Map processing params -->
-  <arg name="process_map" default="true"/>
-  <arg name="map_update_freq" default="1.0"/><!-- Hz -->
-  <arg name="map_topic_input" default="blam_slam/octree_map"/>
-  <arg name="map_topic_output" default="blam_slam/octree_map_downsampled"/>
-
   <!-- optional filename of the zip archive of a pose graph to be loaded -->
   <arg name="load_pose_graph_file" default="" /> 
 
@@ -81,6 +75,11 @@
 
 
     <!-- PC throttling and filtering -->
+    <!-- Map processing params -->
+    <arg name="process_map" default="true"/>
+    <arg name="map_update_freq" default="1.0"/><!-- Hz -->
+    <arg name="map_topic_input" default="blam_slam/octree_map"/>
+    <arg name="map_topic_output" default="blam_slam/octree_map_downsampled"/>
     <group if="$(arg process_map)">
         <include file="$(find blam_example)/launch/map_processing.launch">
           <arg name="robot_namespace" value="$(arg robot_namespace)"/>
@@ -90,15 +89,6 @@
         </include>
     </group>
 
-    <!-- Convert output PoseStamped message to Odometry -->
-    <node pkg="topic_tools" type="transform" name="pose_to_odom"
-          respawn="true"
-          args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate
-                /$(arg robot_namespace)/blam_slam/odometry
-                nav_msgs/Odometry
-                'nav_msgs.msg.Odometry(header=m.header, pose=geometry_msgs.msg.PoseWithCovariance(pose=m.pose))' --import nav_msgs geometry_msgs">
-    </node>
-
     <!-- BLAM frame/process manager -->
     <node pkg="blam_slam"
           name="blam_manager"
@@ -107,6 +97,16 @@
       <param name="blam_frame" value="$(arg robot_namespace)/blam"/>
     </node>
 
+    <!-- Convert output PoseStamped message to Odometry -->
+    <node pkg="topic_tools" type="transform" name="pose_to_odom"
+          respawn="true" output="screen"
+          args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate
+                /$(arg robot_namespace)/blam_slam/odometry
+                nav_msgs/Odometry
+                'nav_msgs.msg.Odometry(header=m.header, pose=geometry_msgs.msg.PoseWithCovariance(pose=m.pose))' --import nav_msgs geometry_msgs">
+    </node>
+
   </group>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find blam_example)/rviz/lidar_slam.rviz" />
 
 </launch>
