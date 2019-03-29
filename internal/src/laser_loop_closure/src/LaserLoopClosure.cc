@@ -487,6 +487,9 @@ bool LaserLoopClosure::FindLoopClosures(
           // Send an empty message notifying any subscribers that we found a loop
           // closure.
           loop_closure_notifier_pub_.publish(std_msgs::Empty());
+
+          // break if a successful loop closure 
+          break;
         }
       } else {
 
@@ -508,6 +511,9 @@ bool LaserLoopClosure::FindLoopClosures(
           // Send an empty message notifying any subscribers that we found a loop
           // closure.
           loop_closure_notifier_pub_.publish(std_msgs::Empty());
+
+          // break if a successful loop closure 
+          break;
         }
       }
     }
@@ -1834,7 +1840,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
   bool do_optimize = false; 
 
   // print number of loop closures
-  std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
+  // std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
 
   if (values.size() != 1) do_optimize = true; // for loop closure empty
   if (values.size() > 1) {
