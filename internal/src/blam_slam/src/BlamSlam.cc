@@ -107,7 +107,10 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
 
-  if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
+  if (!pu::Get("use_chordal_factor", use_chordal_factor_))
+    return false;
+  if (!pu::Get("artifacts_in_global", artifacts_in_global_))
+    return false;
 
   std::string graph_filename;
   if (pu::Get("load_graph", graph_filename) && !graph_filename.empty()) {
@@ -340,32 +343,46 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   Eigen::Vector3d artifact_position;
   artifact_position << msg.point.point.x, msg.point.point.y, msg.point.point.z;
 
-  // Get global pose 
-  // geometry_utils::Transform3 global_pose = localization_.GetIntegratedEstimate();
-  geometry_utils::Transform3 global_pose = loop_closure_.GetPoseAtTime(msg.point.header.stamp);
+  // Global position
+  Eigen::Vector3d W_artifact_position;
 
-  // tf::StampedTransform odom_T_base_link_tf;
-  // std::string robot_name_ = "husky";
-  // listener.lookupTransform(tf::resolve(robot_name_, "map"), tf::resolve(robot_name_, "base_link"), msg.header.stamp,
-  //                              odom_T_base_link_tf);
-  // Eigen::Vector3d T_global =
-  //         Eigen::Vector3d(odom_T_base_link_tf.getOrigin().getX(), odom_T_base_link_tf.getOrigin().getY(),
-  //                         odom_T_base_link_tf.getOrigin().getZ());
-  // Eigen::Matrix3d R_global =
-  //         Eigen::Quaterniond(odom_T_base_link_tf.getRotation().w(), odom_T_base_link_tf.getRotation().x(),
-  //                            odom_T_base_link_tf.getRotation().y(), odom_T_base_link_tf.getRotation().z())
-  //             .toRotationMatrix();
+  if (artifacts_in_global_) {
+    // Already in fixed frame
+    W_artifact_position = artifact_position;
+  } else {
+    // Get global pose
+    // geometry_utils::Transform3 global_pose =
+    // localization_.GetIntegratedEstimate();
+    geometry_utils::Transform3 global_pose =
+        loop_closure_.GetPoseAtTime(msg.point.header.stamp);
 
-  // todo - check the order 
+    // tf::StampedTransform odom_T_base_link_tf;
+    // std::string robot_name_ = "husky";
+    // listener.lookupTransform(tf::resolve(robot_name_, "map"),
+    // tf::resolve(robot_name_, "base_link"), msg.header.stamp,
+    //                              odom_T_base_link_tf);
+    // Eigen::Vector3d T_global =
+    //         Eigen::Vector3d(odom_T_base_link_tf.getOrigin().getX(),
+    //         odom_T_base_link_tf.getOrigin().getY(),
+    //                         odom_T_base_link_tf.getOrigin().getZ());
+    // Eigen::Matrix3d R_global =
+    //         Eigen::Quaterniond(odom_T_base_link_tf.getRotation().w(),
+    //         odom_T_base_link_tf.getRotation().x(),
+    //                            odom_T_base_link_tf.getRotation().y(),
+    //                            odom_T_base_link_tf.getRotation().z())
+    //             .toRotationMatrix();
 
-  // Assum transform from body to global
-  Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
-  Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
-  std::cout << "Global robot position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
-  std::cout << "Global robot rotation is: " << R_global << std::endl;
+    // todo - check the order
+    // Assum transform from body to global
+    Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
+    Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
+    std::cout << "Global robot position is: " << T_global[0] << ", "
+              << T_global[1] << ", " << T_global[2] << std::endl;
+    std::cout << "Global robot rotation is: " << R_global << std::endl;
 
-  // Apply transform 
-  Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global;
+    // Apply transform
+    W_artifact_position = R_global * artifact_position + T_global;
+  }
 
   std::cout << "Artifact position in map is: " << W_artifact_position[0] << ", "
             << W_artifact_position[1] << ", " << W_artifact_position[2]
