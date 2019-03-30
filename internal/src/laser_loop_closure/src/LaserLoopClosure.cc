@@ -1838,7 +1838,7 @@ void LaserLoopClosure::PublishPoseGraph() {
   //Interactive Marker
   if (publish_interactive_markers_) {
     for (const auto& keyed_pose : values_) {
-      if (keyed_pose.key % 20 == 0) {
+      if (keyed_pose.key % 1 == 0) {
         gu::Transform3 position = ToGu(values_.at<Pose3>(keyed_pose.key));
         const std::string id_number = std::to_string(keyed_pose.key);
         LaserLoopClosure::makeMenuMarker(position, id_number);

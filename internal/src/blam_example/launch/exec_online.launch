@@ -39,9 +39,6 @@
         odom_attitude_sigma: 0.316
       </rosparam>     
 
-      <!-- Artifact frames -->
-      <rosparam param="artifacts_in_global" value="true"/> 
-
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
 

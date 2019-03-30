@@ -102,14 +102,14 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Load frame ids.
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
+  if (!pu::Get("frame_id/artifacts_in_global", artifacts_in_global_))
+    return false;
 
   // Covariance for odom factors
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
 
   if (!pu::Get("use_chordal_factor", use_chordal_factor_))
-    return false;
-  if (!pu::Get("artifacts_in_global", artifacts_in_global_))
     return false;
 
   std::string graph_filename;
