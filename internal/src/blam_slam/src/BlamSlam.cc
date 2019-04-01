@@ -311,21 +311,10 @@ void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
 }
 
 void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
-  // Subscribe to artifact messages and include them in the posegraph
+  // Subscribe to artifact messages, include in pose graph, publish global position 
 
-  // TODO review logic to filter - not accept if confidence is not high enough
-  // if (msg.confidence < 0.5) {
-  //   std::cout << "Object " << msg.id << " confidence is not sufficiently high, "
-  //             << msg.confidence << " - rejecting" << std::endl;
-  //   return;
-  // }
-  // TODO other logic - if have seen the object before within the past n
-  // seconds, then don't add a new node
-
-  // Passed - accept artifact, add new pose to pose-graph
-
-  // Add new node - from latest relative poses from LIO
-  // AddNewNode(timestamp_lkf_nsec, msg.header, false);
+  // TODO: don't accept if confidence too low
+  // TODO: if we have seen object before withit the past n seconds, don't add?
 
   std::cout << "Artifact message received is for id " << msg.id << std::endl;
   std::cout << "\t Confidence: " << msg.confidence << std::endl;
@@ -338,32 +327,18 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   Eigen::Vector3d artifact_position;
   artifact_position << msg.point.point.x, msg.point.point.y, msg.point.point.z;
 
-  // Get global pose 
+  // Get global pose (of robot)
   // geometry_utils::Transform3 global_pose = localization_.GetIntegratedEstimate();
-  geometry_utils::Transform3 global_pose = loop_closure_.GetPoseAtTime(msg.point.header.stamp);
+  gtsam::Key pose_key = loop_closure_.GetKeyAtTime(msg.point.header.stamp);
+  geometry_utils::Transform3 global_pose = loop_closure_.GetPoseAtKey(pose_key);
 
-  // tf::StampedTransform odom_T_base_link_tf;
-  // std::string robot_name_ = "husky";
-  // listener.lookupTransform(tf::resolve(robot_name_, "map"), tf::resolve(robot_name_, "base_link"), msg.header.stamp,
-  //                              odom_T_base_link_tf);
-  // Eigen::Vector3d T_global =
-  //         Eigen::Vector3d(odom_T_base_link_tf.getOrigin().getX(), odom_T_base_link_tf.getOrigin().getY(),
-  //                         odom_T_base_link_tf.getOrigin().getZ());
-  // Eigen::Matrix3d R_global =
-  //         Eigen::Quaterniond(odom_T_base_link_tf.getRotation().w(), odom_T_base_link_tf.getRotation().x(),
-  //                            odom_T_base_link_tf.getRotation().y(), odom_T_base_link_tf.getRotation().z())
-  //             .toRotationMatrix();
-
-  // todo - check the order 
-
-  // Assum transform from body to global
+  // Transform artifact pose from body frame to global frame 
   Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
   Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
-  std::cout << "Global robot position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
-  std::cout << "Global robot rotation is: " << R_global << std::endl;
+  // std::cout << "Global robot position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
+  // std::cout << "Global robot rotation is: " << R_global << std::endl;
 
-  // Apply transform 
-  Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global;
+  Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global; // Apply transform
 
   std::cout << "Artifact position in map is: " << W_artifact_position[0] << ", "
             << W_artifact_position[1] << ", " << W_artifact_position[2]

@@ -1883,45 +1883,45 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
   }
 }
 
-gu::Transform3 LaserLoopClosure::GetPoseAtTime(const ros::Time& stamp) const {
+gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
+  ROS_INFO("Get Key closest to input time %f ", stamp.toSec());
 
-  std::cout << "Get pose closest to input time: " << stamp.toSec() << std::endl;
-  // Find closest timestamp
-  // std::map<ros::Time, unsigned int>::iterator iterTime;
-  
-  // First key that is not less than timestamp (so the key just past the timestamp)
-  auto iterTime = stamps_keyed_.lower_bound(stamp.toSec());
+  auto iterTime = stamps_keyed_.lower_bound(stamp.toSec()); // First key that is not less tha timestamp 
 
-  std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
+  // std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
 
   // TODO - interpolate - currently just take one
-  double t2 = iterTime->first;
-  double t1 = std::prev(iterTime,1)->first;
+  double t2 = iterTime->first; 
+  double t1 = std::prev(iterTime,1)->first; 
 
-  std::cout << "Time 1 is: " << t1 << ", Time 2 is: " << t2 << std::endl;
+  // std::cout << "Time 1 is: " << t1 << ", Time 2 is: " << t2 << std::endl;
 
   unsigned int key;
 
-  if (t2-stamp.toSec() < stamp.toSec()-t1){
+  if (t2-stamp.toSec() < stamp.toSec() - t1) { 
     // t2 is closer - use that key
-    std::cout << "Selecting later time: " << t2 << std::endl;
+    // std::cout << "Selecting later time: " << t2 << std::endl;
     key = iterTime->second;
-  }else {
+  } else {
     // t1 is closer - use that key
-    std::cout << "Selecting earlier time: " << t1 << std::endl;
+    // std::cout << "Selecting earlier time: " << t1 << std::endl;
     key = std::prev(iterTime,1)->second;
     iterTime--;
   }
-  std::cout << "Key is: " << key << std::endl;
+  // std::cout << "Key is: " << key << std::endl;
   if (iterTime == std::prev(stamps_keyed_.begin())){
     ROS_WARN("Invalid time for graph (before start of graph range). Choosing next value");
     iterTime++;
     key = iterTime->second;
-  } else if(iterTime==stamps_keyed_.end()){
+  } else if(iterTime == stamps_keyed_.end()){
     ROS_WARN("Invalid time for graph (past end of graph range). take latest pose");
     key = key_ -1;
   }
 
+  return key; 
+}
+
+gu::Transform3 LaserLoopClosure::GetPoseAtKey(const gtsam::Key& key) const {
   // Get the pose at that key
   return ToGu(values_.at<Pose3>(key));
 }

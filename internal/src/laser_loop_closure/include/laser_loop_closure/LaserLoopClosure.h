@@ -139,7 +139,10 @@ class LaserLoopClosure {
   geometry_utils::Transform3 GetLastPose() const;
 
   // Get pose at an input time
-  geometry_utils::Transform3 GetPoseAtTime(const ros::Time& stamp) const;
+  gtsam::Key GetKeyAtTime(const ros::Time& stamp) const;
+
+  // Get pose at an input key 
+  geometry_utils::Transform3 GetPoseAtKey(const gtsam::Key& key) const; 
 
   // Publish pose graph for visualization.
   void PublishPoseGraph();
