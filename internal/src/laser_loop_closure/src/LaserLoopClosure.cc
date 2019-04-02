@@ -307,6 +307,8 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   nfg_ = isam_->getFactorsUnsafe();
 
+  std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
+
   // Assign output and get ready to go again!
   *key = key_++;
 
@@ -1852,7 +1854,8 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
 
   if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
 
-  if (nfg.size() == 1) {
+  if (nfg.size() == 1 && values.size() == 1) {
+    // Don't add odometry edges 
     boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
             boost::dynamic_pointer_cast<gtsam::BetweenFactor<Pose3> >(nfg[0]);
 
@@ -1860,7 +1863,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
             boost::dynamic_pointer_cast<gtsam::BetweenChordalFactor<Pose3> >(nfg[0]);
 
     if (pose3Between || pose3BetweenChordal) {
-      do_optimize = false;
+      do_optimize = false; // Don't add odometry edges 
     } else {
       ROS_WARN("Unexpected behavior: single not BetweenFactor factor added");
     }
@@ -1874,7 +1877,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
     // optimize
     #if solver==LM
     gtsam::LevenbergMarquardtParams params;
-    params.setVerbosityLM("TRYLAMBDA");
+    params.setVerbosityLM("SUMMARY");
     params.diagonalDamping = true; 
     values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
     #elif solver==SEsync
