@@ -10,7 +10,7 @@
           output="screen">
 
       <!-- Bagfile parameters -->
-      <param name="filename/bag" value="/Users/eanelson/Desktop/lbl_lidar.bag"/>
+      <param name="filename/bag" value="/home/costar/Downloads/full_tunnel_hand-carry_no_rs_2_2019-01-19-laser_imu.bag"/>
       <param name="scan_topic" value="/velodyne_points"/>
 
       <param name="time_start" value="0.0"/>
@@ -29,9 +29,7 @@
       <rosparam param="noise">
         odom_position_sigma: 0.4
         odom_attitude_sigma: 0.1
-      </rosparam>
-
-
+      </rosparam>      
 
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
