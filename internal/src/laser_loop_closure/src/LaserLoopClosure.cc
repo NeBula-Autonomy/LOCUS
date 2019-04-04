@@ -504,7 +504,7 @@ bool LaserLoopClosure::FindLoopClosures(
           loop_closure_notifier_pub_.publish(std_msgs::Empty());
 
           // break if a successful loop closure 
-          break;
+          // break;
         }
       } else {
 
@@ -528,7 +528,7 @@ bool LaserLoopClosure::FindLoopClosures(
           loop_closure_notifier_pub_.publish(std_msgs::Empty());
 
           // break if a successful loop closure 
-          break;
+          // break;
         }
       }
     }

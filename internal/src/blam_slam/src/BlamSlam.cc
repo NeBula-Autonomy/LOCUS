@@ -278,7 +278,7 @@ bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
 }
 
 void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
-  ROS_INFO_STREAM("Received Point Cloud " << msg->header.seq);
+  // ROS_INFO_STREAM("Received Point Cloud " << msg->header.seq);
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
 
@@ -298,7 +298,7 @@ void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
         const MeasurementSynchronizer::Message<PointCloud>::ConstPtr& m =
             synchronizer_.GetPCLPointCloudMessage(index);
 
-        ROS_INFO_STREAM("Processing Point Cloud " << m->msg->header.seq);
+        // ROS_INFO_STREAM("Processing Point Cloud " << m->msg->header.seq);
         ProcessPointCloudMessage(m->msg);
         break;
       }

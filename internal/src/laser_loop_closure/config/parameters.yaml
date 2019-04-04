@@ -1,6 +1,6 @@
 # Toggle loop closures on or off. Setting this to off will increase run-time
 # speed by a small fraction.
-check_for_loop_closures: false
+check_for_loop_closures: true
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
 loop_closure_optimizer: 1
@@ -17,7 +17,7 @@ use_chordal_factor: false
 publish_interactive_markers: true
 
 # Noise parameters (as precisions) for manual loop closure
-manual_lc_rot_precision: 0.0 # default 0.0 (no information)
+manual_lc_rot_precision: 0.1 # default 0.0 (no information)
 manual_lc_trans_precision: 10.0 # default 0.001 (~30 m sd)
 
 # Noise parameters (as variances) for Laser loop closure
@@ -37,7 +37,7 @@ proximity_threshold: 4
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
 # the ICP "fitness score" must be less than this number.
-max_tolerable_fitness: 3.0
+max_tolerable_fitness: 5.0
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.
