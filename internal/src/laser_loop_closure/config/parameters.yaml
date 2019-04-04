@@ -41,11 +41,11 @@ max_tolerable_fitness: 5.0
 
 # Don't attempt loop closures with poses in the graph that were collected within
 # the last 'skip_recent_poses' poses.
-skip_recent_poses: 10 #10 # 200
+skip_recent_poses: 20 #10 # 200
 
 # If a loop has recently been closed, don't close a new one for at least this
 # many poses (i.e. the sensor would have to move translation_threshold *
 # poses_before_reclosing meters in order to close a new loop).
-poses_before_reclosing: 10 #10
+poses_before_reclosing: 20 #10
 
 # TODO make these dynamic with the translation threshold for nodes
