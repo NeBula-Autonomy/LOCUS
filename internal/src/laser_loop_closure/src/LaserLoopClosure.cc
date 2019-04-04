@@ -1583,7 +1583,6 @@ void LaserLoopClosure::makeMenuMarker( gu::Transform3 position, const std::strin
   menu_handler.insert(id_number);
   server->insert(int_marker);
   menu_handler.apply(*server, int_marker.name );
-  server->applyChanges();
 }
 
 void LaserLoopClosure::PublishPoseGraph() {
@@ -1798,6 +1797,9 @@ void LaserLoopClosure::PublishPoseGraph() {
         const std::string id_number = std::to_string(keyed_pose.key);
         LaserLoopClosure::makeMenuMarker(position, id_number);
       }
+    }
+    if (server != NULL){
+      server->applyChanges();
     }
   }
 }
