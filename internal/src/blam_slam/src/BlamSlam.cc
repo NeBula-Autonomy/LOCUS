@@ -165,7 +165,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
 
-  pcld_sub_ = nl.subscribe("pcld", 10, &BlamSlam::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 100000, &BlamSlam::PointCloudCallback, this);
 
   artifact_sub_ = nl.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
 
@@ -278,12 +278,14 @@ bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
 }
 
 void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
+  // ROS_INFO_STREAM("Received Point Cloud " << msg->header.seq);
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
 
 void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
   // Sort all messages accumulated since the last estimate update.
   synchronizer_.SortMessages();
+  
 
   // Iterate through sensor messages, passing to update functions.
   MeasurementSynchronizer::sensor_type type;
@@ -296,6 +298,7 @@ void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
         const MeasurementSynchronizer::Message<PointCloud>::ConstPtr& m =
             synchronizer_.GetPCLPointCloudMessage(index);
 
+        // ROS_INFO_STREAM("Processing Point Cloud " << m->msg->header.seq);
         ProcessPointCloudMessage(m->msg);
         break;
       }
