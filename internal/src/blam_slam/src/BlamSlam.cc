@@ -49,7 +49,8 @@ BlamSlam::BlamSlam()
     position_sigma_(0.01),
     attitude_sigma_(0.04),
     marker_id_(0),
-    tf_listener_(tf_buffer_) {}
+    tf_listener_(tf_buffer_),
+    largest_artifact_id_(0) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -102,6 +103,8 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Load frame ids.
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
+  if (!pu::Get("frame_id/artifacts_in_global", artifacts_in_global_))
+    return false;
 
   // Covariance for odom factors
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
@@ -198,10 +201,14 @@ bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
     }
   }
 
-  response.success = loop_closure_.AddFactor(
+  const gtsam::Pose3 pose_from_to 
+      = gtsam::Pose3(gtsam::Rot3(request.qw, request.qx, request.qy, request.qz), gtsam::Point3());
+  pose_from_to.print("Between pose is ");
+
+  response.success = loop_closure_.AddManualLoopClosure(
     static_cast<unsigned int>(request.key_from),
     static_cast<unsigned int>(request.key_to),
-    request.qw, request.qx, request.qy, request.qz);
+    pose_from_to);
   response.confirm = false;
   if (response.success){
     std::cout << "adding factor for loop closure succeeded" << std::endl;
@@ -329,20 +336,69 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
 
   // Get global pose (of robot)
   // geometry_utils::Transform3 global_pose = localization_.GetIntegratedEstimate();
+
+  Eigen::Vector3d R_artifact_position; // In robot frame
+
   gtsam::Key pose_key = loop_closure_.GetKeyAtTime(msg.point.header.stamp);
-  geometry_utils::Transform3 global_pose = loop_closure_.GetPoseAtKey(pose_key);
 
-  // Transform artifact pose from body frame to global frame 
-  Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
-  Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
-  // std::cout << "Global robot position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
-  // std::cout << "Global robot rotation is: " << R_global << std::endl;
+  // Chck if artifact is published in global frame 
+  // And convert to local frame to include in pose graph 
+  if (artifacts_in_global_) { // Already in fixed frame
+    geometry_utils::Transform3 global_pose = loop_closure_.GetPoseAtKey(pose_key);
 
-  Eigen::Vector3d W_artifact_position = R_global * artifact_position + T_global; // Apply transform
+    // Transform artifact pose from global frame to body frame 
+    Eigen::Matrix<double, 3, 3> R_global = global_pose.rotation.Eigen();
+    Eigen::Matrix<double, 3, 1> T_global = global_pose.translation.Eigen();
+    // std::cout << "Global robot position is: " << T_global[0] << ", " << T_global[1] << ", " << T_global[2] << std::endl;
+    // std::cout << "Global robot rotation is: " << R_global << std::endl;
 
-  std::cout << "Artifact position in map is: " << W_artifact_position[0] << ", "
-            << W_artifact_position[1] << ", " << W_artifact_position[2]
+    R_artifact_position = R_global.transpose() * (artifact_position - T_global); // Apply transform
+  } else {
+    R_artifact_position = artifact_position;
+  }
+
+  std::cout << "Artifact position in robot frame is: " << R_artifact_position[0] << ", "
+            << R_artifact_position[1] << ", " << R_artifact_position[2]
             << std::endl;
+
+  std::string artifact_id = msg.id; 
+  gtsam::Key cur_artifact_key; 
+  // get artifact id / key -----------------------------------------------
+  // Check if the ID of the object already exists in the object hash
+  if (artifact_id2key_hash.find(artifact_id) != artifact_id2key_hash.end()) {
+    // Take the ID for that object
+    cur_artifact_key = artifact_id2key_hash[artifact_id];
+    std::cout << "artifact previously observed, artifact id " << artifact_id 
+              << " with key in pose graph " 
+              << gtsam::DefaultKeyFormatter(cur_artifact_key) << std::endl;
+  } else {
+    // New artifact - increment the id counters
+    ++largest_artifact_id_;
+    cur_artifact_key = gtsam::Symbol('l', largest_artifact_id_);
+    std::cout << "new artifact observed, artifact id " << artifact_id 
+              << " with key in pose graph " 
+              << gtsam::DefaultKeyFormatter(cur_artifact_key) << std::endl;
+    // update hash
+    artifact_id2key_hash[artifact_id] = cur_artifact_key;
+  }
+
+  // add to pose graph and optimize --------------------------------------
+  const gtsam::Pose3 R_pose_A 
+      = gtsam::Pose3(gtsam::Rot3(), gtsam::Point3(R_artifact_position[0], 
+                                                  R_artifact_position[1],
+                                                  R_artifact_position[2]));
+  R_pose_A.print("Between pose is ");
+
+  loop_closure_.AddFactor(
+    pose_key,
+    cur_artifact_key,
+    R_pose_A,
+    false, // this is not manual loop closure 
+    0.0, 
+    100); // TODO: add to params for translation precision 
+
+  // query W_artifact_position from optimized values
+  Eigen::Vector3d W_artifact_position = loop_closure_.GetArtifactPosition(cur_artifact_key);
 
   PublishArtifact(W_artifact_position, msg); 
 }

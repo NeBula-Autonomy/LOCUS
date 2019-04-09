@@ -57,6 +57,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/slam/InitializePose3.h>
 #include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
+#include <gtsam/inference/Symbol.h>
 
 // #include "SESync/SESync.h"
 // #include "SESync/SESync_utils.h"
@@ -144,19 +145,24 @@ class LaserLoopClosure {
   // Get pose at an input key 
   geometry_utils::Transform3 GetPoseAtKey(const gtsam::Key& key) const; 
 
+  Eigen::Vector3d GetArtifactPosition(const gtsam::Key artifact_key) const;
+
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
   // makeMenuMaker
   void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;
 
-  // Add factor between the two keys to connect them. This function is
+  // AddManualLoopClosure between the two keys to connect them. This function is
   // designed for a scenario where a human operator can manually perform
   // loop closures by adding these factors to the pose graph.
-  // Optionally, a quaternion defining the attitude of the loop closure
-  // can be specified via the qw, qx, qy, qz coordinates (in radians).
-  bool AddFactor(unsigned int key1, unsigned int key2,
-                 double qw=1, double qx=0, double qy=0, double qz=0);
+  bool AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2, gtsam::Pose3 pose12);
+
+  bool AddFactor(gtsam::Key key1, gtsam::Key key2, 
+                 gtsam::Pose3 pose12, 
+                 bool is_manual_loop_closure,
+                 double rot_precision, 
+                 double trans_precision);
 
   // Removes the factor between the two keys from the pose graph.
   bool RemoveFactor(unsigned int key1, unsigned int key2);

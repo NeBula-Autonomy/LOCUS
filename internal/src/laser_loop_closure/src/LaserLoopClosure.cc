@@ -842,37 +842,52 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   return true;
 }
 
-bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw, double qx, double qy, double qz) {
+bool LaserLoopClosure::AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2, 
+                                            gtsam::Pose3 pose12){
+
+  bool is_manual_loop_closure = true;
+  return AddFactor(key1,key2,pose12,is_manual_loop_closure,
+                   manual_lc_rot_precision_, manual_lc_trans_precision_); 
+}
+
+bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2, 
+                                 gtsam::Pose3 pose12, 
+                                 bool is_manual_loop_closure,
+                                 double rot_precision, 
+                                 double trans_precision) {
   // Thanks to Luca for providing the code
   ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
 
-  // Remove visualization of edge to be confirmed
-  RemoveConfirmFactorVisualization();
-
-  // TODO - some check to see what the distance between the two poses are
-  // Print that out for the operator to check - to see how large a change is being asked for
-
-  gtsam::Key id1 = key1; // more elegant way to “name” variables in GTSAM “Symbol” (x1,v1,b1)
-  gtsam::Key id2 = key2;
-
-  // std::cout << "isamgetlinearizationpoint-before" << std::endl; 
   gtsam::Values linPoint = isam_->getLinearizationPoint();
-  // std::cout << "isamgetlinearizationpoint-after" << std::endl; 
-
-  // check keys are already in factor graph 
-  if (!linPoint.exists(key1) || !linPoint.exists(key2)) { 
-    ROS_WARN("AddFactor: Trying to add manual loop closure involving at least one nonexisting key");
-    return false;
-  }
-
   nfg_ = isam_->getFactorsUnsafe();
-  // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/mlc_linpoint.g2o");
-  const gtsam::Pose3 measured = gtsam::Pose3(gtsam::Rot3(qw, qx, qy, qz), gtsam::Point3());
-  measured.print("Between pose is ");
+
+  // Remove visualization of edge to be confirmed
+  if (is_manual_loop_closure) {
+    RemoveConfirmFactorVisualization();
+    // check keys are already in factor graph 
+    if (!linPoint.exists(key1) || !linPoint.exists(key2)) { 
+      ROS_WARN("AddFactor: Trying to add manual loop closure involving at least one nonexisting key");
+      return false;
+    }
+  }
 
   double cost; // for debugging
 
   NonlinearFactorGraph new_factor;
+  gtsam::Values new_values;
+
+  if (!is_manual_loop_closure && !linPoint.exists(key2)) {
+
+    if(!linPoint.exists(key1)){
+      ROS_WARN("AddFactor: Trying to add artifact factor, but key1 does not exist");
+      return false;    
+    }
+    // We should add initial guess to values 
+    new_values.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
+  }
+
+  // TODO - some check to see what the distance between the two poses are
+  // Print that out for the operator to check - to see how large a change is being asked for
 
   if (!use_chordal_factor_) {
     // Use BetweenFactor
@@ -880,12 +895,12 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
 
     // create Information of measured
     gtsam::Vector6 precisions; // inverse of variances
-    precisions.head<3>().setConstant(manual_lc_rot_precision_); // rotation precision
-    precisions.tail<3>().setConstant(manual_lc_trans_precision_); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
-    static const gtsam::SharedNoiseModel& loopClosureNoise =
+    precisions.head<3>().setConstant(rot_precision); // rotation precision
+    precisions.tail<3>().setConstant(trans_precision); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
+    static const gtsam::SharedNoiseModel& noise =
     gtsam::noiseModel::Diagonal::Precisions(precisions);
 
-    gtsam::BetweenFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+    gtsam::BetweenFactor<gtsam::Pose3> factor(key1, key2, pose12, noise);
 
     factor.print("manual loop closure factor \n");
     cost = factor.error(linPoint);
@@ -898,12 +913,12 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
   } else {
     // Use BetweenChordalFactor  
     gtsam::Vector12 precisions; 
-    precisions.head<9>().setConstant(manual_lc_rot_precision_); // rotation precision 
-    precisions.tail<3>().setConstant(manual_lc_trans_precision_);
-    static const gtsam::SharedNoiseModel& loopClosureNoise = 
+    precisions.head<9>().setConstant(rot_precision); // rotation precision 
+    precisions.tail<3>().setConstant(trans_precision);
+    static const gtsam::SharedNoiseModel& noise = 
     gtsam::noiseModel::Diagonal::Precisions(precisions);
  
-    gtsam::BetweenChordalFactor<gtsam::Pose3> factor(id1, id2, measured, loopClosureNoise);
+    gtsam::BetweenChordalFactor<gtsam::Pose3> factor(key1, key2, pose12, noise);
 
     factor.print("manual loop closure factor \n");
     cost = factor.error(linPoint);
@@ -913,40 +928,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
     // add factor to factor graph
     new_factor.add(factor);
   }
-
-
-  // // save factor graph as graphviz dot file
-  // // Render to PDF using "fdp Pose2SLAMExample.dot -Tpdf > graph.pdf"
-  // std::ofstream os("Pose2SLAMExample.dot");
-  // graph.saveGraph(os, result);
-
-  // // Read File, create graph and initial estimate
-  // // we are in build/examples, data is in examples/Data
-  // NonlinearFactorGraph::shared_ptr graph;
-  // Values::shared_ptr initial;
-  // SharedDiagonal model = noiseModel::Diagonal::Sigmas((Vector(3) << 0.05, 0.05, 5.0 * M_PI / 180.0).finished());
-  // string graph_file = findExampleDataFile("w100.graph");
-  // boost::tie(graph, initial) = load2D(graph_file, model);
-  // initial->print("Initial estimate:\n");
-
-  // TODO - option to save or load the graph - check size of the existing graph?
-  // Or just create an option to load an existing graph in the launch file?
-  // TODO - Debug this for quicker testing - load a good graph that already has all we want.
-  // bool bLoadGraph = false;
-  // if (!bLoadGraph){
-  //   // Save the graph 
-  //   gtsam::SharedNoiseModel noise_model;
-  //   noise_model = gtsam::noiseModel::Diagonal::Precisions::shared_ptr((gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.04, 0.04, 0.04).finished());
-  //   gtsam::save2D(isam_->getFactorsUnsafe(), values_, noise_model, "pre-loop_graph.graph");
-  // }else{
-  //   // Load the graph
-  //   NonlinearFactorGraph::shared_ptr graph;
-  //   Values::shared_ptr initial;
-  //   gtsam::SharedNoiseModel noise_model = gtsam::noiseModel::Diagonal::Precisions::shared_ptr((gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.04, 0.04, 0.04).finished());
-  //   string graph_file = findExampleDataFile("pre-loop_graph.graph");
-  //   boost::tie(graph, initial) = load2D(graph_file, noise_model);
-  //   // initial->print("Initial estimate:\n");
-  // }
 
   // optimize
   try {
@@ -974,7 +955,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
           std::cout << "Optimizing manual loop closure ISAM, iteration " << i << std::endl;
           if (i == 0){
             // Run first update with the added factors 
-            isam_->update(new_factor, Values());
+            isam_->update(new_factor, new_values);
           } else {
             // Run iterations of the update without adding new factors
             isam_->update(NonlinearFactorGraph(), Values());
@@ -998,7 +979,7 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
       {
         // Levenberg Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
-        isam_->update(new_factor, Values());
+        isam_->update(new_factor, new_values);
         initialEstimate = isam_->calculateEstimate();
         nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
         // nfg_.print(""); // print whole factor graph
@@ -1091,20 +1072,20 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
     nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
     std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
     std::cout.rdbuf(nfgFile.rdbuf());
-
     // save entire factor graph to file and debug if loop closure is correct
     // nfg = isam_->getFactorsUnsafe();
     nfg_.print();
     nfgFile.close();
-
     std::cout.rdbuf(coutbuf); //reset to standard output again
     
-    // Store for visualization and output.
-    loop_edges_.push_back(std::make_pair(id1, id2));
+    if (is_manual_loop_closure) {
+      // Store for visualization and output.
+      loop_edges_.push_back(std::make_pair(key1, key2));
 
-    // Send an empty message notifying any subscribers that we found a loop
-    // closure.
-    loop_closure_notifier_pub_.publish(std_msgs::Empty());
+      // Send an empty message notifying any subscribers that we found a loop
+      // closure.
+      loop_closure_notifier_pub_.publish(std_msgs::Empty());
+    }
 
     // Update values
     // values_ = isam_->calculateEstimate();
@@ -1889,7 +1870,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
 gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
   ROS_INFO("Get Key closest to input time %f ", stamp.toSec());
 
-  auto iterTime = stamps_keyed_.lower_bound(stamp.toSec()); // First key that is not less tha timestamp 
+  auto iterTime = stamps_keyed_.lower_bound(stamp.toSec()); // First key that is not less than timestamp 
 
   // std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
 
@@ -1927,4 +1908,8 @@ gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
 gu::Transform3 LaserLoopClosure::GetPoseAtKey(const gtsam::Key& key) const {
   // Get the pose at that key
   return ToGu(values_.at<Pose3>(key));
+}
+
+Eigen::Vector3d LaserLoopClosure::GetArtifactPosition(const gtsam::Key artifact_key) const {
+  return values_.at<Pose3>(artifact_key).translation().vector();
 }

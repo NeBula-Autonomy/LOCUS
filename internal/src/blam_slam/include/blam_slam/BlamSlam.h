@@ -143,6 +143,11 @@ class BlamSlam {
   // Names of coordinate frames.
   std::string fixed_frame_id_;
   std::string base_frame_id_;
+  bool artifacts_in_global_;
+  int largest_artifact_id_; 
+
+  // Object IDs
+  std::unordered_map<std::string, gtsam::Key> artifact_id2key_hash;
 
   // Class objects (BlamSlam is a composite class).
   MeasurementSynchronizer synchronizer_;
