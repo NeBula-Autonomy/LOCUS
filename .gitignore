@@ -44,3 +44,6 @@ internal/.catkin_tools
 
 # CSV files
 *.csv
+
+# pyc filees 
+*.pyc
