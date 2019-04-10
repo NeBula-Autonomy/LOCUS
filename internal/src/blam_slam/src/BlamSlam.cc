@@ -110,6 +110,9 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
 
+  if (!pu::Get("artifacts/rot_precision", artifacts_rot_precision_)) return false;
+  if (!pu::Get("artifacts/trans_precision", artifacts_trans_precision_)) return false; 
+
   if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
   std::string graph_filename;
@@ -394,8 +397,8 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     cur_artifact_key,
     R_pose_A,
     false, // this is not manual loop closure 
-    0.0, 
-    100); // TODO: add to params for translation precision 
+    artifacts_rot_precision_, 
+    artifacts_trans_precision_); // TODO: add to params for translation precision 
 
   // query W_artifact_position from optimized values
   Eigen::Vector3d W_artifact_position = loop_closure_.GetArtifactPosition(cur_artifact_key);

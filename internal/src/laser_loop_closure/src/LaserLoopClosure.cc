@@ -1913,3 +1913,12 @@ gu::Transform3 LaserLoopClosure::GetPoseAtKey(const gtsam::Key& key) const {
 Eigen::Vector3d LaserLoopClosure::GetArtifactPosition(const gtsam::Key artifact_key) const {
   return values_.at<Pose3>(artifact_key).translation().vector();
 }
+
+/* TODO: 
+-> AddBetweenFactor (and Chordal): rename to AddBetweenFactorOdometry 
+-> AddBetweenChordalFactor: use ifdef to avoid copy paste 
+-> move conversion functions to Utils.h
+-> ideally laserLoopClosure should be split into LSLAMFrontEnd (icp), LSLAMBacknd (gtsam + posegraph)
+-> AddFactor should be AddFactorManual (this will need a lot of cleaning after STIX) 
+-> move all visualization functions to a Visualizer.h 
+*/ 

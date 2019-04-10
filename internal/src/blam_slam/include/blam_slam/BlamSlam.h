@@ -123,6 +123,10 @@ class BlamSlam {
   double position_sigma_;
   double attitude_sigma_;
 
+  // Precisions 
+  double artifacts_rot_precision_; 
+  double artifacts_trans_precision_;
+
   // Subscribers.
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
