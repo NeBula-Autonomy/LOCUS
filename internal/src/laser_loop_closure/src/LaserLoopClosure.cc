@@ -886,6 +886,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     new_values.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
   }
 
+  // CHECK!!! (Put update with new values here (or better to do with newfactors?))
+  isam_->update(nfg_, new_values);
+  linPoint = isam_->getLinearizationPoint();
+
   // TODO - some check to see what the distance between the two poses are
   // Print that out for the operator to check - to see how large a change is being asked for
 
@@ -955,7 +959,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
           std::cout << "Optimizing manual loop closure ISAM, iteration " << i << std::endl;
           if (i == 0){
             // Run first update with the added factors 
-            isam_->update(new_factor, new_values);
+            isam_->update(new_factor, Values());
           } else {
             // Run iterations of the update without adding new factors
             isam_->update(NonlinearFactorGraph(), Values());
@@ -979,7 +983,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
       {
         // Levenberg Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
-        isam_->update(new_factor, new_values);
+        isam_->update(new_factor, Values());
         initialEstimate = isam_->calculateEstimate();
         nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
         // nfg_.print(""); // print whole factor graph
@@ -1868,7 +1872,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
 }
 
 gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
-  ROS_INFO("Get Key closest to input time %f ", stamp.toSec());
+  ROS_INFO("Get pose key closest to input time %f ", stamp.toSec());
 
   auto iterTime = stamps_keyed_.lower_bound(stamp.toSec()); // First key that is not less than timestamp 
 

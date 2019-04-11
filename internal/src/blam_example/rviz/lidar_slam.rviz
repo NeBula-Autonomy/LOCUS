@@ -56,11 +56,11 @@ Visualization Manager:
       Frame Timeout: 100000000
       Frames:
         All Enabled: false
-        robot/base_link:
+        husky/base_link:
           Value: true
-        robot/base_link_blam_odometry:
+        husky/base_link_blam_odometry:
           Value: true
-        robot/blam:
+        husky/blam:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -68,10 +68,10 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        robot/blam:
-          robot/base_link:
+        husky/blam:
+          husky/base_link:
             {}
-          robot/base_link_blam_odometry:
+          husky/base_link_blam_odometry:
             {}
       Update Interval: 0
       Value: true
@@ -130,7 +130,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.100000001
       Style: Points
-      Topic: /robot/blam_slam/odometry_query_points
+      Topic: /husky/blam_slam/odometry_query_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: false
@@ -160,7 +160,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.100000001
       Style: Points
-      Topic: /robot/blam_slam/octree_map_updates
+      Topic: /husky/blam_slam/octree_map_updates
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -190,7 +190,7 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.00999999978
       Style: Points
-      Topic: /robot/blam_slam/odometry_query_points
+      Topic: /husky/blam_slam/odometry_query_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -220,7 +220,7 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.00999999978
       Style: Points
-      Topic: /robot/blam_slam/localization_reference_points
+      Topic: /husky/blam_slam/localization_reference_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -250,7 +250,7 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.00999999978
       Style: Points
-      Topic: /robot/blam_slam/localization_aligned_points
+      Topic: /husky/blam_slam/localization_aligned_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -280,7 +280,7 @@ Visualization Manager:
       Size (Pixels): 1
       Size (m): 0.100000001
       Style: Points
-      Topic: /robot/blam_slam/octree_map
+      Topic: /husky/blam_slam/octree_map
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -310,14 +310,14 @@ Visualization Manager:
       Size (Pixels): 1
       Size (m): 0.00999999978
       Style: Points
-      Topic: /robot/blam_slam/octree_map_updates
+      Topic: /husky/blam_slam/octree_map_updates
       Unreliable: false
       Use Fixed Frame: false
       Use rainbow: true
       Value: false
     - Class: rviz/Marker
       Enabled: false
-      Marker Topic: /robot/blam_slam/odometry_edges
+      Marker Topic: /husky/blam_slam/odometry_edges
       Name: Odometry Edges
       Namespaces:
         {}
@@ -325,42 +325,42 @@ Visualization Manager:
       Value: false
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/loop_edges
+      Marker Topic: /husky/blam_slam/loop_edges
       Name: Loop Edges
       Namespaces:
-        robot/blam: true
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/graph_nodes
+      Marker Topic: /husky/blam_slam/graph_nodes
       Name: Graph Nodes
       Namespaces:
-        robot/blam: true
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/graph_node_ids
+      Marker Topic: /husky/blam_slam/graph_node_ids
       Name: Node IDs
       Namespaces:
-        robot/blam: true
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/keyframe_nodes
+      Marker Topic: /husky/blam_slam/keyframe_nodes
       Name: Key Frames
       Namespaces:
-        robot/blam: true
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/closure_area
+      Marker Topic: /husky/blam_slam/closure_area
       Name: Closure Area
       Namespaces:
-        robot/base_link: true
+        husky/base_link: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -388,7 +388,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 5
       Style: Points
-      Topic: /robot/blam_slam/loop_closure_scan1
+      Topic: /husky/blam_slam/loop_closure_scan1
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -418,14 +418,14 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.00999999978
       Style: Points
-      Topic: /robot/blam_slam/loop_closure_scan2
+      Topic: /husky/blam_slam/loop_closure_scan2
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/confirm_edge
+      Marker Topic: /husky/blam_slam/confirm_edge
       Name: Confirm Edge
       Namespaces:
         {}
@@ -433,7 +433,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /robot/blam_slam/artifact_markers
+      Marker Topic: /husky/blam_slam/artifact_markers
       Name: Artifacts Markers
       Namespaces:
         {}
@@ -443,7 +443,7 @@ Visualization Manager:
   Global Options:
     Background Color: 0; 0; 0
     Default Light: true
-    Fixed Frame: robot/blam
+    Fixed Frame: husky/blam
     Frame Rate: 30
   Name: root
   Tools:

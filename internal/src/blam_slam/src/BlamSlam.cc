@@ -170,7 +170,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   pcld_sub_ = nl.subscribe("pcld", 100000, &BlamSlam::PointCloudCallback, this);
 
-  artifact_sub_ = nl.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
+  artifact_sub_ = nl.subscribe("/object_localizer/artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
 
   return CreatePublishers(n);
 }

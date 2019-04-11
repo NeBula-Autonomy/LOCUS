@@ -1,5 +1,5 @@
 <launch>
-  <arg name="robot_namespace" default="robot"/>
+  <arg name="robot_namespace" default="husky"/>
 
   <!-- True for simulation, false for real-time and bagfiles -->
   <param name="/use_sim_time" value="false"/>
@@ -40,7 +40,7 @@
       <!-- Artifacts parameters -->
       <rosparam param="artifacts">
         trans_precision: 100.0 
-        rot_precision: 0.0
+        rot_precision: 0.0001
       </rosparam>
 
       <!-- Rates -->
