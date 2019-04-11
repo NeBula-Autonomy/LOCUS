@@ -40,7 +40,7 @@
       <!-- Artifacts parameters -->
       <rosparam param="artifacts">
         trans_precision: 100.0 
-        rot_precision: 0.0001
+        rot_precision: 0.0
       </rosparam>
 
       <!-- Rates -->

@@ -884,11 +884,17 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     }
     // We should add initial guess to values 
     new_values.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
-  }
 
-  // CHECK!!! (Put update with new values here (or better to do with newfactors?))
-  isam_->update(nfg_, new_values);
-  linPoint = isam_->getLinearizationPoint();
+    // Create prior on rotation 
+    gtsam::Vector6 precisions; // inverse of variances
+    precisions.head<3>().setConstant(10.0); // rotation precision
+    precisions.tail<3>().setConstant(0.0); // std: 1/1000 ~ 30 m 1/100 - 10 m 1/25 - 5m
+    static const gtsam::SharedNoiseModel& noise =
+    gtsam::noiseModel::Diagonal::Precisions(precisions);
+
+    new_factor.add(gtsam::Prior<gtsam::Pose3>(key2, gtsam::Pose3(), noise))
+    linPoint.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
+  }
 
   // TODO - some check to see what the distance between the two poses are
   // Print that out for the operator to check - to see how large a change is being asked for
@@ -959,7 +965,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
           std::cout << "Optimizing manual loop closure ISAM, iteration " << i << std::endl;
           if (i == 0){
             // Run first update with the added factors 
-            isam_->update(new_factor, Values());
+            isam_->update(new_factor, new_values);
           } else {
             // Run iterations of the update without adding new factors
             isam_->update(NonlinearFactorGraph(), Values());
@@ -983,7 +989,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
       {
         // Levenberg Marquardt Optimizer
         std::cout << "Running LM optimization" << std::endl;
-        isam_->update(new_factor, Values());
+        isam_->update(new_factor, new_values);
         initialEstimate = isam_->calculateEstimate();
         nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
         // nfg_.print(""); // print whole factor graph
@@ -1818,41 +1824,20 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
   // add new values and factors
   nfg_gs_.add(nfg);
   values_gs_.insert(values);
-  bool do_optimize = false; 
+  bool do_optimize = true; 
 
   // print number of loop closures
   std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
 
-  if (values.size() != 1) do_optimize = true; // for loop closure empty
-  if (values.size() > 1) {
-    ROS_WARN("Unexpected behavior: number of update poses greater than one.");
-  }
+  if (values.size() > 1) {ROS_WARN("Unexpected behavior: number of update poses greater than one.");}
 
-  if (nfg.size() != 1) do_optimize = true; 
-  if (nfg.size() > 1) {
-    ROS_WARN("Unexpected behavior: number of update factors greater than one.");
-  }
+  if (nfg.size() > 1) {ROS_WARN("Unexpected behavior: number of update factors greater than one.");}
 
-  if (nfg.size() == 0 && values.size() > 0) {
-    ROS_ERROR("Unexpected behavior: added values but no factors.");
-  }
+  if (nfg.size() == 0 && values.size() > 0) {ROS_ERROR("Unexpected behavior: added values but no factors.");}
 
-  if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
+  // TODO: do not optimize if key is a pose (odometry) 
 
-  if (nfg.size() == 1 && values.size() == 1) {
-    // Don't add odometry edges 
-    boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
-            boost::dynamic_pointer_cast<gtsam::BetweenFactor<Pose3> >(nfg[0]);
-
-    boost::shared_ptr<gtsam::BetweenChordalFactor<Pose3> > pose3BetweenChordal =
-            boost::dynamic_pointer_cast<gtsam::BetweenChordalFactor<Pose3> >(nfg[0]);
-
-    if (pose3Between || pose3BetweenChordal) {
-      do_optimize = false; // Don't add odometry edges 
-    } else {
-      ROS_WARN("Unexpected behavior: single not BetweenFactor factor added");
-    }
-  }
+  if (nfg.size() == 0 && values.size() == 0) do_optimize = false; 
 
   if (factorsToRemove.size() > 0) 
     do_optimize = true;
