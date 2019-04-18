@@ -1835,9 +1835,15 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
 
   if (nfg.size() == 0 && values.size() > 0) {ROS_ERROR("Unexpected behavior: added values but no factors.");}
 
-  // TODO: do not optimize if key is a pose (odometry) 
+  // Do not optimize for just odometry additions 
+  // odometry values would not have prefix 'l' unlike artifact values
+  if (nfg.size() == 1 && values.size() == 1) {
+    const gtsam::Symbol symb(values.keys()[0]); 
+    if (symb.chr() != 'l') {do_optimize = false;}
+  }
 
-  if (nfg.size() == 0 && values.size() == 0) do_optimize = false; 
+  // nothing added so no optimization 
+  if (nfg.size() == 0 && values.size() == 0) {do_optimize = false;}
 
   if (factorsToRemove.size() > 0) 
     do_optimize = true;
