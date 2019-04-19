@@ -307,7 +307,7 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   nfg_ = isam_->getFactorsUnsafe();
 
-  std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
+  // std::cout << "!!!!! error at AddBetweenFactor isam: " << nfg_.error(values_) << std::endl;
 
   // Assign output and get ready to go again!
   *key = key_++;
@@ -1827,7 +1827,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
   bool do_optimize = true; 
 
   // print number of loop closures
-  std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
+  // std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
 
   if (values.size() > 1) {ROS_WARN("Unexpected behavior: number of update poses greater than one.");}
 

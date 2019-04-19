@@ -71,7 +71,7 @@
 #include <vector>
 
 // default is isam, LM for LevenbergMarquardt
-// #define solver LM 
+#define solver LM 
 
 class GenericSolver {
 public:

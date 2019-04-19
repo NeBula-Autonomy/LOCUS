@@ -564,8 +564,9 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
   // Publish Marker with new position
   visualization_msgs::Marker marker;
   // Set the frame ID and timestamp.  See the TF tutorials for information on these.
-  marker.header.frame_id = fixed_frame_id_;
-  std::cout << "Get marker fixed frame id: " << fixed_frame_id_ << std::endl;
+  // marker.header.frame_id = fixed_frame_id_;
+  marker.header.frame_id = "world";
+  // std::cout << "Get marker fixed frame id: " << fixed_frame_id_ << std::endl;
   marker.header.stamp = ros::Time::now();
 
   // Set the namespace and id for this marker.  This serves to create a unique ID
@@ -615,7 +616,7 @@ void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
   if (msg.label == "survivor")
   {
     std::cout << "survivor marker" << std::endl;
-    return;
+    // return;
     marker.color.r = 1.0f;
     marker.color.g = 1.0f;
     marker.color.b = 1.0f;
