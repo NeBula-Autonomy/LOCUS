@@ -179,10 +179,12 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // ISAM2GaussNewtonParams gnparams(-1);
   // parameters.setOptimizationParams(gnparams);
   isam_.reset(new ISAM2(parameters));
+  ROS_INFO("Using ISAM2 optimizer");
   #endif
   #ifdef solver
   isam_.reset(new GenericSolver());
   isam_->print();
+  ROS_INFO("Using generic solver (LM currently)");
   #endif
   std::cout << "after isam reset" << std::endl; 
 
@@ -221,19 +223,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   return true;
 }
-
-// bool LaserLoopClosure::AddFactorService(laser_loop_closure::ManualLoopClosureRequest &request,
-//                                         laser_loop_closure::ManualLoopClosureResponse &response) {
-//   response.success = AddFactor(static_cast<unsigned int>(request.key_from),
-//                                static_cast<unsigned int>(request.key_to));
-//   if (response.success){
-//     std::cout << "adding factor for loop closure succeeded" << std::endl;
-//   }else{
-//     std::cout << "adding factor for loop closure failed" << std::endl;
-//   }
-
-//   return true;
-// }
 
 bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
@@ -515,7 +504,7 @@ bool LaserLoopClosure::FindLoopClosures(
           loop_closure_notifier_pub_.publish(std_msgs::Empty());
 
           // break if a successful loop closure 
-          break;
+          // break;
         }
       } else {
 
@@ -539,7 +528,7 @@ bool LaserLoopClosure::FindLoopClosures(
           loop_closure_notifier_pub_.publish(std_msgs::Empty());
 
           // break if a successful loop closure 
-          break;
+          // break;
         }
       }
     }
@@ -943,40 +932,6 @@ bool LaserLoopClosure::AddFactor(unsigned int key1, unsigned int key2, double qw
     // add factor to factor graph
     new_factor.add(factor);
   }
-
-
-  // // save factor graph as graphviz dot file
-  // // Render to PDF using "fdp Pose2SLAMExample.dot -Tpdf > graph.pdf"
-  // std::ofstream os("Pose2SLAMExample.dot");
-  // graph.saveGraph(os, result);
-
-  // // Read File, create graph and initial estimate
-  // // we are in build/examples, data is in examples/Data
-  // NonlinearFactorGraph::shared_ptr graph;
-  // Values::shared_ptr initial;
-  // SharedDiagonal model = noiseModel::Diagonal::Sigmas((Vector(3) << 0.05, 0.05, 5.0 * M_PI / 180.0).finished());
-  // string graph_file = findExampleDataFile("w100.graph");
-  // boost::tie(graph, initial) = load2D(graph_file, model);
-  // initial->print("Initial estimate:\n");
-
-  // TODO - option to save or load the graph - check size of the existing graph?
-  // Or just create an option to load an existing graph in the launch file?
-  // TODO - Debug this for quicker testing - load a good graph that already has all we want.
-  // bool bLoadGraph = false;
-  // if (!bLoadGraph){
-  //   // Save the graph 
-  //   gtsam::SharedNoiseModel noise_model;
-  //   noise_model = gtsam::noiseModel::Diagonal::Precisions::shared_ptr((gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.04, 0.04, 0.04).finished());
-  //   gtsam::save2D(isam_->getFactorsUnsafe(), values_, noise_model, "pre-loop_graph.graph");
-  // }else{
-  //   // Load the graph
-  //   NonlinearFactorGraph::shared_ptr graph;
-  //   Values::shared_ptr initial;
-  //   gtsam::SharedNoiseModel noise_model = gtsam::noiseModel::Diagonal::Precisions::shared_ptr((gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.04, 0.04, 0.04).finished());
-  //   string graph_file = findExampleDataFile("pre-loop_graph.graph");
-  //   boost::tie(graph, initial) = load2D(graph_file, noise_model);
-  //   // initial->print("Initial estimate:\n");
-  // }
 
   // optimize
   try {
@@ -1628,7 +1583,6 @@ void LaserLoopClosure::makeMenuMarker( gu::Transform3 position, const std::strin
   menu_handler.insert(id_number);
   server->insert(int_marker);
   menu_handler.apply(*server, int_marker.name );
-  server->applyChanges();
 }
 
 void LaserLoopClosure::PublishPoseGraph() {
@@ -1844,6 +1798,9 @@ void LaserLoopClosure::PublishPoseGraph() {
         LaserLoopClosure::makeMenuMarker(position, id_number);
       }
     }
+    if (server != NULL){
+      server->applyChanges();
+    }
   }
 }
 
@@ -1870,12 +1827,14 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
   // print number of loop closures
   // std::cout << "number of loop closures so far: " << nfg_gs_.size() - values_gs_.size() << std::endl; 
 
-  if (values.size() != 1) do_optimize = true; // for loop closure empty
+
+  // Logic to not optimize if an odometry factor is being added
+  if (values.size() != 1) do_optimize = true; // for loop closure, the values are empty - so we want to optimize
   if (values.size() > 1) {
     ROS_WARN("Unexpected behavior: number of update poses greater than one.");
   }
 
-  if (nfg.size() != 1) do_optimize = true; 
+  if (nfg.size() != 1) do_optimize = true;  // If we have a large update
   if (nfg.size() > 1) {
     ROS_WARN("Unexpected behavior: number of update factors greater than one.");
   }
@@ -1886,7 +1845,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
 
   if (nfg.size() == 0 && values.size() == 0) do_optimize = false;
 
-  if (nfg.size() == 1) {
+  if (nfg.size() == 1 && values.size() == 1) {
     boost::shared_ptr<gtsam::BetweenFactor<Pose3> > pose3Between =
             boost::dynamic_pointer_cast<gtsam::BetweenFactor<Pose3> >(nfg[0]);
 
@@ -1899,6 +1858,10 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
       ROS_WARN("Unexpected behavior: single not BetweenFactor factor added");
     }
   }
+
+  // Only run optimization if there are factors to remove - otherwise assume we have odometry factors 
+  if (factorsToRemove.size() > 0) 
+    do_optimize = true;
 
   if (do_optimize) {
     ROS_INFO(">>>>>>>>>>>> Run Optimizer <<<<<<<<<<<<");

@@ -7,7 +7,7 @@ icp:
   corr_dist: 0.3
 
   # Iterate ICP this many times.
-  iterations: 10
+  iterations: 5 # Default from original branch is 20
 
   # Maximum acceptable incremental rotation and translation.
   transform_thresholding: false
