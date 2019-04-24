@@ -109,7 +109,8 @@ Alternatively, just run the tmux script (after modifying the parameters at the t
 ```
 
 ## (Optional) Running TBB and MKL:
-1- Downloading MKL package:
+Follow these steps for downloading MKL package:
+
 Downloading the GnuPG key first and add it to the keyring:
 ```
 cd /tmp
@@ -119,31 +120,41 @@ sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list
 ```
 
 After this step for avoiding any error update your repository once more.
-```apt-get update```
+```
+apt-get update
+```
 
 And then:
-```apt-get install intel-mkl-64bit-2018.2-046```
+```
+apt-get install intel-mkl-64bit-2018.2-046
+```
 This is the 64-bit of the MKL.
 
-# Note:
+**Note:**
 MKL package at least requires 500MB packages. If you are running out of space, it is not required to risk it.
 
 
 
 For the purpose of enabling the TBB package follow these commands:
-```sudo apt-get install libtbb-dev```
+```
+sudo apt-get install libtbb-dev
+```
+
 and then
 
-```cd ~/ws/gtsam/cmake
+```
+cd ~/ws/gtsam/cmake
 ```
 
 Add these two commands to the CMakeLists.txt and then rebuild your gtsam.
-```FindMKL.cmake
+```
+FindMKL.cmake
 FindTBB.cmake 
 ```
 
-Note: By applying both the packages, there are still crashes you will be seeing. It is provided by the developer that these two packages are still under the development.
-Note: There are not consistancy in TBB package. 70% cases used the MKL and TBB and perfectly working with enhancement in lowering the computation. There are cases of software crashing.
+**Note:** By applying both the packages, there are still crashes you will be seeing. It is provided by the developer that these two packages are still under the development.
+
+**Note:** There are not consistancy in TBB package. %70 cases used the MKL and TBB and perfectly working with enhancement in lowering the computation. There are cases of software crashing.
 
 
 # OLD
