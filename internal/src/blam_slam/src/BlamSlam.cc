@@ -49,7 +49,6 @@ BlamSlam::BlamSlam()
     position_sigma_(0.01),
     attitude_sigma_(0.04),
     marker_id_(0),
-    tf_listener_(tf_buffer_),
     largest_artifact_id_(0) {}
 
 BlamSlam::~BlamSlam() {}
@@ -109,9 +108,6 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Covariance for odom factors
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
-
-  if (!pu::Get("artifacts/rot_precision", artifacts_rot_precision_)) return false;
-  if (!pu::Get("artifacts/trans_precision", artifacts_trans_precision_)) return false; 
 
   if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
@@ -181,9 +177,6 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
 
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
- 
-  artifact_pub_ = nl.advertise<core_msgs::Artifact>("artifact", 10);
-  marker_pub_ = nl.advertise<visualization_msgs::Marker>("artifact_markers", 10);
 
   return true;
 }
@@ -324,7 +317,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Subscribe to artifact messages, include in pose graph, publish global position 
 
   // TODO: don't accept if confidence too low
-  // TODO: if we have seen object before withit the past n seconds, don't add?
+  // TODO: if we have seen object before within the past n seconds, don't add?
 
   std::cout << "Artifact message received is for id " << msg.id << std::endl;
   std::cout << "\t Confidence: " << msg.confidence << std::endl;
@@ -392,18 +385,13 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
                                                   R_artifact_position[2]));
   R_pose_A.print("Between pose is ");
 
-  loop_closure_.AddFactor(
+  loop_closure_.AddArtifact(
     pose_key,
     cur_artifact_key,
-    R_pose_A,
-    false, // this is not manual loop closure 
-    artifacts_rot_precision_, 
-    artifacts_trans_precision_); // TODO: add to params for translation precision 
+    R_pose_A, 
+    msg.label); 
 
-  // query W_artifact_position from optimized values
-  Eigen::Vector3d W_artifact_position = loop_closure_.GetArtifactPosition(cur_artifact_key);
-
-  PublishArtifact(W_artifact_position, msg); 
+  loop_closure_.PublishPoseGraph();
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
@@ -535,99 +523,6 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
              pose_key, closure_key);
   }
   return true;
-}
-
-void BlamSlam::PublishArtifact(const Eigen::Vector3d& W_artifact_position,
-                               const core_msgs::Artifact& msg) {
-  // Publish the message with the updated position
-  core_msgs::Artifact new_msg =
-      msg;              // This copying may be expensive with the thumbnail
-  new_msg.header.seq++; // Change the sequence so it is not completely
-                        // duplicating the message
-  new_msg.point.point.x = W_artifact_position[0];
-  new_msg.point.point.y = W_artifact_position[1];
-  new_msg.point.point.z = W_artifact_position[2];
-  new_msg.point.header.frame_id = fixed_frame_id_;
-
-  // Transform to world frame from map frame
-  new_msg.point = tf_buffer_.transform(
-      new_msg.point, "world", new_msg.point.header.stamp, "world");
-  // Transform at time of message
-
-  std::cout << "Artifact position in world is: " << new_msg.point.point.x
-            << ", " << new_msg.point.point.y << ", " << new_msg.point.point.z
-            << std::endl;
-  std::cout << "Frame ID is: " << new_msg.point.header.frame_id << std::endl;
-
-  artifact_pub_.publish(new_msg);
-
-  // Publish Marker with new position
-  visualization_msgs::Marker marker;
-  // Set the frame ID and timestamp.  See the TF tutorials for information on these.
-  // marker.header.frame_id = fixed_frame_id_;
-  marker.header.frame_id = "world";
-  // std::cout << "Get marker fixed frame id: " << fixed_frame_id_ << std::endl;
-  marker.header.stamp = ros::Time::now();
-
-  // Set the namespace and id for this marker.  This serves to create a unique ID
-  // Any marker sent with the same namespace and id will overwrite the old one
-  marker.ns = "artifact";
-  marker.id = marker_id_++;
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position = new_msg.point.point;
-  // marker.pose.position.x = W_artifact_position[0];
-  // marker.pose.position.y = W_artifact_position[1];
-  // marker.pose.position.z = W_artifact_position[2];
-  std::cout << "Marker xyz: " << marker.pose.position.x << " "
-            << marker.pose.position.y << " " << marker.pose.position.z << std::endl;
-  marker.pose.orientation.x = 0.0;
-  marker.pose.orientation.y = 0.0;
-  marker.pose.orientation.z = 0.0;
-  marker.pose.orientation.w = 1.0;
-  marker.scale.x = 0.35f;
-  marker.scale.y = 0.35f;
-  marker.scale.z = 0.35f;
-  marker.color.a = 1.0f;
-
-  if (msg.label == "backpack")
-  {
-    std::cout << "backpack marker" << std::endl;
-    marker.color.r = 1.0f;
-    marker.color.g = 0.0f;
-    marker.color.b = 0.0f;
-    marker.type = visualization_msgs::Marker::CUBE;
-  }
-  if (msg.label == "fire extinguisher")
-  {
-    std::cout << "fire extinguisher marker" << std::endl;
-    marker.color.r = 1.0f;
-    marker.color.g = 0.5f;
-    marker.color.b = 0.75f;
-    marker.type = visualization_msgs::Marker::SPHERE;
-  }
-  if (msg.label == "drill")
-  {
-    std::cout << "drill marker" << std::endl;
-    marker.color.r = 0.0f;
-    marker.color.g = 1.0f;
-    marker.color.b = 0.0f;
-    marker.type = visualization_msgs::Marker::CYLINDER;
-  }
-  if (msg.label == "survivor")
-  {
-    std::cout << "survivor marker" << std::endl;
-    // return;
-    marker.color.r = 1.0f;
-    marker.color.g = 1.0f;
-    marker.color.b = 1.0f;
-    marker.scale.x = 2.0f;
-    marker.scale.y = 2.0f;
-    marker.scale.z = 2.0f;
-    marker.type = visualization_msgs::Marker::CYLINDER;
-  }
-  marker.lifetime = ros::Duration();
-
-  marker_pub_.publish(marker);
 }
 
 

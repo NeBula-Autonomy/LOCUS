@@ -59,6 +59,11 @@
 #include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
 #include <gtsam/inference/Symbol.h>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <core_msgs/Artifact.h>
+
 // #include "SESync/SESync.h"
 // #include "SESync/SESync_utils.h"
 
@@ -70,8 +75,8 @@
 #include <map>
 #include <vector>
 
-// default is isam, LM for LevenbergMarquardt
-#define solver LM 
+// default is isam, 1 for LevenbergMarquardt, 2 for GaussNewton, 3 for SESync (WIP)
+// #define SOLVER 1
 
 class GenericSolver {
 public:
@@ -150,6 +155,9 @@ class LaserLoopClosure {
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
+  // Publish artifacts for visualization. 
+  void PublishArtifacts();
+  
   // makeMenuMaker
   void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;
 
@@ -157,6 +165,8 @@ class LaserLoopClosure {
   // designed for a scenario where a human operator can manually perform
   // loop closures by adding these factors to the pose graph.
   bool AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2, gtsam::Pose3 pose12);
+
+  bool AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, gtsam::Pose3 pose12, std::string label);
 
   bool AddFactor(gtsam::Key key1, gtsam::Key key2, 
                  gtsam::Pose3 pose12, 
@@ -247,6 +257,8 @@ class LaserLoopClosure {
   double max_tolerable_fitness_;
   double manual_lc_rot_precision_;
   double manual_lc_trans_precision_;
+  double artifact_rot_precision_;
+  double artifact_trans_precision_;
   double laser_lc_rot_sigma_;
   double laser_lc_trans_sigma_;
   unsigned int relinearize_skip_;
@@ -260,10 +272,10 @@ class LaserLoopClosure {
   unsigned int icp_iterations_;
 
   // ISAM2 optimizer object, and best guess pose values.
-  #ifdef solver
+  #ifdef SOLVER
   std::unique_ptr<GenericSolver> isam_;
   #endif
-  #ifndef solver 
+  #ifndef SOLVER
   std::unique_ptr<gtsam::ISAM2> isam_;
   #endif
 
@@ -273,6 +285,9 @@ class LaserLoopClosure {
   // Frames.
   std::string fixed_frame_id_;
   std::string base_frame_id_;
+
+  // Artifacts and labels 
+  std::unordered_map<gtsam::Key, std::string> artifact_key2label_hash;
 
   // Visualization publishers.
   ros::Publisher odometry_edge_pub_;
@@ -284,8 +299,13 @@ class LaserLoopClosure {
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
   ros::Publisher confirm_edge_pub_;
+  ros::Publisher artifact_pub_;
+  ros::Publisher marker_pub_;
 
   // ros::ServiceServer add_factor_srv_;
+
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 
   // Pose graph publishers.
   ros::Publisher pose_graph_pub_;

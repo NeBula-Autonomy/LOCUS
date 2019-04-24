@@ -51,9 +51,6 @@
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_listener.h>
-
 #include <core_msgs/Artifact.h>
 
 class BlamSlam {
@@ -123,20 +120,12 @@ class BlamSlam {
   double position_sigma_;
   double attitude_sigma_;
 
-  // Precisions 
-  double artifacts_rot_precision_; 
-  double artifacts_trans_precision_;
-
   // Subscribers.
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
-  ros::Publisher artifact_pub_;
-  ros::Publisher marker_pub_;
   
 
   // Services

@@ -78,7 +78,7 @@ using gtsam::ISAM2GaussNewtonParams;
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 
 LaserLoopClosure::LaserLoopClosure()
-    : key_(0), last_closure_key_(std::numeric_limits<int>::min()) {
+    : key_(0), last_closure_key_(std::numeric_limits<int>::min()), tf_listener_(tf_buffer_) {
   initial_noise_.setZero();
 }
 
@@ -135,6 +135,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("manual_lc_trans_precision", manual_lc_trans_precision_)) return false;
   if (!pu::Get("laser_lc_rot_sigma", laser_lc_rot_sigma_)) return false;
   if (!pu::Get("laser_lc_trans_sigma", laser_lc_trans_sigma_)) return false;
+  if (!pu::Get("artifact_rot_precision", artifact_rot_precision_)) return false; 
+  if (!pu::Get("artifact_trans_precision", artifact_trans_precision_)) return false; 
   if (!pu::Get("use_chordal_factor", use_chordal_factor_)) return false; 
 
   // Load ICP parameters.
@@ -163,7 +165,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("init/orientation_sigma/yaw", sigma_yaw)) return false;
 
   std::cout << "before isam reset" << std::endl; 
-  #ifndef solver
+  #ifndef SOLVER
   // Create the ISAM2 solver.
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
@@ -174,7 +176,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // parameters.setOptimizationParams(gnparams);
   isam_.reset(new ISAM2(parameters));
   #endif
-  #ifdef solver
+  #ifdef SOLVER
   isam_.reset(new GenericSolver());
   isam_->print();
   #endif
@@ -254,6 +256,9 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 10, false);
   loop_closure_notifier_pub_ =
       nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
+
+  artifact_pub_ = nl.advertise<core_msgs::Artifact>("artifact", 10);
+  marker_pub_ = nl.advertise<visualization_msgs::Marker>("artifact_markers", 10);
       
   return true;
 }
@@ -846,8 +851,21 @@ bool LaserLoopClosure::AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2,
                                             gtsam::Pose3 pose12){
 
   bool is_manual_loop_closure = true;
-  return AddFactor(key1,key2,pose12,is_manual_loop_closure,
+  return AddFactor(key1, key2, pose12, is_manual_loop_closure,
                    manual_lc_rot_precision_, manual_lc_trans_precision_); 
+}
+
+bool LaserLoopClosure::AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, 
+                                   gtsam::Pose3 pose12, std::string label) {
+
+  // keep track of what the artifact label is 
+  if (artifact_key2label_hash.find(artifactkey) == artifact_key2label_hash.end()) {
+    artifact_key2label_hash[artifactkey] = label;
+  }
+  // add to pose graph 
+  bool is_manual_loop_closure = false;
+  return AddFactor(posekey, artifactkey, pose12, is_manual_loop_closure,
+                   artifact_rot_precision_, artifact_trans_precision_);
 }
 
 bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2, 
@@ -1057,7 +1075,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
 
     
     // ----------------------------------------------
-    #ifndef solver
+    #ifndef SOLVER
     // Create the ISAM2 solver.
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
@@ -1067,7 +1085,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     // parameters.setOptimizationParams(gnparams);
     isam_.reset(new ISAM2(parameters));
     #endif
-    #ifdef solver
+    #ifdef SOLVER
     isam_.reset(new GenericSolver());
     #endif
     // Update with the new graph
@@ -1459,13 +1477,13 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
   nfg_ = *gv.first;
   values_ = *gv.second;
 
-  #ifndef solver
+  #ifndef SOLVER
   ISAM2Params parameters;
   parameters.relinearizeSkip = relinearize_skip_;
   parameters.relinearizeThreshold = relinearize_threshold_;
   isam_.reset(new ISAM2(parameters));
   #endif
-  #ifdef solver
+  #ifdef SOLVER
   isam_.reset(new GenericSolver());
   #endif
 
@@ -1804,6 +1822,103 @@ void LaserLoopClosure::PublishPoseGraph() {
       LaserLoopClosure::makeMenuMarker( position, id_number );
     }
   }
+
+  // Publish artifacts 
+  PublishArtifacts();
+}
+
+void LaserLoopClosure::PublishArtifacts() {
+  // For now, loop through artifact_key2label_hash
+  // then publish. (might want to change this to an array later?)
+
+  // loop through values 
+  for (auto it = artifact_key2label_hash.begin(); 
+            it != artifact_key2label_hash.end(); ++it ) {
+
+    // Get position and label 
+    Eigen::Vector3d artifact_position = GetArtifactPosition(it->first);
+    std::string artifact_label = it->second;
+
+    // Create new artifact msg 
+    core_msgs::Artifact new_msg;
+
+    new_msg.point.point.x = artifact_position[0];
+    new_msg.point.point.y = artifact_position[1];
+    new_msg.point.point.z = artifact_position[2];
+    new_msg.point.header.frame_id = fixed_frame_id_;
+    // Transform to world frame from map frame
+    new_msg.point = tf_buffer_.transform(
+        new_msg.point, "world", new_msg.point.header.stamp, "world");
+    // Transform at time of message
+    std::cout << "Artifact position in world is: " << new_msg.point.point.x
+              << ", " << new_msg.point.point.y << ", " << new_msg.point.point.z
+              << std::endl;
+    std::cout << "Frame ID is: " << new_msg.point.header.frame_id << std::endl;
+
+    artifact_pub_.publish(new_msg);
+
+    // Publish Marker with new position
+    visualization_msgs::Marker marker;
+
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
+
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "artifact";
+    marker.id = it->first;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position = new_msg.point.point;
+
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.35f;
+    marker.scale.y = 0.35f;
+    marker.scale.z = 0.35f;
+    marker.color.a = 1.0f;
+
+    if (artifact_label == "backpack")
+    {
+      std::cout << "backpack marker" << std::endl;
+      marker.color.r = 1.0f;
+      marker.color.g = 0.0f;
+      marker.color.b = 0.0f;
+      marker.type = visualization_msgs::Marker::CUBE;
+    }
+    if (artifact_label == "fire extinguisher")
+    {
+      std::cout << "fire extinguisher marker" << std::endl;
+      marker.color.r = 1.0f;
+      marker.color.g = 0.5f;
+      marker.color.b = 0.75f;
+      marker.type = visualization_msgs::Marker::SPHERE;
+    }
+    if (artifact_label == "drill")
+    {
+      std::cout << "drill marker" << std::endl;
+      marker.color.r = 0.0f;
+      marker.color.g = 1.0f;
+      marker.color.b = 0.0f;
+      marker.type = visualization_msgs::Marker::CYLINDER;
+    }
+    if (artifact_label == "survivor")
+    {
+      std::cout << "survivor marker" << std::endl;
+      // return;
+      marker.color.r = 1.0f;
+      marker.color.g = 1.0f;
+      marker.color.b = 1.0f;
+      marker.scale.x = 2.0f;
+      marker.scale.y = 2.0f;
+      marker.scale.z = 2.0f;
+      marker.type = visualization_msgs::Marker::CYLINDER;
+    }
+    // marker.lifetime = ros::Duration();
+
+    marker_pub_.publish(marker);
+  }
 }
 
 GenericSolver::GenericSolver(): 
@@ -1851,12 +1966,18 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
   if (do_optimize) {
     ROS_INFO(">>>>>>>>>>>> Run Optimizer <<<<<<<<<<<<");
     // optimize
-    #if solver==LM
+    #if SOLVER==1
     gtsam::LevenbergMarquardtParams params;
     params.setVerbosityLM("SUMMARY");
+    std::cout << "Running LM" << std::endl; 
     params.diagonalDamping = true; 
     values_gs_ = gtsam::LevenbergMarquardtOptimizer(nfg_gs_, values_gs_, params).optimize();
-    #elif solver==SEsync
+    #elif SOLVER==2
+    gtsam::GaussNewtonParams params;
+    params.setVerbosity("ERROR");
+    std::cout << "Running GN" << std::endl; 
+    values_gs_ = gtsam::GaussNewtonOptimizer(nfg_gs_, values_gs_, params).optimize();
+    #elif SOLVER==3
     // something
     #endif
   }
