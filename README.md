@@ -98,6 +98,14 @@ Also, when running on a bagfile, a static transform publisher is needed, to take
 static_transform_publisher 0 0 0 0 0 0 1 /husky/base_link /velodyne
 ```
 
+In addition, a static transform publisher is needed to take place of the tf from world to blam:
+
+```bash
+static_transform_publisher 0 0 0 0 0 0 1 /world /husky/blam
+```
+**Note:** 
+If you are using the ``run_blam.sh`` script, there is no need to run the static transform publisher from `/world` to `/husky/blam` as this is already captured in the script.
+
 To visualize in RViz, use the husky rviz file:
 ```bash
 rviz -d {filepath}/localizer_blam/internal/src/blam_example/rviz/lidar_slam_husky.rviz
