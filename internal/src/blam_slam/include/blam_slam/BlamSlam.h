@@ -51,9 +51,6 @@
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_listener.h>
-
 #include <core_msgs/Artifact.h>
 
 class BlamSlam {
@@ -126,13 +123,9 @@ class BlamSlam {
   // Subscribers.
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
-  ros::Publisher artifact_pub_;
-  ros::Publisher marker_pub_;
   
 
   // Services
@@ -144,6 +137,10 @@ class BlamSlam {
   std::string fixed_frame_id_;
   std::string base_frame_id_;
   bool artifacts_in_global_;
+  int largest_artifact_id_; 
+
+  // Object IDs
+  std::unordered_map<std::string, gtsam::Key> artifact_id2key_hash;
 
   // Class objects (BlamSlam is a composite class).
   MeasurementSynchronizer synchronizer_;

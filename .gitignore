@@ -10,6 +10,7 @@ internal/devel
 internal/build_isolated
 internal/devel_isolated
 internal/install_isolated
+internal/.catkin_tools
 #internal/src
 *.catkin_workspace
 
@@ -43,3 +44,6 @@ internal/install_isolated
 
 # CSV files
 *.csv
+
+# pyc filees 
+*.pyc

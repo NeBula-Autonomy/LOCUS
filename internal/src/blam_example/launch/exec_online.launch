@@ -40,7 +40,7 @@
       <rosparam param="noise">
         odom_position_sigma: 0.6324
         odom_attitude_sigma: 0.316
-      </rosparam>     
+      </rosparam>      
 
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
@@ -100,7 +100,7 @@
 
     <!-- Convert output PoseStamped message to Odometry -->
     <node pkg="topic_tools" type="transform" name="pose_to_odom"
-          respawn="true"
+          respawn="true" output="screen"
           args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate
                 /$(arg robot_namespace)/blam_slam/odometry
                 nav_msgs/Odometry
