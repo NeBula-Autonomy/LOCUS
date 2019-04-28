@@ -930,11 +930,9 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
 
     new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(key2, gtsam::Pose3(), prior_noise));
-    linPoint.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
   }
 
-  // TODO - some check to see what the distance between the two poses are
-  // Print that out for the operator to check - to see how large a change is being asked for
+  linPoint.insert(new_values); // insert new values
 
   if (!use_chordal_factor_) {
     // Use BetweenFactor
@@ -979,107 +977,44 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
   // optimize
   try {
     std::cout << "Optimizing manual loop closure, iteration" << std::endl;
-    gtsam::ISAM2Result result_ISAM;
-    // gtsam::NonlinearFactorGraph nfg;
-    gtsam::Values initialEstimate;
-    gtsam::Values result, resultGN;
+    gtsam::Values result;
 
-    // TODO - loop over optimizers?
-    // TODO using strings or enum rather than ints
     // Switch based on optimizer input
     switch (loop_closure_optimizer_){
-      case 0 : 
+      case 0 : // only do the above isam update 
       {
-        // Run isam 2 standard
-        // TODO - test this!
-        // isam_->update(new_factor, Values());
-        // nfg = isam_->getFactorsUnsafe();
-        // result = isam_->calculateEstimate();
-        // Loop for n_iterations of the update 
-        try{
-        std::cout << "In ISAM2 update" << std::endl;
-        for (int i = 0; i < n_iterations_manual_loop_close_; i++){
-          std::cout << "Optimizing manual loop closure ISAM, iteration " << i << std::endl;
-          if (i == 0){
-            // Run first update with the added factors 
-            isam_->update(new_factor, new_values);
-          } else {
-            // Run iterations of the update without adding new factors
-            isam_->update(NonlinearFactorGraph(), Values());
-          }
-          // result_ISAM.print("iSAM2 update result:\t");
-
-          linPoint = isam_->calculateBestEstimate();
-          nfg_ = isam_->getFactorsUnsafe();
-          cost = nfg_.error(linPoint);
-          ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
-        }
-        result = isam_->calculateBestEstimate();
-        }
-        catch (...) {
-          ROS_INFO_STREAM("Error with ISAM");
-          throw;
-        }
+        // ISAM2
+        isam_->update(new_factor, new_values);
+        result = isam_->calculateEstimate();
+        nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
       }
         break;
       case 1 : 
       {
         // Levenberg Marquardt Optimizer
+        nfg_.add(new_factor); // add new factor (new values already inserted above)
         std::cout << "Running LM optimization" << std::endl;
-        isam_->update(new_factor, new_values);
-        initialEstimate = isam_->calculateEstimate();
-        nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
-        // nfg_.print(""); // print whole factor graph
-        // std::cout << "number of factors after manual loop closure: " << nfg_.size() << std::endl; 
-        // std::cout << "number of poses after manual loop closure: " << initialEstimate.size() << std::endl; 
-        // gtsam::Values chordalInitial = gtsam::InitializePose3::initialize(nfg_); // test
-        // std::cout << "error at 1c: " << nfg_.error(chordalInitial) << std::endl;
-        // writeG2o(nfg_, chordalInitial, "/home/yunchang/Desktop/result_manual_loop_1c.g2o");
-
-        // std::cout << "!!!!! error after isam2 update on manual loop closure: " << nfg_.error(initialEstimate) << std::endl;
-        // writeG2o(nfg_, initialEstimate, "/home/yunchang/Desktop/mlc_isam2.g2o");
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("SUMMARY");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
-        // result = gtsam::LevenbergMarquardtOptimizer(nfg_, initial, params).optimize();
-        // result.print("LM result is: ");
-        // std::cout << "!!!!! error after LM on manual loop closure: " << nfg_.error(result) << std::endl;
-        // writeG2o(nfg_, result, "/home/yunchang/Desktop/mlc_lm.g2o");
-
-        // // Testing GN results 
-        // gtsam::GaussNewtonParams paramsGN;
-        // resultGN = gtsam::GaussNewtonOptimizer(nfg_, linPoint, paramsGN).optimize();
-        // std::cout << "!!!!! error after GN on manual loop closure: " << nfg_.error(resultGN) << std::endl;
-        // writeG2o(nfg_, resultGN, "/home/yunchang/Desktop/mlc_gn.g2o");
       }
         break;
       case 2 : 
       {
         // Dogleg Optimizer
         std::cout << "Running Dogleg optimization" << std::endl;
-        // nfg_ = isam_->getFactorsUnsafe();
         nfg_.add(new_factor);
-        initialEstimate = isam_->calculateEstimate();
-        result = gtsam::DoglegOptimizer(nfg_, initialEstimate).optimize();
+        result = gtsam::DoglegOptimizer(nfg_, linPoint).optimize();
       }
         break;
       case 3 : 
-      {
+      { 
         // Gauss Newton Optimizer
+        nfg_.add(new_factor); // add new factor (new values already inserted above)
         std::cout << "Running Gauss Newton optimization" << std::endl;
-        // nfg_ = isam_->getFactorsUnsafe();
-        nfg_.add(new_factor);
-
-        // Optimise on the graph - set up parameters
-        gtsam::GaussNewtonParams parameters;
-
-        // Print per iteration
-        parameters.setVerbosity("ERROR");
-
-        // Optimize
-        initialEstimate = isam_->calculateEstimate();
-        result = gtsam::GaussNewtonOptimizer(nfg_, initialEstimate, parameters).optimize();
-        
+        gtsam::GaussNewtonParams params;
+        params.setVerbosity("ERROR");
+        result = gtsam::GaussNewtonOptimizer(nfg_, linPoint, params).optimize();
       }
         break;
       default : 
@@ -1099,9 +1034,6 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
     parameters.relinearizeThreshold = relinearize_threshold_;
-    // // Set wildfire threshold 
-    // ISAM2GaussNewtonParams gnparams(-1);
-    // parameters.setOptimizationParams(gnparams);
     isam_.reset(new ISAM2(parameters));
     #endif
     #ifdef SOLVER
@@ -1109,42 +1041,20 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     #endif
     // Update with the new graph
     isam_->update(nfg_,result); 
-    gtsam::Values result_isam = isam_->calculateBestEstimate();
-    // std::cout << "!!!!! error after isam update from LM result: " << nfg_.error(result_isam) << std::endl;
-    // writeG2o(nfg_, result_isam, "/home/yunchang/Desktop/mlc_isam2.g2o");
-    
-    // redirect cout to file
-    std::ofstream nfgFile;
-    std::string home_folder(getenv("HOME"));
-    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
-    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
-    std::cout.rdbuf(nfgFile.rdbuf());
 
-    // save entire factor graph to file and debug if loop closure is correct
-    // nfg = isam_->getFactorsUnsafe();
-    nfg_.print();
-    nfgFile.close();
-
-    std::cout.rdbuf(coutbuf); //reset to standard output again
-    
     if (is_manual_loop_closure) {
       // Store for visualization and output.
       loop_edges_.push_back(std::make_pair(key1, key2));
-
       // Send an empty message notifying any subscribers that we found a loop
       // closure.
       loop_closure_notifier_pub_.publish(std_msgs::Empty());
     }
 
     // Update values
-    // values_ = isam_->calculateEstimate();
     values_ = result;//
 
-    // Todo test calculate best estimate vs calculate estimate
-    // values =  isam_->calculateBestEstimate();
-
+    // INFO stream new cost
     linPoint = isam_->getLinearizationPoint();
-    // nfg = isam_->getFactorsUnsafe();
     cost = nfg_.error(linPoint);
     ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
 

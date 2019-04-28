@@ -5,7 +5,7 @@ from add_factor import yes_or_no
 
 def connect(key_from, key_to):
     rospy.init_node('remove_factor_client')
-    remove_factor = rospy.ServiceProxy('/robot/blam_slam/remove_factor', RemoveFactor)
+    remove_factor = rospy.ServiceProxy('/husky/blam_slam/remove_factor', RemoveFactor)
     response = remove_factor(key_from, key_to, False)
     if response.confirm:
         if response.success:
