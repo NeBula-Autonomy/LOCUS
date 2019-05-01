@@ -154,7 +154,7 @@ and then
 cd ~/ws/gtsam/cmake
 ```
 
-Add these two commands to the CMakeLists.txt and then rebuild your gtsam.
+Add these two commands to the CMakeLists.txt of gtsam and then rebuild your gtsam.
 ```
 FindMKL.cmake
 FindTBB.cmake 
