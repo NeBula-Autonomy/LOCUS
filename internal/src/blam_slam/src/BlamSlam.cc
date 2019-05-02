@@ -321,6 +321,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // TODO: if we have seen object before within the past n seconds, don't add?
 
   std::cout << "Artifact message received is for id " << msg.id << std::endl;
+  std::cout << "\t Parent id: " << msg.parent_id << std::endl;
   std::cout << "\t Confidence: " << msg.confidence << std::endl;
   std::cout << "\t Position:\n[" << msg.point.point.x << ", "
             << msg.point.point.y << ", " << msg.point.point.z << "]"
@@ -358,7 +359,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
             << R_artifact_position[1] << ", " << R_artifact_position[2]
             << std::endl;
 
-  std::string artifact_id = msg.id; 
+  std::string artifact_id = msg.parent_id; // Note that we are looking at the parent id here
   gtsam::Key cur_artifact_key; 
   // get artifact id / key -----------------------------------------------
   // Check if the ID of the object already exists in the object hash
@@ -386,11 +387,13 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
                                                   R_artifact_position[2]));
   R_pose_A.print("Between pose is ");
 
+  ArtifactInfo artifactinfo(msg.parent_id, msg.label);
+
   loop_closure_.AddArtifact(
     pose_key,
     cur_artifact_key,
     R_pose_A, 
-    msg.label); 
+    artifactinfo);
 
   loop_closure_.PublishPoseGraph();
 }

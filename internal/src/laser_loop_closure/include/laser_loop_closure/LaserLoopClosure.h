@@ -100,6 +100,15 @@ private:
   gtsam::NonlinearFactorGraph nfg_gs_;
 };
 
+struct ArtifactInfo {
+  std::string id; // this corresponds to parent_id
+  std::string label; // what object it is
+  int num_updates; // how many times the optimizer has updated this
+  ArtifactInfo(std::string art_id="",
+               std::string art_label="") :
+               id(art_id), label(art_label), num_updates(0){}
+};
+
 class LaserLoopClosure {
  public:
   LaserLoopClosure();
@@ -166,7 +175,8 @@ class LaserLoopClosure {
   // loop closures by adding these factors to the pose graph.
   bool AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2, gtsam::Pose3 pose12);
 
-  bool AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, gtsam::Pose3 pose12, std::string label);
+  bool AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, gtsam::Pose3 pose12,
+                   ArtifactInfo artifact);
 
   bool AddFactor(gtsam::Key key1, gtsam::Key key2, 
                  gtsam::Pose3 pose12, 
@@ -290,7 +300,7 @@ class LaserLoopClosure {
   std::string base_frame_id_;
 
   // Artifacts and labels 
-  std::unordered_map<gtsam::Key, std::string> artifact_key2label_hash;
+  std::unordered_map<gtsam::Key, ArtifactInfo> artifact_key2info_hash;
 
   // Visualization publishers.
   ros::Publisher odometry_edge_pub_;

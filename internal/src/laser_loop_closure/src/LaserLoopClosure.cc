@@ -875,11 +875,11 @@ bool LaserLoopClosure::AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2,
 }
 
 bool LaserLoopClosure::AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, 
-                                   gtsam::Pose3 pose12, std::string label) {
+                                   gtsam::Pose3 pose12, ArtifactInfo artifact) {
 
-  // keep track of what the artifact label is 
-  if (artifact_key2label_hash.find(artifactkey) == artifact_key2label_hash.end()) {
-    artifact_key2label_hash[artifactkey] = label;
+  // keep track of artifact info: add to hash if not added
+  if (artifact_key2info_hash.find(artifactkey) == artifact_key2info_hash.end()) {
+    artifact_key2info_hash[artifactkey] = artifact;
   }
   // add to pose graph 
   bool is_manual_loop_closure = false;
@@ -1768,12 +1768,15 @@ void LaserLoopClosure::PublishArtifacts() {
   // then publish. (might want to change this to an array later?)
 
   // loop through values 
-  for (auto it = artifact_key2label_hash.begin(); 
-            it != artifact_key2label_hash.end(); ++it ) {
+  for (auto it = artifact_key2info_hash.begin();
+            it != artifact_key2info_hash.end(); ++it ) {
 
     // Get position and label 
     Eigen::Vector3d artifact_position = GetArtifactPosition(it->first);
-    std::string artifact_label = it->second;
+    std::string artifact_label = it->second.label;
+
+    // Increment update count
+    it->second.num_updates++;
 
     // Create new artifact msg 
     core_msgs::Artifact new_msg;
