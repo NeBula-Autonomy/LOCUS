@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(parameter_utils)
 
-IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release)
-ENDIF()
+#IF(NOT CMAKE_BUILD_TYPE)
+#  SET(CMAKE_BUILD_TYPE Release)
+#ENDIF()
+
+SET(CMAKE_BUILD_TYPE Release)
 
 find_package(catkin REQUIRED)
 
