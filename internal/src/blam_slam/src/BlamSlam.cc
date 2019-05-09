@@ -228,6 +228,9 @@ bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
   // Visualize the pose graph and current loop closure radius.
   loop_closure_.PublishPoseGraph();
 
+  // Publish artifacts - should be updated from the pose-graph 
+  loop_closure_.PublishArtifacts();
+
   // Publish updated map
   mapper_.PublishMap();
 
@@ -262,6 +265,9 @@ bool BlamSlam::RemoveFactorService(blam_slam::RemoveFactorRequest &request,
 
   // Visualize the pose graph and current loop closure radius.
   loop_closure_.PublishPoseGraph();
+
+  // Publish artifacts - should be updated from the pose-graph 
+  loop_closure_.PublishArtifacts();
 
   // Publish updated map
   mapper_.PublishMap();
@@ -395,7 +401,11 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     R_pose_A, 
     artifactinfo);
 
+  // Publish pose graph markers
   loop_closure_.PublishPoseGraph();
+
+  // Publish artifacts - from pose-graph positions
+  loop_closure_.PublishArtifacts();
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
@@ -450,6 +460,10 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 
     // Also reset the robot's estimated position.
     localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+    // Publish artifacts - should be updated from the pose-graph 
+    loop_closure_.PublishArtifacts();
+
   } else {
     // No new loop closures - but was there a new key frame? If so, add new
     // points to the map.
@@ -461,8 +475,12 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     }
   }
 
-  // Visualize the pose graph and current loop closure radius.
-  loop_closure_.PublishPoseGraph();
+  // Only publish the pose-graph if there is a new keyframe TODO consider changing to publishing for each new node 
+  if (new_keyframe){
+    // Visualize the pose graph and current loop closure radius.
+    loop_closure_.PublishPoseGraph();
+  }   
+  
 
   // Publish the incoming point cloud message from the base frame.
   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {

@@ -1058,8 +1058,8 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     cost = nfg_.error(linPoint);
     ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
 
-    // Publish
-    PublishPoseGraph();
+    // // Publish
+    // PublishPoseGraph();
 
     return true; //result.getVariablesReeliminated() > 0;
   } catch (...) {
@@ -1133,8 +1133,8 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   // Update values
   values_ = isam_->calculateEstimate();
 
-  // Publish
-  PublishPoseGraph();
+  // // Publish
+  // PublishPoseGraph();
 
   return true; //result.getVariablesReeliminated() > 0;
 }
@@ -1758,9 +1758,6 @@ void LaserLoopClosure::PublishPoseGraph() {
       server->applyChanges();
     }
   }
-
-  // Publish artifacts 
-  PublishArtifacts();
 }
 
 void LaserLoopClosure::PublishArtifacts() {
