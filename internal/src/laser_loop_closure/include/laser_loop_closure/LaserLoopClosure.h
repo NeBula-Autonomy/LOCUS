@@ -165,7 +165,7 @@ class LaserLoopClosure {
   void PublishPoseGraph();
 
   // Publish artifacts for visualization. 
-  void PublishArtifacts();
+  void PublishArtifacts(gtsam::Key artifact_key = '-1');
   
   // makeMenuMaker
   void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;
@@ -175,7 +175,7 @@ class LaserLoopClosure {
   // loop closures by adding these factors to the pose graph.
   bool AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2, gtsam::Pose3 pose12);
 
-  bool AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, gtsam::Pose3 pose12,
+  bool AddArtifact(gtsam::Key posekey, gtsam::Key artifact_key, gtsam::Pose3 pose12,
                    ArtifactInfo artifact);
 
   bool AddFactor(gtsam::Key key1, gtsam::Key key2, 
@@ -305,6 +305,7 @@ class LaserLoopClosure {
   // Visualization publishers.
   ros::Publisher odometry_edge_pub_;
   ros::Publisher loop_edge_pub_;
+  ros::Publisher artifact_edge_pub_;
   ros::Publisher graph_node_pub_;
   ros::Publisher graph_node_id_pub_;
   ros::Publisher keyframe_node_pub_;
@@ -326,8 +327,10 @@ class LaserLoopClosure {
   ros::Publisher loop_closure_notifier_pub_;
 
   typedef std::pair<unsigned int, unsigned int> Edge;
+  typedef std::pair<gtsam::Key, gtsam::Key> ArtifactEdge;
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
+  std::vector<ArtifactEdge> artifact_edges_;
 
   // For filtering laser scans prior to ICP.
   PointCloudFilter filter_;

@@ -49,7 +49,8 @@ BlamSlam::BlamSlam()
     position_sigma_(0.01),
     attitude_sigma_(0.04),
     marker_id_(0),
-    largest_artifact_id_(0) {}
+    largest_artifact_id_(0),
+    use_artifact_loop_closure_(false) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -111,6 +112,8 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
 
   if (!pu::Get("use_chordal_factor", use_chordal_factor_))
     return false;
+
+  if (!pu::Get("use_artifact_loop_closure", use_artifact_loop_closure_)) return false;
 
   std::string graph_filename;
   if (pu::Get("load_graph", graph_filename) && !graph_filename.empty()) {
@@ -367,9 +370,10 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
 
   std::string artifact_id = msg.parent_id; // Note that we are looking at the parent id here
   gtsam::Key cur_artifact_key; 
+  bool b_is_new_artifact = false;
   // get artifact id / key -----------------------------------------------
   // Check if the ID of the object already exists in the object hash
-  if (artifact_id2key_hash.find(artifact_id) != artifact_id2key_hash.end()) {
+  if (use_artifact_loop_closure_ && artifact_id2key_hash.find(artifact_id) != artifact_id2key_hash.end()) {
     // Take the ID for that object
     cur_artifact_key = artifact_id2key_hash[artifact_id];
     std::cout << "artifact previously observed, artifact id " << artifact_id 
@@ -377,6 +381,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
               << gtsam::DefaultKeyFormatter(cur_artifact_key) << std::endl;
   } else {
     // New artifact - increment the id counters
+    b_is_new_artifact = true;
     ++largest_artifact_id_;
     cur_artifact_key = gtsam::Symbol('l', largest_artifact_id_);
     std::cout << "new artifact observed, artifact id " << artifact_id 
@@ -395,17 +400,45 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
 
   ArtifactInfo artifactinfo(msg.parent_id, msg.label);
 
-  loop_closure_.AddArtifact(
+  bool result = loop_closure_.AddArtifact(
     pose_key,
     cur_artifact_key,
     R_pose_A, 
     artifactinfo);
 
-  // Publish pose graph markers
+  if (result){
+    std::cout << "adding artifact observation succeeded" << std::endl;
+  } else {
+    std::cout << "adding artifact observation failed" << std::endl;
+  }
+
+  // Update the map from the loop closures
+  std::cout << "Updating the map" << std::endl;
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+  // Visualize the pose graph and current loop closure radius.
   loop_closure_.PublishPoseGraph();
 
   // Publish artifacts - from pose-graph positions
-  loop_closure_.PublishArtifacts();
+  if (b_is_new_artifact){
+    loop_closure_.PublishArtifacts(cur_artifact_key);
+  }else{
+    loop_closure_.PublishArtifacts();
+  }
+
+  // Publish updated map
+  mapper_.PublishMap();
+
+  std::cout << "Updated the map" << std::endl;
+
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {

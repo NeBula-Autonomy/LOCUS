@@ -234,6 +234,8 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<visualization_msgs::Marker>("odometry_edges", 10, false);
   loop_edge_pub_ =
       nl.advertise<visualization_msgs::Marker>("loop_edges", 10, false);
+  artifact_edge_pub_ =
+      nl.advertise<visualization_msgs::Marker>("artifact_edges", 10, false);
   graph_node_pub_ =
       nl.advertise<visualization_msgs::Marker>("graph_nodes", 10, false);
   graph_node_id_pub_ =
@@ -874,16 +876,17 @@ bool LaserLoopClosure::AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2,
                    manual_lc_rot_precision_, manual_lc_trans_precision_); 
 }
 
-bool LaserLoopClosure::AddArtifact(gtsam::Key posekey, gtsam::Key artifactkey, 
+bool LaserLoopClosure::AddArtifact(gtsam::Key posekey, gtsam::Key artifact_key, 
                                    gtsam::Pose3 pose12, ArtifactInfo artifact) {
 
   // keep track of artifact info: add to hash if not added
-  if (artifact_key2info_hash.find(artifactkey) == artifact_key2info_hash.end()) {
-    artifact_key2info_hash[artifactkey] = artifact;
+  if (artifact_key2info_hash.find(artifact_key) == artifact_key2info_hash.end()) {
+    ROS_INFO("New artifact detected with id %d",artifact.id);
+    artifact_key2info_hash[artifact_key] = artifact;
   }
   // add to pose graph 
   bool is_manual_loop_closure = false;
-  return AddFactor(posekey, artifactkey, pose12, is_manual_loop_closure,
+  return AddFactor(posekey, artifact_key, pose12, is_manual_loop_closure,
                    artifact_rot_precision_, artifact_trans_precision_);
 }
 
@@ -893,7 +896,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
                                  double rot_precision, 
                                  double trans_precision) {
   // Thanks to Luca for providing the code
-  ROS_INFO_STREAM("Adding factor between " << (int) key1 << " and " << (int) key2);
+  ROS_INFO_STREAM("Adding factor between " << gtsam::DefaultKeyFormatter(key1) << " and " << gtsam::DefaultKeyFormatter(key2));
 
   gtsam::Values linPoint = isam_->getLinearizationPoint();
   nfg_ = isam_->getFactorsUnsafe();
@@ -922,6 +925,12 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     // We should add initial guess to values 
     new_values.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
 
+    ROS_INFO("Initial global position of artifact is: %f, %f, %f",
+                  new_values.at<Pose3>(key2).translation().vector().x(),
+                  new_values.at<Pose3>(key2).translation().vector().y(),
+                  new_values.at<Pose3>(key2).translation().vector().z());
+    
+
     // Set prior on rotation as a hack for 0 precision on rotation 
     gtsam::Vector6 prior_precisions; // inverse of variances
     prior_precisions.head<3>().setConstant(10.0); // rotation precision
@@ -947,10 +956,17 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
 
     gtsam::BetweenFactor<gtsam::Pose3> factor(key1, key2, pose12, noise);
 
-    factor.print("manual loop closure factor \n");
-    cost = factor.error(linPoint);
-    ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
-    // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
+    if (is_manual_loop_closure){
+      factor.print("manual loop closure factor \n");
+      cost = factor.error(linPoint);
+      ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
+      // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
+    }
+    else{
+      factor.print("Artifact loop closure factor \n");
+      cost = factor.error(linPoint);
+      ROS_INFO_STREAM("Cost of artifact factor is: " << cost); 
+    }  
 
     // add factor to factor graph
     new_factor.add(factor);
@@ -965,18 +981,29 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
  
     gtsam::BetweenChordalFactor<gtsam::Pose3> factor(key1, key2, pose12, noise);
 
-    factor.print("manual loop closure factor \n");
-    cost = factor.error(linPoint);
-    ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
-    // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
-      
+    if (is_manual_loop_closure){
+      factor.print("manual loop closure factor \n");
+      cost = factor.error(linPoint);
+      ROS_INFO_STREAM("Cost of loop closure: " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)  // cost = ( error )’ Omega ( error ), where the Omega = diag([0 0 0 1/25 1/25 1/25]). Error = [3 3 3] get an estimate for cost.
+      // TODO get the positions of each of the poses and compute the distance between them - see what the error should be - maybe a bug there
+    }
+    else{
+      factor.print("Artifact loop closure factor \n");
+      cost = factor.error(linPoint);
+      ROS_INFO_STREAM("Cost of artifact factor is: " << cost); 
+    }  
+
     // add factor to factor graph
     new_factor.add(factor);
   }
 
   // optimize
   try {
-    std::cout << "Optimizing manual loop closure, iteration" << std::endl;
+    if (is_manual_loop_closure){
+      std::cout << "Optimizing manual loop closure, iteration" << std::endl;
+    }else{
+      std::cout << "Optimizing artifact factor addition" << std::endl;
+    }
     gtsam::Values result;
 
     // Switch based on optimizer input
@@ -1048,6 +1075,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
       // Send an empty message notifying any subscribers that we found a loop
       // closure.
       loop_closure_notifier_pub_.publish(std_msgs::Empty());
+    }
+    else{
+      // Placeholder visualization for artifacts
+      artifact_edges_.push_back(std::make_pair(key1, key2));
     }
 
     // Update values
@@ -1558,8 +1589,8 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.scale.x = 0.02;
 
     for (size_t ii = 0; ii < odometry_edges_.size(); ++ii) {
-      unsigned int key1 = odometry_edges_[ii].first;
-      unsigned int key2 = odometry_edges_[ii].second;
+      gtsam::Key key1 = odometry_edges_[ii].first;
+      gtsam::Key key2 = odometry_edges_[ii].second;
 
       gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
       gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
@@ -1587,8 +1618,8 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.scale.x = 0.02;
 
     for (size_t ii = 0; ii < loop_edges_.size(); ++ii) {
-      unsigned int key1 = loop_edges_[ii].first;
-      unsigned int key2 = loop_edges_[ii].second;
+      gtsam::Key key1 = loop_edges_[ii].first;
+      gtsam::Key key2 = loop_edges_[ii].second;
 
       gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
       gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
@@ -1597,6 +1628,35 @@ void LaserLoopClosure::PublishPoseGraph() {
       m.points.push_back(gr::ToRosPoint(p2));
     }
     loop_edge_pub_.publish(m);
+    // ros::spinOnce();
+    // ros::Duration(0.005).sleep();
+  }
+
+  // Publish Artifact link messages
+  if (artifact_edge_pub_.getNumSubscribers() > 0) {
+    visualization_msgs::Marker m;
+    m.header.frame_id = fixed_frame_id_;
+    m.ns = fixed_frame_id_;
+    m.id = 1;
+    m.action = visualization_msgs::Marker::ADD;
+    m.type = visualization_msgs::Marker::LINE_LIST;
+    m.color.r = 0.2;
+    m.color.g = 1.0;
+    m.color.b = 0.0;
+    m.color.a = 0.6;
+    m.scale.x = 0.02;
+
+    for (size_t ii = 0; ii < artifact_edges_.size(); ++ii) {
+      gtsam::Key key1 = artifact_edges_[ii].first;
+      gtsam::Key key2 = artifact_edges_[ii].second;
+
+      gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
+      gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
+
+      m.points.push_back(gr::ToRosPoint(p1));
+      m.points.push_back(gr::ToRosPoint(p2));
+    }
+    artifact_edge_pub_.publish(m);
     // ros::spinOnce();
     // ros::Duration(0.005).sleep();
   }
@@ -1618,8 +1678,12 @@ void LaserLoopClosure::PublishPoseGraph() {
     m.scale.z = 0.1;
 
     for (const auto& keyed_pose : values_) {
-      gu::Vec3 p = ToGu(values_.at<Pose3>(keyed_pose.key)).translation;
-      m.points.push_back(gr::ToRosPoint(p));
+      std::string label = "l";
+      if ((std::string(gtsam::Symbol(keyed_pose.key)).compare(0,1,label)) != 0){
+        // If it is not a landmark keypose 
+        gu::Vec3 p = ToGu(values_.at<Pose3>(keyed_pose.key)).translation;
+        m.points.push_back(gr::ToRosPoint(p));
+      }
     }
     graph_node_pub_.publish(m);
     // ros::spinOnce();
@@ -1760,20 +1824,38 @@ void LaserLoopClosure::PublishPoseGraph() {
   }
 }
 
-void LaserLoopClosure::PublishArtifacts() {
+void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
   // For now, loop through artifact_key2label_hash
   // then publish. (might want to change this to an array later?)
+
+  Eigen::Vector3d artifact_position;
+  std::string artifact_label;
 
   // loop through values 
   for (auto it = artifact_key2info_hash.begin();
             it != artifact_key2info_hash.end(); ++it ) {
+    
+    if (artifact_key == '-1'){
+      // Update all artifacts - loop through all - the default
+      // Get position and label 
+      artifact_position = GetArtifactPosition(it->first);
+      artifact_label = it->second.label;
 
-    // Get position and label 
-    Eigen::Vector3d artifact_position = GetArtifactPosition(it->first);
-    std::string artifact_label = it->second.label;
+      // Increment update count
+      it->second.num_updates++;
+        
+    }
+    else{
+      // Updating a single artifact - will return at the end of this first loop
+      // Using the artifact key to publish that artifact
+      ROS_INFO("Publishing only the new artifact");
+      // Get position and label 
+      artifact_position = GetArtifactPosition(artifact_key);
+      artifact_label = artifact_key2info_hash[artifact_key].label;
 
-    // Increment update count
-    it->second.num_updates++;
+      // Increment update count
+      artifact_key2info_hash[artifact_key].num_updates++; 
+    }
 
     // Create new artifact msg 
     core_msgs::Artifact new_msg;
@@ -1846,14 +1928,19 @@ void LaserLoopClosure::PublishArtifacts() {
       marker.color.r = 1.0f;
       marker.color.g = 1.0f;
       marker.color.b = 1.0f;
-      marker.scale.x = 2.0f;
-      marker.scale.y = 2.0f;
-      marker.scale.z = 2.0f;
+      marker.scale.x = 1.0f;
+      marker.scale.y = 1.0f;
+      marker.scale.z = 1.0f;
       marker.type = visualization_msgs::Marker::CYLINDER;
     }
     // marker.lifetime = ros::Duration();
 
     marker_pub_.publish(marker);
+
+    if (artifact_key != '-1'){
+      // Only a single artifact - exit the loop 
+      return;
+    }
   }
 }
 
