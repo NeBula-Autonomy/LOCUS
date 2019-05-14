@@ -22,7 +22,7 @@
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>
       <remap from="~artifact" to="~artifact_global" />
-      <remap from="~artifact_relative" to="/object_localizer/artifact_relative" />
+      <remap from="~artifact_relative" to="/object_localizer/reconciled_artifact" />
 
       <!-- Initial pose -->
       <rosparam param="init">

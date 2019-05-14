@@ -2034,7 +2034,7 @@ gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
   // std::cout << "Key is: " << key << std::endl;
   if (iterTime == std::prev(stamps_keyed_.begin())){
     ROS_WARN("Invalid time for graph (before start of graph range). Choosing next value");
-    iterTime++;
+    iterTime = stamps_keyed_.begin();
     key = iterTime->second;
   } else if(iterTime == stamps_keyed_.end()){
     ROS_WARN("Invalid time for graph (past end of graph range). take latest pose");
