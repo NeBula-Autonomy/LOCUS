@@ -29,7 +29,7 @@ laser_lc_trans_sigma: 0.01 #0.6324 # default 0.04
 
 # Noise parameters (as precisions) for artifacts 
 artifact_rot_precision: 0.0
-artifact_trans_precision: 10.0
+artifact_trans_precision: 1.0
 
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures

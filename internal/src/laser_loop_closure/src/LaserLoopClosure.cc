@@ -938,7 +938,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     static const gtsam::SharedNoiseModel& prior_noise =
     gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
 
-    new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(key2, gtsam::Pose3(), prior_noise));
+    new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12), prior_noise));
   }
 
   linPoint.insert(new_values); // insert new values

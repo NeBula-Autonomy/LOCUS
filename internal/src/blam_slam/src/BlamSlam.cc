@@ -39,6 +39,7 @@
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <visualization_msgs/Marker.h>
+#include <math.h>
 
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
@@ -337,6 +338,12 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
             << std::endl;
   std::cout << "\t Label: " << msg.label << std::endl;
 
+  // Check for NaNs and reject 
+  if (isnan(msg.point.point.x) || isnan(msg.point.point.y) || isnan(msg.point.point.z)){
+    ROS_WARN("NAN positions input from artifact message - ignoring");
+    return;
+  }
+
   // Get artifact position 
   Eigen::Vector3d artifact_position;
   artifact_position << msg.point.point.x, msg.point.point.y, msg.point.point.z;
@@ -371,6 +378,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   std::string artifact_id = msg.parent_id; // Note that we are looking at the parent id here
   gtsam::Key cur_artifact_key; 
   bool b_is_new_artifact = false;
+  gu::Transform3 last_key_pose;
   // get artifact id / key -----------------------------------------------
   // Check if the ID of the object already exists in the object hash
   if (use_artifact_loop_closure_ && artifact_id2key_hash.find(artifact_id) != artifact_id2key_hash.end()) {
@@ -379,6 +387,8 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     std::cout << "artifact previously observed, artifact id " << artifact_id 
               << " with key in pose graph " 
               << gtsam::DefaultKeyFormatter(cur_artifact_key) << std::endl;
+    // Get last node pose before doing artifact loop closure 
+    last_key_pose = loop_closure_.GetLastPose();
   } else {
     // New artifact - increment the id counters
     b_is_new_artifact = true;
@@ -427,18 +437,42 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Visualize the pose graph and current loop closure radius.
   loop_closure_.PublishPoseGraph();
 
-  // Publish artifacts - from pose-graph positions
   if (b_is_new_artifact){
+    // Don't need to update the map at all - just publish artifacts
+    // Publish artifacts - from pose-graph positions
     loop_closure_.PublishArtifacts(cur_artifact_key);
   }else{
+    // Loop closure has been performed - update the graph
+    // Update the map from the loop closures
+    std::cout << "Updating the map" << std::endl;
+    PointCloud::Ptr regenerated_map(new PointCloud);
+    loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+    mapper_.Reset();
+    PointCloud::Ptr unused(new PointCloud);
+    mapper_.InsertPoints(regenerated_map, unused.get());
+
+    // Get new pose
+    // New key pose of last pose key
+    gu::Transform3 new_key_pose = loop_closure_.GetLastPose();
+    // Update to the pose of the last key
+    gu::Transform3 delta_key_pose = gu::PoseUpdate(last_key_pose, gu::PoseInverse(new_key_pose));
+    // Apply to current estimate
+    gu::Transform3 new_pose = gu::PoseUpdate(localization_.GetIntegratedEstimate(), delta_key_pose);
+
+    // Update localization
+    // Also reset the robot's estimated position.
+    localization_.SetIntegratedEstimate(new_pose);
+
+    // Visualize the pose graph updates
+    loop_closure_.PublishPoseGraph();
+
+    // Publish artifacts - from pose-graph positions
     loop_closure_.PublishArtifacts();
+
+    // Publish updated map // TODO have criteria of change for when to publish the map?
+    mapper_.PublishMap();
   }
-
-  // Publish updated map
-  mapper_.PublishMap();
-
-  std::cout << "Updated the map" << std::endl;
-
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
