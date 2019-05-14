@@ -339,7 +339,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   std::cout << "\t Label: " << msg.label << std::endl;
 
   // Check for NaNs and reject 
-  if (isnan(msg.point.point.x) || isnan(msg.point.point.y) || isnan(msg.point.point.z)){
+  if (std::isnan(msg.point.point.x) || std::isnan(msg.point.point.y) || std::isnan(msg.point.point.z)){
     ROS_WARN("NAN positions input from artifact message - ignoring");
     return;
   }
