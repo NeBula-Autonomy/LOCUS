@@ -203,6 +203,9 @@ class LaserLoopClosure {
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
+  // Checks on loop closure 
+  bool SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost);
+
   // Pose conversion from/to GTSAM format.
   geometry_utils::Transform3 ToGu(const gtsam::Pose3& pose) const;
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
@@ -278,6 +281,11 @@ class LaserLoopClosure {
   bool use_chordal_factor_;
   bool publish_interactive_markers_;
 
+  // Sanity check parameters
+  bool b_check_deltas_; 
+  double translational_sanity_check_lc_;
+  double translational_sanity_check_odom_;
+
   // ICP parameters.
   double icp_ransac_thresh_;
   double icp_tf_epsilon_;
@@ -294,6 +302,10 @@ class LaserLoopClosure {
 
   gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
+
+  // Backup values
+  gtsam::NonlinearFactorGraph nfg_backup_;
+  gtsam::Values values_backup_;
 
   // Frames.
   std::string fixed_frame_id_;

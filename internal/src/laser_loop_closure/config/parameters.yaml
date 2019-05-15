@@ -56,3 +56,11 @@ skip_recent_poses: 20 #10 # 200
 poses_before_reclosing: 20 #10
 
 # TODO make these dynamic with the translation threshold for nodes
+
+########################################
+# Turn on sanity checks
+b_check_deltas: true
+
+# Sanity check thresholds
+translational_sanity_check_lc: 100
+translational_sanity_check_odom: 3

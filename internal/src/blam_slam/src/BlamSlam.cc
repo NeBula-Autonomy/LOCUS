@@ -514,6 +514,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     loop_closure_.PublishArtifacts();
 
   } else {
+    // ROS_INFO("No new loop closures");
     // No new loop closures - but was there a new key frame? If so, add new
     // points to the map.
     if (new_keyframe) {
@@ -560,6 +561,7 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
     if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
                                         covariance, stamp, &pose_key)) {
+      // ROS_INFO("No new pose from add between factor. Pose key is %f",pose_key);
       return false;
     }
 

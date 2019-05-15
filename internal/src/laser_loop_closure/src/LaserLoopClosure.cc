@@ -170,6 +170,11 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("init/orientation_sigma/pitch", sigma_pitch)) return false;
   if (!pu::Get("init/orientation_sigma/yaw", sigma_yaw)) return false;
 
+  // Sanity check parameters
+  if (!pu::Get("b_check_deltas", b_check_deltas_)) return false;
+  if (!pu::Get("translational_sanity_check_lc", translational_sanity_check_lc_)) return false;
+  if (!pu::Get("translational_sanity_check_odom", translational_sanity_check_odom_)) return false;
+
   std::cout << "before isam reset" << std::endl; 
   #ifndef SOLVER
   // Create the ISAM2 solver.
@@ -298,9 +303,14 @@ bool LaserLoopClosure::AddBetweenFactor(
   Pose3 last_pose = values_.at<Pose3>(key_-1);
   new_value.insert(key_, last_pose.compose(odometry_));
 
-  // Store this timestamp so that we can publish the pose graph later.
-  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
-  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
+  // Compute cost before optimization
+  NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
+  nfg_temp.add(new_factor);
+  Values values_temp = isam_->getLinearizationPoint();
+  values_temp.insert(key_, last_pose.compose(odometry_));
+  double cost_old = nfg_temp.error(values_temp); // Assume values is up to date - no new values
+  
+  ROS_INFO("Cost before optimization is: %f", cost_old);
 
   // Update ISAM2.
   try{
@@ -328,6 +338,33 @@ bool LaserLoopClosure::AddBetweenFactor(
   values_ = isam_->calculateEstimate();
 
   nfg_ = isam_->getFactorsUnsafe();
+
+  // Get updated cost
+  double cost = nfg_.error(values_);
+
+  ROS_INFO("Cost after optimization is: %f", cost);
+
+  // Do sanity check on result
+  bool b_accept_update;
+  if (b_check_deltas_ && values_backup_.exists(key_-1)){ // Only check if the values_backup has been stored (a loop closure has occured)
+    ROS_INFO("Sanity checking output");
+    b_accept_update = SanityCheckForLoopClosure(translational_sanity_check_odom_, cost_old, cost);
+    // TODO - remove vizualization keys if it is rejected 
+
+    if (!b_accept_update){
+      ROS_WARN("Returning false for add between factor - have reset, waiting for next pose update");
+      *key = key_ - 1;
+      // Remove odom edges
+      odometry_edges_.pop_back();
+      return false;
+    }
+    ROS_INFO("Sanity check passed");
+  }
+
+  // Adding poses to stored hash maps
+  // Store this timestamp so that we can publish the pose graph later.
+  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
 
   // Assign output and get ready to go again!
   *key = key_++;
@@ -457,6 +494,14 @@ bool LaserLoopClosure::FindLoopClosures(
   }
   closure_keys->clear();
 
+  // Update backups
+  nfg_backup_ = isam_->getFactorsUnsafe();
+  values_backup_ = isam_->getLinearizationPoint();
+
+  // To track change in cost
+  double cost;
+  double cost_old;
+
   // If a loop has already been closed recently, don't try to close a new one.
   if (std::fabs(key - last_closure_key_) < poses_before_reclosing_)
     return false;
@@ -498,9 +543,24 @@ bool LaserLoopClosure::FindLoopClosures(
           NonlinearFactorGraph new_factor;
           new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
                                               ToGtsam(covariance)));
+          
+          // Compute cost before optimization
+          NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
+          nfg_temp.add(new_factor);
+          cost_old = nfg_temp.error(values_); // Assume values is up to date - no new values
+
+          ROS_INFO("Cost before optimization is: %f", cost_old);
+
+          // Optimization                                
           isam_->update(new_factor, Values());
           closed_loop = true;
           last_closure_key_ = key;
+
+          // Get updated cost
+          nfg_temp = isam_->getFactorsUnsafe();
+          cost = nfg_temp.error(isam_->getLinearizationPoint());
+
+          ROS_INFO("Cost after optimization is: %f", cost);
 
           // Store for visualization and output.
           loop_edges_.push_back(std::make_pair(key, other_key));
@@ -522,9 +582,24 @@ bool LaserLoopClosure::FindLoopClosures(
           NonlinearFactorGraph new_factor;
           new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
                                               ToGtsam(covariance)));
+          
+          // Compute cost before optimization
+          NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
+          nfg_temp.add(new_factor);
+          cost_old = nfg_temp.error(values_); // Assume values is up to date - no new values
+          
+          ROS_INFO("Cost before optimization is: %f", cost_old);
+
+          // Optimization                                
           isam_->update(new_factor, Values());
           closed_loop = true;
           last_closure_key_ = key;
+
+          // Get updated cost
+          nfg_temp = isam_->getFactorsUnsafe();
+          cost = nfg_temp.error(isam_->getLinearizationPoint());
+
+          ROS_INFO("Cost after optimization is: %f", cost);
 
           // Store for visualization and output.
           loop_edges_.push_back(std::make_pair(key, other_key));
@@ -538,13 +613,92 @@ bool LaserLoopClosure::FindLoopClosures(
           // break;
         }
       }
-    }
-  }
-  values_ = isam_->calculateEstimate();
+      values_ = isam_->calculateEstimate();
 
-  nfg_ = isam_->getFactorsUnsafe();
+      nfg_ = isam_->getFactorsUnsafe();
 
+      // Check the change in pose to see if it exceeds criteria
+      if (b_check_deltas_ && closed_loop){
+        ROS_INFO("Sanity checking output");
+        closed_loop = SanityCheckForLoopClosure(translational_sanity_check_lc_, cost_old, cost);
+        // TODO - remove vizualization keys if it is rejected 
+      }
+
+      // Update backups
+      nfg_backup_ = nfg_;
+      values_backup_ = values_;
+    } // end of if statement 
+  } // end of for loop
+  
   return closed_loop;
+}
+
+bool LaserLoopClosure::SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost){
+  // Checks loop closures to see if the translational threshold is within limits
+
+  // if (!values_backup_.exists(key_-1)){
+  //   ROS_INFO("")
+  // }
+
+  // Init poses
+  gtsam::Pose3 old_pose;
+  gtsam::Pose3 new_pose;
+
+  if (key_ > 1){
+    ROS_INFO("Key is more than 1, checking pose change");
+    // Previous pose
+    old_pose = values_backup_.at<Pose3>(key_-1);
+    // New pose
+    new_pose = values_.at<Pose3>(key_-1);
+  }
+  else{
+    ROS_INFO("Key is less than or equal to 1, not checking pose change");
+    // Second pose - return 
+    return true;
+  }
+
+  // Translational change 
+  double delta = old_pose.compose(new_pose.inverse()).translation().norm();
+  
+  ROS_INFO("Translational change with update is %f",delta);
+
+  // TODO vary the sanity check values based on what kind of update it is
+  // e.g. have the odom update to have a smaller sanity check 
+  if (delta > translational_sanity_check || cost > cost_old){ // TODO - add threshold for error in the graph - if it increases after loop closure then reject
+    if (delta > translational_sanity_check)
+      ROS_WARN("Update delta exceeds threshold, rejecting");
+    
+    if (cost > cost_old)
+      ROS_WARN("Cost increases, rejecting");
+
+    // Updating 
+    values_ = values_backup_;
+    nfg_ = nfg_backup_;
+    // Reset
+    #ifndef SOLVER
+    // Create the ISAM2 solver.
+    ISAM2Params parameters;
+    parameters.relinearizeSkip = relinearize_skip_;
+    parameters.relinearizeThreshold = relinearize_threshold_;
+    isam_.reset(new ISAM2(parameters));
+    #endif
+    #ifdef SOLVER
+    isam_.reset(new GenericSolver());
+    #endif
+    ROS_INFO("Reset isam");
+    isam_->update(nfg_, values_);
+    ROS_INFO("updated isam to reset");
+
+    // Save updated values
+    values_ = isam_->calculateEstimate();
+    nfg_ = isam_->getFactorsUnsafe();
+    ROS_INFO("updated stored values");
+
+    return false;
+  }
+
+  return true;
+
 }
 
 void LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
@@ -901,6 +1055,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
   gtsam::Values linPoint = isam_->getLinearizationPoint();
   nfg_ = isam_->getFactorsUnsafe();
 
+  // Update backups
+  nfg_backup_ = isam_->getFactorsUnsafe();
+  values_backup_ = isam_->getLinearizationPoint();
+
   // Remove visualization of edge to be confirmed
   if (is_manual_loop_closure) {
     RemoveConfirmFactorVisualization();
@@ -911,7 +1069,8 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     }
   }
 
-  double cost; // for debugging
+  double cost_old;
+  double cost; // for sanity checks
 
   NonlinearFactorGraph new_factor;
   gtsam::Values new_values;
@@ -971,6 +1130,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     // add factor to factor graph
     new_factor.add(factor);
 
+    // Store cost before optimization
+    cost_old = new_factor.error(linPoint);
+
+
   } else {
     // Use BetweenChordalFactor  
     gtsam::Vector12 precisions; 
@@ -995,6 +1158,9 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
 
     // add factor to factor graph
     new_factor.add(factor);
+
+    // Store cost before optimization
+    cost_old = new_factor.error(linPoint);
   }
 
   // optimize
@@ -1088,6 +1254,12 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     linPoint = isam_->getLinearizationPoint();
     cost = nfg_.error(linPoint);
     ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
+
+    // Check the change in pose to see if it exceeds criteria
+    if (b_check_deltas_){
+      ROS_INFO("Sanity checking output");
+      bool check_result = SanityCheckForLoopClosure(translational_sanity_check_lc_, cost_old, cost);
+    }
 
     // // Publish
     // PublishPoseGraph();
