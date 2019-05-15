@@ -327,9 +327,6 @@ void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
 void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   // Subscribe to artifact messages, include in pose graph, publish global position 
 
-  // TODO: don't accept if confidence too low
-  // TODO: if we have seen object before within the past n seconds, don't add?
-
   std::cout << "Artifact message received is for id " << msg.id << std::endl;
   std::cout << "\t Parent id: " << msg.parent_id << std::endl;
   std::cout << "\t Confidence: " << msg.confidence << std::endl;
@@ -421,21 +418,6 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   } else {
     std::cout << "adding artifact observation failed" << std::endl;
   }
-
-  // Update the map from the loop closures
-  std::cout << "Updating the map" << std::endl;
-  PointCloud::Ptr regenerated_map(new PointCloud);
-  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
-
-  mapper_.Reset();
-  PointCloud::Ptr unused(new PointCloud);
-  mapper_.InsertPoints(regenerated_map, unused.get());
-
-  // Also reset the robot's estimated position.
-  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
-
-  // Visualize the pose graph and current loop closure radius.
-  loop_closure_.PublishPoseGraph();
 
   if (b_is_new_artifact){
     // Don't need to update the map at all - just publish artifacts
