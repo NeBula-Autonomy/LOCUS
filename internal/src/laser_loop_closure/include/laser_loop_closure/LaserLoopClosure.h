@@ -101,6 +101,9 @@ class LaserLoopClosure {
 
   bool Initialize(const ros::NodeHandle& n);
 
+  bool graph_skip_;
+  bool skip_init_;
+
   // Typedef for 6x6 covariance matrices (x, y, z, roll, pitch, yaw).
   typedef geometry_utils::MatrixNxNBase<double, 6> Mat66;
   typedef geometry_utils::MatrixNxNBase<double, 12> Mat1212;
@@ -227,6 +230,7 @@ class LaserLoopClosure {
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
+  bool save_pointcloud_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;
@@ -289,6 +293,9 @@ class LaserLoopClosure {
   typedef std::pair<unsigned int, unsigned int> Edge;
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
+
+  std::vector<unsigned int> load_graph_keys_;
+
 
   // For filtering laser scans prior to ICP.
   PointCloudFilter filter_;

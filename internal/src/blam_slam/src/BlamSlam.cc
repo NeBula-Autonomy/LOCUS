@@ -402,7 +402,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
-
+  if (!loop_closure_.skip_init_){
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
     // First update ever.
@@ -410,6 +410,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     mapper_.InsertPoints(msg_filtered, unused.get());
     loop_closure_.AddKeyScanPair(0, msg);
     return;
+  }
   }
 
   // Containers.

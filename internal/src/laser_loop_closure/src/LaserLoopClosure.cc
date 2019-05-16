@@ -114,6 +114,10 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Should we turn loop closure checking on or off?
   if (!pu::Get("check_for_loop_closures", check_for_loop_closures_)) return false;
 
+  // Should we save a backup pointcloud?
+  if (!pu::Get("save_pointcloud_backup", save_pointcloud_backup_)) return false;
+
+
   // Optimizer selection
   if (!pu::Get("loop_closure_optimizer", loop_closure_optimizer_)) return false;
   
@@ -264,6 +268,13 @@ bool LaserLoopClosure::AddBetweenFactor(
     return false;
   }
 
+  if(!graph_skip_){
+  int last_key_on_graph_ = load_graph_keys_.back();
+  key_ = last_key_on_graph_ + 1; //
+  delta.Identity(); //TODO: get odom from something else!!!!!
+  graph_skip_=true;
+  }
+ 
   // Append the new odometry.
   Pose3 new_odometry = ToGtsam(delta);
 
@@ -487,6 +498,9 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenFactor)
         LaserLoopClosure::Mat66 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          if (save_pointcloud_backup_){
+            LaserLoopClosure::Save("pointcloud_backup.zip");
+          }
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
@@ -511,6 +525,9 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenChordalFactor)
         LaserLoopClosure::Mat1212 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          if (save_pointcloud_backup_){
+            LaserLoopClosure::Save("pointcloud_backup.zip");
+          }
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
@@ -1484,6 +1501,7 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     if (keyStr.empty())
       break;
     key_ = std::stoi(keyStr);
+    load_graph_keys_.push_back(key_);
     std::getline(info_file, pcd_filename, ',');
     PointCloud::Ptr pc(new PointCloud);
     if (pcl::io::loadPCDFile(pcd_filename, *pc) == -1) {
@@ -1548,6 +1566,8 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     boost::filesystem::remove_all(folder);
 
   ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
+  graph_skip_ = false;
+  skip_init_ = true;
   PublishPoseGraph();
   return true;
 }
