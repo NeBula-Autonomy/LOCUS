@@ -29,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 2
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -495,6 +495,15 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/InteractiveMarkers
+      Enable Transparency: true
+      Enabled: true
+      Name: InteractiveMarkers
+      Show Axes: false
+      Show Descriptions: true
+      Show Visual Aids: false
+      Update Topic: /husky/interactive_node/update
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -523,25 +532,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 18.50238800048828
+      Distance: 45.687313079833984
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.82854175567627
-        Y: -0.28199705481529236
-        Z: -1.8960682153701782
+        X: 94.64522552490234
+        Y: -14.525566101074219
+        Z: 1.427183747291565
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9697966575622559
+      Pitch: 0.7047969102859497
       Target Frame: base
       Value: Orbit (rviz)
-      Yaw: 1.4497785568237305
+      Yaw: 1.1847788095474243
     Saved: ~
 Window Geometry:
   Displays:
@@ -559,5 +568,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1247
-  X: 1313
+  X: 67
   Y: 27

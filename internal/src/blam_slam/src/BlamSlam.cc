@@ -145,6 +145,8 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   remove_factor_srv_ = nl.advertiseService("remove_factor", &BlamSlam::RemoveFactorService, this);
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
 
+  restart_srv_ = nl.advertiseService("restart", &BlamSlam::RestartService, this);
+
   if (from_log)
     return RegisterLogCallbacks(n);
   else
@@ -467,6 +469,13 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
+}
+
+bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
+                                blam_slam::RestartResponse &response) {
+ ROS_INFO_STREAM(request.filename);
+ response.success = loop_closure_.Load(request.filename);
+  return true;
 }
 
 bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,

@@ -43,6 +43,8 @@
 #include <blam_slam/RemoveFactor.h>
 #include <blam_slam/SaveGraph.h>
 
+#include <blam_slam/Restart.h>
+
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
@@ -100,6 +102,10 @@ class BlamSlam {
   bool RemoveFactorService(blam_slam::RemoveFactorRequest &request,
                            blam_slam::RemoveFactorResponse &response);
 
+  // Generic add Factor service - for human loop closures to start
+  bool RestartService(blam_slam::RestartRequest &request,
+                        blam_slam::RestartResponse &response);
+
   bool use_chordal_factor_;
 
   // Service to write the pose graph and all point clouds to a zip file.
@@ -139,6 +145,8 @@ class BlamSlam {
   ros::ServiceServer add_factor_srv_;
   ros::ServiceServer remove_factor_srv_;
   ros::ServiceServer save_graph_srv_;
+
+  ros::ServiceServer restart_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;
