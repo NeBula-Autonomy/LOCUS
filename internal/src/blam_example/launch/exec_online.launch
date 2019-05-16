@@ -11,7 +11,7 @@
   <arg name="map_topic_output" default="blam_slam/octree_map_downsampled"/>
 
   <!-- optional filename of the zip archive of a pose graph to be loaded -->
-  <arg name="load_pose_graph_file" default="pointcloud_backup.zip" /> 
+  <arg name="load_pose_graph_file" default="" /> 
 
   <group ns="$(arg robot_namespace)">
     <!-- SLAM -->
