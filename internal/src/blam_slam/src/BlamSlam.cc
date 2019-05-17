@@ -241,9 +241,6 @@ bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
   // Delta rotation
   new_pose.rotation = new_pose.rotation*(new_key_pose.rotation*last_key_pose.rotation.Trans());
 
-  std::cout << "Latest pose is: " << new_pose.translation.X() << ", " << new_pose.translation.Y() << ", " << new_pose.translation.Z() << std::endl;
-  std::cout << "Latest node pose is: " << new_key_pose.translation.X() << ", " << new_key_pose.translation.Y() << ", " << new_key_pose.translation.Z() << std::endl;
-
   // Also reset the robot's estimated position.
   localization_.SetIntegratedEstimate(new_pose);
 
@@ -452,14 +449,6 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(regenerated_map, unused.get());
 
-    // // // Get new pose
-    // // // New key pose of last pose key
-    // gu::Transform3 new_key_pose = loop_closure_.GetLastPose();
-    // // Update to the pose of the last key
-    // gu::Transform3 delta_key_pose = gu::PoseDelta(last_key_pose, new_key_pose);
-    // // Apply to current estimate
-    // gu::Transform3 new_pose = gu::PoseUpdate(localization_.GetIntegratedEstimate(), delta_key_pose);
-
     // Get new pose
     // New key pose of last pose key
     gu::Transform3 new_key_pose = loop_closure_.GetLastPose();
@@ -470,9 +459,6 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     new_pose.translation = new_pose.translation + (new_key_pose.translation - last_key_pose.translation);
     // Delta rotation
     new_pose.rotation = new_pose.rotation*(new_key_pose.rotation*last_key_pose.rotation.Trans());
-
-    std::cout << "Latest pose is: " << new_pose.translation.X() << ", " << new_pose.translation.Y() << ", " << new_pose.translation.Z() << std::endl;
-    std::cout << "Latest node pose is: " << new_key_pose.translation.X() << ", " << new_key_pose.translation.Y() << ", " << new_key_pose.translation.Z() << std::endl;
 
     // Update localization
     // Also reset the robot's estimated position.
