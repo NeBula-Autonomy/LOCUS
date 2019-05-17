@@ -202,6 +202,10 @@ bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
     }
   }
 
+  // Get last node pose before doing artifact loop closure 
+  gu::Transform3 last_key_pose;
+  last_key_pose = loop_closure_.GetLastPose();
+
   const gtsam::Pose3 pose_from_to 
       = gtsam::Pose3(gtsam::Rot3(request.qw, request.qx, request.qy, request.qz), gtsam::Point3());
   pose_from_to.print("Between pose is ");
@@ -226,8 +230,22 @@ bool BlamSlam::AddFactorService(blam_slam::AddFactorRequest &request,
   PointCloud::Ptr unused(new PointCloud);
   mapper_.InsertPoints(regenerated_map, unused.get());
 
+  // Get new pose
+  // New key pose of last pose key
+  gu::Transform3 new_key_pose = loop_closure_.GetLastPose();
+  // Update to the pose of the last key
+  // Current estimate
+  gu::Transform3 new_pose = localization_.GetIntegratedEstimate();
+  // Delta translation
+  new_pose.translation = new_pose.translation + (new_key_pose.translation - last_key_pose.translation);
+  // Delta rotation
+  new_pose.rotation = new_pose.rotation*(new_key_pose.rotation*last_key_pose.rotation.Trans());
+
+  std::cout << "Latest pose is: " << new_pose.translation.X() << ", " << new_pose.translation.Y() << ", " << new_pose.translation.Z() << std::endl;
+  std::cout << "Latest node pose is: " << new_key_pose.translation.X() << ", " << new_key_pose.translation.Y() << ", " << new_key_pose.translation.Z() << std::endl;
+
   // Also reset the robot's estimated position.
-  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+  localization_.SetIntegratedEstimate(new_pose);
 
   // Visualize the pose graph and current loop closure radius.
   loop_closure_.PublishPoseGraph();
@@ -434,17 +452,31 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(regenerated_map, unused.get());
 
+    // // // Get new pose
+    // // // New key pose of last pose key
+    // gu::Transform3 new_key_pose = loop_closure_.GetLastPose();
+    // // Update to the pose of the last key
+    // gu::Transform3 delta_key_pose = gu::PoseDelta(last_key_pose, new_key_pose);
+    // // Apply to current estimate
+    // gu::Transform3 new_pose = gu::PoseUpdate(localization_.GetIntegratedEstimate(), delta_key_pose);
+
     // Get new pose
     // New key pose of last pose key
     gu::Transform3 new_key_pose = loop_closure_.GetLastPose();
     // Update to the pose of the last key
-    gu::Transform3 delta_key_pose = gu::PoseUpdate(last_key_pose, gu::PoseInverse(new_key_pose));
-    // Apply to current estimate
-    gu::Transform3 new_pose = gu::PoseUpdate(localization_.GetIntegratedEstimate(), delta_key_pose);
+    // Current estimate
+    gu::Transform3 new_pose = localization_.GetIntegratedEstimate();
+    // Delta translation
+    new_pose.translation = new_pose.translation + (new_key_pose.translation - last_key_pose.translation);
+    // Delta rotation
+    new_pose.rotation = new_pose.rotation*(new_key_pose.rotation*last_key_pose.rotation.Trans());
+
+    std::cout << "Latest pose is: " << new_pose.translation.X() << ", " << new_pose.translation.Y() << ", " << new_pose.translation.Z() << std::endl;
+    std::cout << "Latest node pose is: " << new_key_pose.translation.X() << ", " << new_key_pose.translation.Y() << ", " << new_key_pose.translation.Z() << std::endl;
 
     // Update localization
     // Also reset the robot's estimated position.
-    localization_.SetIntegratedEstimate(new_pose);
+    localization_.SetIntegratedEstimate(new_key_pose);
 
     // Visualize the pose graph updates
     loop_closure_.PublishPoseGraph();
@@ -497,7 +529,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   localization_.MeasurementUpdate(msg_filtered, msg_neighbors, msg_base.get());
 
   // Check for new loop closures.
-  bool new_keyframe;
+  bool new_keyframe = false;
   if (HandleLoopClosures(msg, &new_keyframe)) {
     // We found one - regenerate the 3D map.
     PointCloud::Ptr regenerated_map(new PointCloud);
@@ -517,10 +549,17 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     // No new loop closures - but was there a new key frame? If so, add new
     // points to the map.
     if (new_keyframe) {
+      ROS_INFO("Updating with a new key frame");
       localization_.MotionUpdate(gu::Transform3::Identity());
       localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
       PointCloud::Ptr unused(new PointCloud);
       mapper_.InsertPoints(msg_fixed, unused.get());
+
+      // Also reset the robot's estimated position.
+      localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+      // Publish artifacts - should be updated from the pose-graph 
+      loop_closure_.PublishArtifacts();
     }
   }
 
