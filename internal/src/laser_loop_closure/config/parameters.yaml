@@ -6,7 +6,7 @@ check_for_loop_closures: false
 use_artifact_loop_closure: true
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
-loop_closure_optimizer: 0
+loop_closure_optimizer: 1
 
 # Default parameters for the ISAM2 data structure.
 relinearize_skip: 1 # - keep this at 1 - to encourage relinearization
