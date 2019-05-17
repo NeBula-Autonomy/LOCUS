@@ -76,7 +76,7 @@
 #include <vector>
 
 // default is isam, 1 for LevenbergMarquardt, 2 for GaussNewton, 3 for SESync (WIP)
-// #define SOLVER 1
+#define SOLVER 1
 
 class GenericSolver {
 public:
