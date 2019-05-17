@@ -1,4 +1,4 @@
-![LAMP-logo](https://gitlab.robotics.caltech.edu/rollocopter/localizer/localizer_blam/raw/feature/lamplogo/LAMP-logo.png)
+![LAMP-logo](https://gitlab.robotics.caltech.edu/rollocopter/localizer/localizer_blam/raw/master/LAMP-logo.png)
 
 ## Build Instructions
 Build this package in a catkin workspace 
