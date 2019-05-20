@@ -167,6 +167,15 @@ class LaserLoopClosure {
   // Removes the factor that was visualized for confirmation.
   void RemoveConfirmFactorVisualization();
 
+
+  // Get the most recent pose in the pose graph.
+  geometry_utils::Transform3 GetLastLoadedPose() const;
+
+  //Erase the posegraph
+  bool ErasePosegraph();
+
+  std::vector<unsigned int> load_graph_keys_;
+
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 
@@ -294,7 +303,6 @@ class LaserLoopClosure {
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
 
-  std::vector<unsigned int> load_graph_keys_;
 
 
   // For filtering laser scans prior to ICP.

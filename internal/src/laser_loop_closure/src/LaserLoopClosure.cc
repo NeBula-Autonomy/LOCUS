@@ -597,6 +597,15 @@ gu::Transform3 LaserLoopClosure::GetLastPose() const {
   }
 }
 
+gu::Transform3 LaserLoopClosure::GetLastLoadedPose() const{
+    if (key_ > 1) {
+    return ToGu(values_.at<Pose3>(key_));
+  } else {
+    ROS_WARN("%s: The graph only contains its initial pose.", name_.c_str());
+    return ToGu(values_.at<Pose3>(0));
+  }
+}
+
 gu::Transform3 LaserLoopClosure::ToGu(const Pose3& pose) const {
   gu::Transform3 out;
   out.translation(0) = pose.translation().x();
@@ -1310,6 +1319,26 @@ bool writeFileToZip(zipFile &zip, const std::string &filename) {
     return false;
   }
   return true;
+}
+
+bool LaserLoopClosure::ErasePosegraph(){
+  keyed_scans_.clear();
+  keyed_stamps_.clear();
+  stamps_keyed_.clear();
+  values_.clear();
+  loop_edges_.clear();
+  odometry_ = Pose3::identity();
+  odometry_kf_ = Pose3::identity();
+  odometry_edges_.clear();
+  nfg_ = isam_->getFactorsUnsafe();
+  key_ = 0;
+  PublishPoseGraph();
+  
+	//Initilize interactive marker server
+  if (publish_interactive_markers_) {
+    server.reset(new interactive_markers::InteractiveMarkerServer(
+        "interactive_node", "", false));
+  }
 }
 
 bool LaserLoopClosure::Save(const std::string &zipFilename) const {

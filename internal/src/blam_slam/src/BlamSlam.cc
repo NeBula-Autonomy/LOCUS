@@ -410,6 +410,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
   if (loop_closure_.skip_init_ == true){
+    skip_init_ = false;
     return;
     }
     else{
@@ -475,9 +476,21 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 }
 
 bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
-                                blam_slam::RestartResponse &response) {
- ROS_INFO_STREAM(request.filename);
- response.success = loop_closure_.Load(request.filename);
+                                blam_slam::RestartResponse &response) {    
+  ROS_INFO_STREAM(request.filename);
+  loop_closure_.ErasePosegraph();  
+  response.success = loop_closure_.Load(request.filename);
+  localization_.MotionUpdate(gu::Transform3::Identity());
+  // We found one - regenerate the 3D map.
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastLoadedPose());
   return true;
 }
 
