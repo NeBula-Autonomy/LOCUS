@@ -101,8 +101,6 @@ class LaserLoopClosure {
 
   bool Initialize(const ros::NodeHandle& n);
 
-  bool graph_skip_;
-  bool skip_init_;
 
   // Typedef for 6x6 covariance matrices (x, y, z, roll, pitch, yaw).
   typedef geometry_utils::MatrixNxNBase<double, 6> Mat66;
@@ -182,6 +180,9 @@ class LaserLoopClosure {
   // Loads pose graph and accompanying point clouds from a zip file.
   bool Load(const std::string &zipFilename);
 
+  // Boolean to show that a posegraph has been loaded to initialize from last key
+  bool loaded_map_;
+
  private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
@@ -239,7 +240,7 @@ class LaserLoopClosure {
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
-  bool save_pointcloud_backup_;
+  bool save_posegraph_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;

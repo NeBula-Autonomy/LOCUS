@@ -409,8 +409,9 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
-  if (loop_closure_.skip_init_ == true){
-    skip_init_ = false;
+
+  //If running from loaded map, skip AddKeyScanPair(0,msg)
+  if (loop_closure_.loaded_map_ == true){
     return;
     }
     else{

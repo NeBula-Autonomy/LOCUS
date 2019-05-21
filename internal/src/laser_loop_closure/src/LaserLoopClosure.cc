@@ -115,7 +115,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("check_for_loop_closures", check_for_loop_closures_)) return false;
 
   // Should we save a backup pointcloud?
-  if (!pu::Get("save_pointcloud_backup", save_pointcloud_backup_)) return false;
+  if (!pu::Get("save_posegraph_backup", save_posegraph_backup_)) return false;
 
 
   // Optimizer selection
@@ -268,13 +268,14 @@ bool LaserLoopClosure::AddBetweenFactor(
     return false;
   }
 
-  if(!graph_skip_){
+  //this gets called if you run LAMP from a loaded map
+  if(loaded_map_ == true){
   int last_key_on_graph_ = load_graph_keys_.back();
   key_ = last_key_on_graph_ + 1; //
   delta.Identity(); //TODO: get odom from something else!!!!!
-  graph_skip_=true;
-  }
- 
+  loaded_map_=false;
+  } 
+
   // Append the new odometry.
   Pose3 new_odometry = ToGtsam(delta);
 
@@ -498,8 +499,8 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenFactor)
         LaserLoopClosure::Mat66 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-          if (save_pointcloud_backup_){
-            LaserLoopClosure::Save("pointcloud_backup.zip");
+          if (save_posegraph_backup_){
+            LaserLoopClosure::Save("posegraph_backup.zip");
           }
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
@@ -525,8 +526,8 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenChordalFactor)
         LaserLoopClosure::Mat1212 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-          if (save_pointcloud_backup_){
-            LaserLoopClosure::Save("pointcloud_backup.zip");
+          if (save_posegraph_backup_){
+            LaserLoopClosure::Save("posegraph_backup.zip");
           }
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
@@ -1339,7 +1340,7 @@ bool LaserLoopClosure::ErasePosegraph(){
     server.reset(new interactive_markers::InteractiveMarkerServer(
         "interactive_node", "", false));
   }
-}
+} 
 
 bool LaserLoopClosure::Save(const std::string &zipFilename) const {
   const std::string path = "pose_graph";
@@ -1595,8 +1596,7 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     boost::filesystem::remove_all(folder);
 
   ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
-  graph_skip_ = false;
-  skip_init_ = true;
+  loaded_map_ = true;
   PublishPoseGraph();
   return true;
 }
