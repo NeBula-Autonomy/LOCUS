@@ -241,6 +241,7 @@ class LaserLoopClosure {
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
   bool save_posegraph_backup_;
+  unsigned int keyes_between_each_posegraph_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;

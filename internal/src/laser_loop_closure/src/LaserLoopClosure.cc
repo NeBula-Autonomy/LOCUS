@@ -117,6 +117,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Should we save a backup pointcloud?
   if (!pu::Get("save_posegraph_backup", save_posegraph_backup_)) return false;
 
+  // Should we save a backup pointcloud?
+  if (!pu::Get("keyes_between_each_posegraph_backup", keyes_between_each_posegraph_backup_)) return false;
 
   // Optimizer selection
   if (!pu::Get("loop_closure_optimizer", loop_closure_optimizer_)) return false;
@@ -209,7 +211,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   Values new_value;
   new_factor.add(MakePriorFactor(pose, covariance));
   new_value.insert(key_, pose);
-
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
@@ -218,6 +219,8 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Set the initial odometry.
   odometry_ = Pose3::identity();
 
+  //initialize boolean to declare if a map has been loaded
+  loaded_map_ = false;
 
 	//Initilize interactive marker server
   if (publish_interactive_markers_) {
@@ -450,6 +453,12 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
 
 bool LaserLoopClosure::FindLoopClosures(
     unsigned int key, std::vector<unsigned int>* closure_keys) {
+
+  // Function to save the posegraph regularly
+  if (key % keyes_between_each_posegraph_backup_ == 0 && save_posegraph_backup_){
+    LaserLoopClosure::Save("posegraph_backup.zip");
+  } 
+
   // If loop closure checking is off, don't do this step. This will save some
   // computation time.
   if (!check_for_loop_closures_)
@@ -499,9 +508,6 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenFactor)
         LaserLoopClosure::Mat66 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-          if (save_posegraph_backup_){
-            LaserLoopClosure::Save("posegraph_backup.zip");
-          }
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
@@ -526,9 +532,6 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenChordalFactor)
         LaserLoopClosure::Mat1212 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-          if (save_posegraph_backup_){
-            LaserLoopClosure::Save("posegraph_backup.zip");
-          }
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
