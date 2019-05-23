@@ -118,7 +118,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("save_posegraph_backup", save_posegraph_backup_)) return false;
 
   // Should we save a backup pointcloud?
-  if (!pu::Get("keyes_between_each_posegraph_backup", keyes_between_each_posegraph_backup_)) return false;
+  if (!pu::Get("keys_between_each_posegraph_backup", keys_between_each_posegraph_backup_)) return false;
 
   // Optimizer selection
   if (!pu::Get("loop_closure_optimizer", loop_closure_optimizer_)) return false;
@@ -211,6 +211,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   Values new_value;
   new_factor.add(MakePriorFactor(pose, covariance));
   new_value.insert(key_, pose);
+  
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
@@ -218,9 +219,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   // Set the initial odometry.
   odometry_ = Pose3::identity();
-
-  //initialize boolean to declare if a map has been loaded
-  loaded_map_ = false;
 
 	//Initilize interactive marker server
   if (publish_interactive_markers_) {
@@ -270,14 +268,6 @@ bool LaserLoopClosure::AddBetweenFactor(
     ROS_ERROR("%s: Output key is null.", name_.c_str());
     return false;
   }
-
-  //this gets called if you run LAMP from a loaded map
-  if(loaded_map_ == true){
-  int last_key_on_graph_ = load_graph_keys_.back();
-  key_ = last_key_on_graph_ + 1; //
-  delta.Identity(); //TODO: get odom from something else!!!!!
-  loaded_map_=false;
-  } 
 
   // Append the new odometry.
   Pose3 new_odometry = ToGtsam(delta);
@@ -455,7 +445,7 @@ bool LaserLoopClosure::FindLoopClosures(
     unsigned int key, std::vector<unsigned int>* closure_keys) {
 
   // Function to save the posegraph regularly
-  if (key % keyes_between_each_posegraph_backup_ == 0 && save_posegraph_backup_){
+  if (key % keys_between_each_posegraph_backup_ == 0 && save_posegraph_backup_){
     LaserLoopClosure::Save("posegraph_backup.zip");
   } 
 
@@ -601,14 +591,6 @@ gu::Transform3 LaserLoopClosure::GetLastPose() const {
   }
 }
 
-gu::Transform3 LaserLoopClosure::GetLastLoadedPose() const{
-    if (key_ > 1) {
-    return ToGu(values_.at<Pose3>(key_));
-  } else {
-    ROS_WARN("%s: The graph only contains its initial pose.", name_.c_str());
-    return ToGu(values_.at<Pose3>(0));
-  }
-}
 
 gu::Transform3 LaserLoopClosure::ToGu(const Pose3& pose) const {
   gu::Transform3 out;
@@ -1329,14 +1311,13 @@ bool LaserLoopClosure::ErasePosegraph(){
   keyed_scans_.clear();
   keyed_stamps_.clear();
   stamps_keyed_.clear();
-  values_.clear();
+
   loop_edges_.clear();
   odometry_ = Pose3::identity();
   odometry_kf_ = Pose3::identity();
   odometry_edges_.clear();
-  nfg_ = isam_->getFactorsUnsafe();
+
   key_ = 0;
-  PublishPoseGraph();
   
 	//Initilize interactive marker server
   if (publish_interactive_markers_) {
@@ -1534,7 +1515,6 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     if (keyStr.empty())
       break;
     key_ = std::stoi(keyStr);
-    load_graph_keys_.push_back(key_);
     std::getline(info_file, pcd_filename, ',');
     PointCloud::Ptr pc(new PointCloud);
     if (pcl::io::loadPCDFile(pcd_filename, *pc) == -1) {
@@ -1547,7 +1527,11 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     ros::Time t;
     t.fromNSec(std::stol(timeStr));
     keyed_stamps_[key_] = t;
+    //stamps_keyed_[t] = key_ ;
   }
+
+  // Increment key to be ready for more scans
+  key_++;
 
   ROS_INFO("Restored all point clouds.");
   info_file.close();
@@ -1599,7 +1583,6 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     boost::filesystem::remove_all(folder);
 
   ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
-  loaded_map_ = true;
   PublishPoseGraph();
   return true;
 }

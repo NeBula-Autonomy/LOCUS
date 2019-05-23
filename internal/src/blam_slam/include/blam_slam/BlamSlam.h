@@ -42,7 +42,6 @@
 #include <blam_slam/AddFactor.h>
 #include <blam_slam/RemoveFactor.h>
 #include <blam_slam/SaveGraph.h>
-
 #include <blam_slam/Restart.h>
 
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
@@ -102,7 +101,7 @@ class BlamSlam {
   bool RemoveFactorService(blam_slam::RemoveFactorRequest &request,
                            blam_slam::RemoveFactorResponse &response);
 
-  // Generic add Factor service - for human loop closures to start
+  // Generic restart service - for restarting from last saved posegraph
   bool RestartService(blam_slam::RestartRequest &request,
                         blam_slam::RestartResponse &response);
 
@@ -145,7 +144,6 @@ class BlamSlam {
   ros::ServiceServer add_factor_srv_;
   ros::ServiceServer remove_factor_srv_;
   ros::ServiceServer save_graph_srv_;
-
   ros::ServiceServer restart_srv_;
 
   // Names of coordinate frames.

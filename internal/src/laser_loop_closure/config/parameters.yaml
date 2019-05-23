@@ -3,10 +3,10 @@
 check_for_loop_closures: true
 
 # Make true to save a backup pointcloud before every loop closure.
-save_posegraph_backup: true
+save_posegraph_backup: false
 
 #Number of keyes between each saved backup
-keyes_between_each_posegraph_backup: 5
+keys_between_each_posegraph_backup: 5
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
 loop_closure_optimizer: 1

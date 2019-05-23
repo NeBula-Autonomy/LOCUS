@@ -144,7 +144,6 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
   remove_factor_srv_ = nl.advertiseService("remove_factor", &BlamSlam::RemoveFactorService, this);
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
-
   restart_srv_ = nl.advertiseService("restart", &BlamSlam::RestartService, this);
 
   if (from_log)
@@ -404,20 +403,14 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
+
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
-
-  //If running from loaded map, skip AddKeyScanPair(0,msg)
-  if (loop_closure_.loaded_map_ == true){
+    loop_closure_.AddKeyScanPair(0, msg);
     return;
-    }
-    else{
-      loop_closure_.AddKeyScanPair(0, msg);
-    return;
-    }
   }
 
   // Containers.
@@ -479,10 +472,12 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
                                 blam_slam::RestartResponse &response) {    
   ROS_INFO_STREAM(request.filename);
+  // Erase the current posegraph to make space for the backup
   loop_closure_.ErasePosegraph();  
+  // Run the load function to retrieve the posegraph
   response.success = loop_closure_.Load(request.filename);
-  localization_.MotionUpdate(gu::Transform3::Identity());
-  // We found one - regenerate the 3D map.
+
+  // Regenerate the 3D map from the loaded posegraph
   PointCloud::Ptr regenerated_map(new PointCloud);
   loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
 
@@ -491,7 +486,7 @@ bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
   mapper_.InsertPoints(regenerated_map, unused.get());
 
   // Also reset the robot's estimated position.
-  localization_.SetIntegratedEstimate(loop_closure_.GetLastLoadedPose());
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
   return true;
 }
 

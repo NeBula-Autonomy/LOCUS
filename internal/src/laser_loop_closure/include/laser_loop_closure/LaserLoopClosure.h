@@ -101,7 +101,6 @@ class LaserLoopClosure {
 
   bool Initialize(const ros::NodeHandle& n);
 
-
   // Typedef for 6x6 covariance matrices (x, y, z, roll, pitch, yaw).
   typedef geometry_utils::MatrixNxNBase<double, 6> Mat66;
   typedef geometry_utils::MatrixNxNBase<double, 12> Mat1212;
@@ -165,23 +164,14 @@ class LaserLoopClosure {
   // Removes the factor that was visualized for confirmation.
   void RemoveConfirmFactorVisualization();
 
-
-  // Get the most recent pose in the pose graph.
-  geometry_utils::Transform3 GetLastLoadedPose() const;
-
   //Erase the posegraph
   bool ErasePosegraph();
-
-  std::vector<unsigned int> load_graph_keys_;
 
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 
   // Loads pose graph and accompanying point clouds from a zip file.
   bool Load(const std::string &zipFilename);
-
-  // Boolean to show that a posegraph has been loaded to initialize from last key
-  bool loaded_map_;
 
  private:
   bool LoadParameters(const ros::NodeHandle& n);
@@ -241,7 +231,7 @@ class LaserLoopClosure {
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
   bool save_posegraph_backup_;
-  unsigned int keyes_between_each_posegraph_backup_;
+  unsigned int keys_between_each_posegraph_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;
@@ -304,8 +294,6 @@ class LaserLoopClosure {
   typedef std::pair<unsigned int, unsigned int> Edge;
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
-
-
 
   // For filtering laser scans prior to ICP.
   PointCloudFilter filter_;
