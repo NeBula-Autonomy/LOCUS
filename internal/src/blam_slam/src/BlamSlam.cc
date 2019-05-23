@@ -148,6 +148,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
   remove_factor_srv_ = nl.advertiseService("remove_factor", &BlamSlam::RemoveFactorService, this);
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
+  restart_srv_ = nl.advertiseService("restart", &BlamSlam::RestartService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -538,6 +539,27 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
+}
+
+bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
+                                blam_slam::RestartResponse &response) {    
+  ROS_INFO_STREAM(request.filename);
+  // Erase the current posegraph to make space for the backup
+  loop_closure_.ErasePosegraph();  
+  // Run the load function to retrieve the posegraph
+  response.success = loop_closure_.Load(request.filename);
+
+  // Regenerate the 3D map from the loaded posegraph
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+  return true;
 }
 
 bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,

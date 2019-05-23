@@ -114,6 +114,12 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Should we turn loop closure checking on or off?
   if (!pu::Get("check_for_loop_closures", check_for_loop_closures_)) return false;
 
+  // Should we save a backup pointcloud?
+  if (!pu::Get("save_posegraph_backup", save_posegraph_backup_)) return false;
+
+  // Should we save a backup pointcloud?
+  if (!pu::Get("keys_between_each_posegraph_backup", keys_between_each_posegraph_backup_)) return false;
+
   // Optimizer selection
   if (!pu::Get("loop_closure_optimizer", loop_closure_optimizer_)) return false;
   
@@ -212,7 +218,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   Values new_value;
   new_factor.add(MakePriorFactor(pose, covariance));
   new_value.insert(key_, pose);
-
+  
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
@@ -220,7 +226,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   // Set the initial odometry.
   odometry_ = Pose3::identity();
-
 
 	//Initilize interactive marker server
   if (publish_interactive_markers_) {
@@ -482,6 +487,12 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
 
 bool LaserLoopClosure::FindLoopClosures(
     unsigned int key, std::vector<unsigned int>* closure_keys) {
+
+  // Function to save the posegraph regularly
+  if (key % keys_between_each_posegraph_backup_ == 0 && save_posegraph_backup_){
+    LaserLoopClosure::Save("posegraph_backup.zip");
+  } 
+
   // If loop closure checking is off, don't do this step. This will save some
   // computation time.
   if (!check_for_loop_closures_)
@@ -740,6 +751,7 @@ gu::Transform3 LaserLoopClosure::GetLastPose() const {
     return ToGu(values_.at<Pose3>(0));
   }
 }
+
 
 gu::Transform3 LaserLoopClosure::ToGu(const Pose3& pose) const {
   gu::Transform3 out;
@@ -1453,6 +1465,25 @@ bool writeFileToZip(zipFile &zip, const std::string &filename) {
   return true;
 }
 
+bool LaserLoopClosure::ErasePosegraph(){
+  keyed_scans_.clear();
+  keyed_stamps_.clear();
+  stamps_keyed_.clear();
+
+  loop_edges_.clear();
+  odometry_ = Pose3::identity();
+  odometry_kf_ = Pose3::identity();
+  odometry_edges_.clear();
+
+  key_ = 0;
+  
+	//Initilize interactive marker server
+  if (publish_interactive_markers_) {
+    server.reset(new interactive_markers::InteractiveMarkerServer(
+        "interactive_node", "", false));
+  }
+} 
+
 bool LaserLoopClosure::Save(const std::string &zipFilename) const {
   const std::string path = "pose_graph";
   const boost::filesystem::path directory(path);
@@ -1654,7 +1685,11 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     ros::Time t;
     t.fromNSec(std::stol(timeStr));
     keyed_stamps_[key_] = t;
+    //stamps_keyed_[t] = key_ ;
   }
+
+  // Increment key to be ready for more scans
+  key_++;
 
   ROS_INFO("Restored all point clouds.");
   info_file.close();

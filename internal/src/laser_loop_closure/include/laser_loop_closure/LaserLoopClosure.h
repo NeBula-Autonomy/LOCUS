@@ -193,6 +193,9 @@ class LaserLoopClosure {
   // Removes the factor that was visualized for confirmation.
   void RemoveConfirmFactorVisualization();
 
+  //Erase the posegraph
+  bool ErasePosegraph();
+
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 
@@ -259,6 +262,8 @@ class LaserLoopClosure {
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
+  bool save_posegraph_backup_;
+  unsigned int keys_between_each_posegraph_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;
