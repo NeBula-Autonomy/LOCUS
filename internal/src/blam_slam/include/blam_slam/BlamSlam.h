@@ -43,6 +43,7 @@
 #include <blam_slam/RemoveFactor.h>
 #include <blam_slam/SaveGraph.h>
 #include <blam_slam/Restart.h>
+#include <blam_slam/LoadGraph.h>
 
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <point_cloud_filter/PointCloudFilter.h>
@@ -108,6 +109,9 @@ class BlamSlam {
   bool SaveGraphService(blam_slam::SaveGraphRequest &request,
                         blam_slam::SaveGraphResponse &response);
 
+  bool LoadGraphService(blam_slam::LoadGraphRequest &request,
+                        blam_slam::LoadGraphResponse &response);                      
+
   // Publish Artifacts
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
                        const core_msgs::Artifact& msg);
@@ -138,6 +142,7 @@ class BlamSlam {
   ros::ServiceServer remove_factor_srv_;
   ros::ServiceServer save_graph_srv_;
   ros::ServiceServer restart_srv_;
+  ros::ServiceServer load_graph_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;

@@ -153,6 +153,9 @@ class LaserLoopClosure {
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
 
+  // Get the most initial pose in the pose graph.
+  geometry_utils::Transform3 GetInitialPose() const;
+
   // Get pose at an input time
   gtsam::Key GetKeyAtTime(const ros::Time& stamp) const;
 

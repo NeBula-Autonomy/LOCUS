@@ -766,6 +766,15 @@ gu::Transform3 LaserLoopClosure::GetLastPose() const {
   }
 }
 
+gu::Transform3 LaserLoopClosure::GetInitialPose() const {
+  if (key_ > 1) {
+    return ToGu(values_.at<Pose3>(0));
+  } else {
+    ROS_WARN("%s: The graph only contains its initial pose.", name_.c_str());
+    return ToGu(values_.at<Pose3>(0));
+  }
+}
+
 
 gu::Transform3 LaserLoopClosure::ToGu(const Pose3& pose) const {
   gu::Transform3 out;
@@ -2235,7 +2244,7 @@ gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
   // std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
 
   // TODO - interpolate - currently just take one
-  double t2 = iterTime->first; 
+  double t2 = iterTime->first;
   double t1 = std::prev(iterTime,1)->first; 
 
   // std::cout << "Time 1 is: " << t1 << ", Time 2 is: " << t2 << std::endl;
