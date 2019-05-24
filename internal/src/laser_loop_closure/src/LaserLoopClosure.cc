@@ -314,7 +314,6 @@ bool LaserLoopClosure::AddBetweenFactor(
   Values values_temp = isam_->getLinearizationPoint();
   values_temp.insert(key_, last_pose.compose(odometry_));
   double cost_old = nfg_temp.error(values_temp); // Assume values is up to date - no new values
-  
   ROS_INFO("Cost before optimization is: %f", cost_old);
 
   // Update ISAM2.
@@ -358,9 +357,10 @@ bool LaserLoopClosure::AddBetweenFactor(
 
     if (!b_accept_update){
       ROS_WARN("Returning false for add between factor - have reset, waiting for next pose update");
-      *key = key_ - 1;
-      // Remove odom edges
-      odometry_edges_.pop_back();
+      // Erase the current posegraph to make space for the backup
+      LaserLoopClosure::ErasePosegraph();  
+      // Run the load function to retrieve the posegraph
+      LaserLoopClosure::Load("posegraph_backup.zip");
       return false;
     }
     ROS_INFO("Sanity check passed");
@@ -550,6 +550,10 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenFactor)
         LaserLoopClosure::Mat66 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+            // Function to save the posegraph regularly
+          if (save_posegraph_backup_){
+            LaserLoopClosure::Save("posegraph_backup.zip");
+          } 
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
@@ -589,6 +593,9 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenChordalFactor)
         LaserLoopClosure::Mat1212 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          if (save_posegraph_backup_){
+            LaserLoopClosure::Save("posegraph_backup.zip");
+          } 
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
@@ -634,7 +641,14 @@ bool LaserLoopClosure::FindLoopClosures(
         closed_loop = SanityCheckForLoopClosure(translational_sanity_check_lc_, cost_old, cost);
         // TODO - remove vizualization keys if it is rejected 
       }
-
+      if (!closed_loop){
+        ROS_WARN("Returning false for bad loop closure - have reset, waiting for next pose update");
+      // Erase the current posegraph to make space for the backup
+        LaserLoopClosure::ErasePosegraph();  
+      // Run the load function to retrieve the posegraph
+        LaserLoopClosure::Load("posegraph_backup.zip");
+      return false;
+    }
       // Update backups
       nfg_backup_ = nfg_;
       values_backup_ = values_;
