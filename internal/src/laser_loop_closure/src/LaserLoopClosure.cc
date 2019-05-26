@@ -252,6 +252,9 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
       nl.advertise<pose_graph_msgs::KeyedScan>("keyed_scans", 10, false);
   loop_closure_notifier_pub_ =
       nl.advertise<std_msgs::Empty>("loop_closure", 10, false);
+  
+  uwb_node_pub_ = nl.advertise<visualization_msgs::Marker>("uwb_nodes", 10, false);
+  uwb_edge_pub_ = nl.advertise<visualization_msgs::Marker>("uwb_edges", 10, false);
       
   return true;
 }
@@ -450,11 +453,11 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     // Add a BetweenFactor between the pose key and the UWB key
     gtsam::Vector6 precisions;
     precisions.head<3>().setConstant(0.0);
-    precisions.tail<3>().setConstant(1.0);
+    precisions.tail<3>().setConstant(0.25);
     static const gtsam::SharedNoiseModel& noise = 
     gtsam::noiseModel::Diagonal::Precisions(precisions);
     // TODO
-    new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(pose_key, uwb_key, gtsam::Pose3(), prior_noise));
+    new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(pose_key, uwb_key, gtsam::Pose3(), noise));
 
     try {
       std::cout << "Optimizing manual loop closure, iteration" << std::endl;
@@ -516,7 +519,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       cost = nfg_.error(linPoint);
       ROS_INFO_STREAM("Error at linearization point (after adding UWB RangeFactor): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)
 
-      // PublishPoseGraph();
+      PublishPoseGraph();
 
       return true;
     }
@@ -1926,6 +1929,57 @@ void LaserLoopClosure::PublishPoseGraph() {
       server->applyChanges();
     }
   }
+
+  // UWB
+  PublishUwb();
+
+}
+
+void LaserLoopClosure::PublishUwb() {
+  for (auto itr = uwb_id2key_hash_.begin(); itr != uwb_id2key_hash_.end(); itr++) {
+    visualization_msgs::Marker m;
+    gu::Transform3 uwb_pose_pub = ToGu(values_.at<Pose3>(itr->second));
+    m.id = itr->second;
+    m.header.frame_id = fixed_frame_id_;
+    m.pose = gr::ToRosPose(uwb_pose_pub);
+    m.scale.x = 0.5f;
+    m.scale.y = 0.5f;
+    m.scale.z = 0.5f;
+    m.color.r = 0.0f;
+    m.color.g = 1.0f;
+    m.color.b = 0.0f;
+    m.color.a = 0.4f;
+    m.type = visualization_msgs::Marker::CUBE;
+
+    uwb_node_pub_.publish(m);
+  }
+
+  if (uwb_edge_pub_.getNumSubscribers() > 0){
+    visualization_msgs::Marker m;
+    m.header.frame_id = fixed_frame_id_;
+    m.ns = fixed_frame_id_;
+    m.id = 5;
+    m.action = visualization_msgs::Marker::ADD;
+    m.type = visualization_msgs::Marker::LINE_LIST;
+    m.color.r = 0.0;
+    m.color.g = 1.0;
+    m.color.b = 0.0;
+    m.color.a = 0.8;
+    m.scale.x = 0.02;
+
+    for (size_t ii = 0; ii < uwb_edges_.size(); ++ii) {
+      unsigned int key1 = uwb_edges_[ii].first;
+      gtsam::Key key2 = uwb_edges_[ii].second;
+
+      gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
+      gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
+
+      m.points.push_back(gr::ToRosPoint(p1));
+      m.points.push_back(gr::ToRosPoint(p2));
+    }
+    uwb_edge_pub_.publish(m);
+  }
+
 }
 
 GenericSolver::GenericSolver(): 

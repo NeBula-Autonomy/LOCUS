@@ -74,7 +74,7 @@
 #include <vector>
 
 // default is isam, LM for LevenbergMarquardt
-// #define solver LM 
+#define solver LM 
 
 class GenericSolver {
 public:
@@ -130,7 +130,8 @@ class LaserLoopClosure {
                     const ros::Time& stamp,
                     const double range,
                     const Eigen::Vector3d robot_position);
-
+  
+  void PublishUwb();
 
   // Upon successful addition of a new between factor, call this function to
   // associate a laser scan with the new pose.
@@ -295,6 +296,9 @@ class LaserLoopClosure {
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
   ros::Publisher confirm_edge_pub_;
+  // UWB
+  ros::Publisher uwb_node_pub_;
+  ros::Publisher uwb_edge_pub_;
 
   // ros::ServiceServer add_factor_srv_;
 

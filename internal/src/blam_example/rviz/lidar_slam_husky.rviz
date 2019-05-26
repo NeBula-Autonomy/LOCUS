@@ -289,6 +289,22 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
+      Marker Topic: /husky/blam_slam/uwb_edges
+      Name: UWB Edges
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/uwb_nodes
+      Name: UWB Nodes
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
       Marker Topic: /husky/blam_slam/loop_edges
       Name: Loop Edges
       Namespaces:
