@@ -145,6 +145,10 @@ class LaserLoopClosure {
   // the pose graph.
   void GetMaximumLikelihoodPoints(PointCloud* map);
 
+  // TEMP : From the branch feature/artifact
+  // Get pose at an input time
+  gtsam::Key GetKeyAtTime(const ros::Time& stamp) const;
+
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
 
@@ -302,6 +306,8 @@ class LaserLoopClosure {
   typedef std::pair<unsigned int, unsigned int> Edge;
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
+  // UWB
+  std::vector<std::pair<unsigned int, gtsam::Key>> uwb_edges_;
 
   // For filtering laser scans prior to ICP.
   PointCloudFilter filter_;
