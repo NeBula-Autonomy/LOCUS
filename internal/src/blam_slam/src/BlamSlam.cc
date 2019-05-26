@@ -173,7 +173,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   artifact_sub_ = nl.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
 
-  uwb_sub_ = nl.subscribe("uwb_signal", 10, &BlamSlam::UwbCallback, this);
+  uwb_sub_ = nl.subscribe("uwb_signal", 10, &BlamSlam::UwbSignalCallback, this);
 
   return CreatePublishers(n);
 }
@@ -401,16 +401,55 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
 }
 
 void BlamSlam::UwbTimerCallback(const ros::TimerEvent& ev) {
-  for (auto itr = map_uwbid_time_range_.begin(); itr != map_uwbid_time_range_.end(); itr++) {
+
+  // Show range data for debug
+  for (auto itr = map_uwbid_time_data_.begin(); itr != map_uwbid_time_data_.end(); itr++) {
     std::cout << "UWB-ID: " << itr->first << std::endl;
     for (auto itr_child = (itr->second).begin(); itr_child != (itr->second).end(); itr_child++) {
-      std::cout << "time = " << itr_child->first << ", range = " << itr_child->second << std::endl;
+      std::cout << "time = " << itr_child->first << ", range = " << itr_child->second.first << std::endl;
+    }
+  }
+
+  for (auto itr = map_uwbid_time_data_.begin(); itr != map_uwbid_time_data_.end(); itr++) {
+    if (!itr->second.empty()) {
+      auto itr_end = (itr->second).end();
+      itr_end--;
+      auto time_diff = ros::Time::now() - itr_end->first;
+      if (time_diff.toSec() > 20.0) {
+        if (itr->second.size() > 4) {
+
+          ProcessUwbRangeData(itr->first);
+
+          itr->second.clear();
+        }
+        else {
+          std::cout << "Number of range measurement is NOT enough" << std::endl;
+          itr->second.clear();
+        }
+        
+      }
     }
   }
 }
 
-void BlamSlam::UwbCallback(const uwb_msgs::Anchor& msg) {
-  map_uwbid_time_range_[msg.id][msg.header.stamp] = msg.range;
+void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
+  std::cout << "Start to process UWB range measurement data of " << uwb_id << std::endl;
+
+  std::map<double, ros::Time> map_range_time_;
+
+  for (auto itr = map_uwbid_time_data_[uwb_id].begin(); itr != map_uwbid_time_data_[uwb_id].end(); itr++) {
+    map_range_time_[itr->second.first] = itr->first;
+  }
+
+  auto minItr = std::min_element(map_range_time_.begin(), map_range_time_.end());
+
+  std::cout << "Minimum range is " << minItr->first << std::endl;
+
+}
+
+void BlamSlam::UwbSignalCallback(const uwb_msgs::Anchor& msg) {
+  map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
+
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {

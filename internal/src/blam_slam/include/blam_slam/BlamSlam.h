@@ -72,6 +72,9 @@ class BlamSlam {
   // Sensor message processing.
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
 
+  // UWB range measurement data processing
+  void ProcessUwbRangeData(const std::string uwb_id);
+
   int marker_id_;
 
  private:
@@ -85,7 +88,7 @@ class BlamSlam {
   // Sensor callbacks.
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
   void ArtifactCallback(const core_msgs::Artifact& msg);
-  void UwbCallback(const uwb_msgs::Anchor& msg);
+  void UwbSignalCallback(const uwb_msgs::Anchor& msg);
 
   // Timer callbacks.
   void EstimateTimerCallback(const ros::TimerEvent& ev);
@@ -152,7 +155,7 @@ class BlamSlam {
   bool artifacts_in_global_;
 
   // UWB
-  std::map<std::string, std::map<ros::Time, double>> map_uwbid_time_range_;
+  std::map<std::string, std::map<ros::Time, std::pair<double, Eigen::Vector3d>>> map_uwbid_time_data_;
 
   // Class objects (BlamSlam is a composite class).
   MeasurementSynchronizer synchronizer_;
