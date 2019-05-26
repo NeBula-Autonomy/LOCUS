@@ -448,9 +448,25 @@ void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
   Eigen::Vector3d aug_robot_position = map_uwbid_time_data_[uwb_id][aug_time].second;
 
   if (loop_closure_.AddUwbFactor(uwb_id, aug_time, aug_range, aug_robot_position)) {
+    std::cout << "Updating the map" << std::endl;
+    PointCloud::Ptr regenerated_map(new PointCloud);
+    loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
 
+    mapper_.Reset();
+    PointCloud::Ptr unused(new PointCloud);
+    mapper_.InsertPoints(regenerated_map, unused.get());
+
+    // Also reset the robot's estimated position.
+    localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+    // Visualize the pose graph and current loop closure radius.
+    loop_closure_.PublishPoseGraph();
+
+    // Publish updated map
+    mapper_.PublishMap();
+
+    std::cout << "Updated the map by UWB Range Factors" << std::endl;
   }
-
 }
 
 void BlamSlam::UwbSignalCallback(const uwb_msgs::Anchor& msg) {

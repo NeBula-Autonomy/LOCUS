@@ -49,3 +49,6 @@ skip_recent_poses: 20 #10 # 200
 poses_before_reclosing: 20 #10
 
 # TODO make these dynamic with the translation threshold for nodes
+
+# UWB range measurement noise (standard deviation)
+uwb_range_measurement_error: 0.50
