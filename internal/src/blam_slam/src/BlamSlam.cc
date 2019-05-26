@@ -443,13 +443,20 @@ void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
 
   auto minItr = std::min_element(map_range_time_.begin(), map_range_time_.end());
 
-  std::cout << "Minimum range is " << minItr->first << std::endl;
+  ros::Time aug_time = minItr->second;
+  double aug_range = minItr->first;
+  Eigen::Vector3d aug_robot_position = map_uwbid_time_data_[uwb_id][aug_time].second;
+
+  if (loop_closure_.AddUwbFactor(uwb_id, aug_time, aug_range, aug_robot_position)) {
+
+  }
 
 }
 
 void BlamSlam::UwbSignalCallback(const uwb_msgs::Anchor& msg) {
   map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
-
+  map_uwbid_time_data_[msg.id][msg.header.stamp].second
+  = localization_.GetIntegratedEstimate().translation.Eigen();
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {

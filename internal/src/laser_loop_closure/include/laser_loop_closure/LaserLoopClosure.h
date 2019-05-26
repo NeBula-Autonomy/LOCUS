@@ -58,6 +58,10 @@
 #include <gtsam/slam/InitializePose3.h>
 #include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
 
+// for UWB
+#include <gtsam/sam/RangeFactor.h>
+#include <gtsam/inference/Symbol.h>
+
 // #include "SESync/SESync.h"
 // #include "SESync/SESync_utils.h"
 
@@ -121,6 +125,12 @@ class LaserLoopClosure {
   bool AddBetweenChordalFactor(const geometry_utils::Transform3& delta,
                         const Mat1212& covariance, const ros::Time& stamp,
                         unsigned int* key);
+  
+  bool AddUwbFactor(const std::string uwb_id,
+                    const ros::Time& stamp,
+                    const double range,
+                    const Eigen::Vector3d robot_position);
+
 
   // Upon successful addition of a new between factor, call this function to
   // associate a laser scan with the new pose.
@@ -252,6 +262,9 @@ class LaserLoopClosure {
   double icp_tf_epsilon_;
   double icp_corr_dist_;
   unsigned int icp_iterations_;
+
+  // UWB parameters
+  std::unordered_map<std::string, gtsam::Key> uwb_id2key_hash_;
 
   // ISAM2 optimizer object, and best guess pose values.
   #ifdef solver

@@ -404,6 +404,27 @@ bool LaserLoopClosure::AddBetweenChordalFactor(
   return false;
 }
 
+bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id, 
+                                    const ros::Time& stamp,
+                                    const double range,
+                                    const Eigen::Vector3d robot_position) {
+
+  gtsam::Key uwb_key;
+  if (uwb_id2key_hash_.find(uwb_id) != uwb_id2key_hash_.end()) {
+    uwb_key = uwb_id2key_hash_[uwb_id];
+  }
+  else {
+    uwb_key = gtsam::Symbol('u', uwb_id2key_hash_.size()+1);
+    uwb_id2key_hash_[uwb_id] = uwb_key;
+  }
+
+  std::cout << "UWB ID is " << uwb_id;
+  gtsam::PrintKey(uwb_key, ", UWB Key is ");
+  std::cout << std::endl;
+
+  return true;
+}
+
 bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
                                       const PointCloud::ConstPtr& scan) {
   if (keyed_scans_.count(key)) {
