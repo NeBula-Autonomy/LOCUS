@@ -55,6 +55,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <core_msgs/Artifact.h>
+#include <uwb_msgs/Anchor.h>
 
 class BlamSlam {
  public:
@@ -84,6 +85,7 @@ class BlamSlam {
   // Sensor callbacks.
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
   void ArtifactCallback(const core_msgs::Artifact& msg);
+  void UwbCallback(const uwb_msgs::Anchor& msg);
 
   // Timer callbacks.
   void EstimateTimerCallback(const ros::TimerEvent& ev);
@@ -126,6 +128,7 @@ class BlamSlam {
   // Subscribers.
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
+  ros::Subscriber uwb_sub_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 

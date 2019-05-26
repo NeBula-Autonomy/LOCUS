@@ -169,6 +169,8 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   artifact_sub_ = nl.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
 
+  uwb_sub_ = nl.subscribe("uwb_signal", 10, &BlamSlam::UwbCallback, this);
+
   return CreatePublishers(n);
 }
 
@@ -392,6 +394,10 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
             << std::endl;
 
   PublishArtifact(W_artifact_position, msg); 
+}
+
+void BlamSlam::UwbCallback(const uwb_msgs::Anchor& msg) {
+  
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
