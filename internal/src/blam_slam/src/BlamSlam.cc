@@ -46,6 +46,7 @@ namespace gu = geometry_utils;
 BlamSlam::BlamSlam()
   : estimate_update_rate_(0.0),
     visualization_update_rate_(0.0),
+    uwb_update_rate_(0.0),
     position_sigma_(0.01),
     attitude_sigma_(0.04),
     marker_id_(0),
@@ -98,6 +99,7 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Load update rates.
   if (!pu::Get("rate/estimate", estimate_update_rate_)) return false;
   if (!pu::Get("rate/visualization", visualization_update_rate_)) return false;
+  if (!pu::Get("rate/uwb_update", uwb_update_rate_)) return false;
 
   // Load frame ids.
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
@@ -164,6 +166,8 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
+  
+  uwb_update_timer_ = nl.createTimer(uwb_update_rate_, &BlamSlam::UwbTimerCallback, this);
 
   pcld_sub_ = nl.subscribe("pcld", 100000, &BlamSlam::PointCloudCallback, this);
 
@@ -396,8 +400,17 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   PublishArtifact(W_artifact_position, msg); 
 }
 
+void BlamSlam::UwbTimerCallback(const ros::TimerEvent& ev) {
+  for (auto itr = map_uwbid_time_range_.begin(); itr != map_uwbid_time_range_.end(); itr++) {
+    std::cout << "UWB-ID: " << itr->first << std::endl;
+    for (auto itr_child = (itr->second).begin(); itr_child != (itr->second).end(); itr_child++) {
+      std::cout << "time = " << itr_child->first << ", range = " << itr_child->second << std::endl;
+    }
+  }
+}
+
 void BlamSlam::UwbCallback(const uwb_msgs::Anchor& msg) {
-  
+  map_uwbid_time_range_[msg.id][msg.header.stamp] = msg.range;
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {

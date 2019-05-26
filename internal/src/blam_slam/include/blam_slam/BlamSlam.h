@@ -90,6 +90,7 @@ class BlamSlam {
   // Timer callbacks.
   void EstimateTimerCallback(const ros::TimerEvent& ev);
   void VisualizationTimerCallback(const ros::TimerEvent& ev);
+  void UwbTimerCallback(const ros::TimerEvent& ev);
 
   // Loop closing. Returns true if at least one loop closure was found. Also
   // output whether or not a new keyframe was added to the pose graph.
@@ -118,8 +119,10 @@ class BlamSlam {
   // Update rates and callback timers.
   double estimate_update_rate_;
   double visualization_update_rate_;
+  double uwb_update_rate_;
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
+  ros::Timer uwb_update_timer_;
 
   // Covariances
   double position_sigma_;
@@ -147,6 +150,9 @@ class BlamSlam {
   std::string fixed_frame_id_;
   std::string base_frame_id_;
   bool artifacts_in_global_;
+
+  // UWB
+  std::map<std::string, std::map<ros::Time, double>> map_uwbid_time_range_;
 
   // Class objects (BlamSlam is a composite class).
   MeasurementSynchronizer synchronizer_;
