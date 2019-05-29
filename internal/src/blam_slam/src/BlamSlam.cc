@@ -305,6 +305,7 @@ bool BlamSlam::LoadGraphService(blam_slam::LoadGraphRequest &request,
   mapper_.Reset();
   PointCloud::Ptr unused(new PointCloud);
   mapper_.InsertPoints(regenerated_map, unused.get());
+  loop_closure_.ChageKeyNumber();
 
   // Also reset the robot's estimated position.
   localization_.SetIntegratedEstimate(loop_closure_.GetInitialPose());
@@ -495,7 +496,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
-    loop_closure_.AddKeyScanPair(10000, msg);
+    loop_closure_.AddKeyScanPair(0, msg);
     return;
   }
 
@@ -607,7 +608,6 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
                                         covariance, stamp, &pose_key);
       map_loaded_= false;
     } else {
-      ROS_INFO("Alex is awesome!");
       if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)
     // TODO rename to attitude and position sigma 

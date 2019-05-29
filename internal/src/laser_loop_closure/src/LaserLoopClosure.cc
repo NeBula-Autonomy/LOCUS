@@ -314,7 +314,7 @@ bool LaserLoopClosure::AddBetweenFactor(
   Values values_temp = isam_->getLinearizationPoint();
   values_temp.insert(key_, last_pose.compose(odometry_));
   double cost_old = nfg_temp.error(values_temp); // Assume values is up to date - no new values
-  ROS_INFO("Cost before optimization is: %f", cost_old);
+  //ROS_INFO("Cost before optimization is: %f", cost_old);
 
   // Update ISAM2.
   try{
@@ -346,7 +346,7 @@ bool LaserLoopClosure::AddBetweenFactor(
   // Get updated cost
   double cost = nfg_.error(values_);
 
-  ROS_INFO("Cost after optimization is: %f", cost);
+  //ROS_INFO("Cost after optimization is: %f", cost);
 
   // Do sanity check on result
   bool b_accept_update;
@@ -386,6 +386,11 @@ bool LaserLoopClosure::AddBetweenFactor(
   }
 
   return false;
+}
+
+//function to change keynumber for multiple robots
+bool LaserLoopClosure::ChageKeyNumber(){
+    key_ = 10000;
 }
 
 bool LaserLoopClosure::AddBetweenChordalFactor(
@@ -564,7 +569,6 @@ bool LaserLoopClosure::FindLoopClosures(
           nfg_temp.add(new_factor);
           cost_old = nfg_temp.error(values_); // Assume values is up to date - no new values
 
-          ROS_INFO("Cost before optimization is: %f", cost_old);
 
           // Optimization                                
           isam_->update(new_factor, Values());
@@ -575,7 +579,6 @@ bool LaserLoopClosure::FindLoopClosures(
           nfg_temp = isam_->getFactorsUnsafe();
           cost = nfg_temp.error(isam_->getLinearizationPoint());
 
-          ROS_INFO("Cost after optimization is: %f", cost);
 
           // Store for visualization and output.
           loop_edges_.push_back(std::make_pair(key, other_key));
@@ -605,8 +608,6 @@ bool LaserLoopClosure::FindLoopClosures(
           NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
           nfg_temp.add(new_factor);
           cost_old = nfg_temp.error(values_); // Assume values is up to date - no new values
-          
-          ROS_INFO("Cost before optimization is: %f", cost_old);
 
           // Optimization                                
           isam_->update(new_factor, Values());
@@ -617,7 +618,6 @@ bool LaserLoopClosure::FindLoopClosures(
           nfg_temp = isam_->getFactorsUnsafe();
           cost = nfg_temp.error(isam_->getLinearizationPoint());
 
-          ROS_INFO("Cost after optimization is: %f", cost);
 
           // Store for visualization and output.
           loop_edges_.push_back(std::make_pair(key, other_key));
@@ -1848,7 +1848,6 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     boost::filesystem::remove_all(folder);
 
   ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
-  key_ = 10000;
   PublishPoseGraph();
   return true;
 }
