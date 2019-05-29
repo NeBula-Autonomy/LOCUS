@@ -640,14 +640,15 @@ bool LaserLoopClosure::FindLoopClosures(
         ROS_INFO("Sanity checking output");
         closed_loop = SanityCheckForLoopClosure(translational_sanity_check_lc_, cost_old, cost);
         // TODO - remove vizualization keys if it is rejected 
-      }
-      if (!closed_loop){
-        ROS_WARN("Returning false for bad loop closure - have reset, waiting for next pose update");
-      // Erase the current posegraph to make space for the backup
-        LaserLoopClosure::ErasePosegraph();  
-      // Run the load function to retrieve the posegraph
-        LaserLoopClosure::Load("posegraph_backup.zip");
-      return false;
+      
+        if (!closed_loop){
+          ROS_WARN("Returning false for bad loop closure - have reset, waiting for next pose update");
+          // Erase the current posegraph to make space for the backup
+          LaserLoopClosure::ErasePosegraph();
+          // Run the load function to retrieve the posegraph  
+          LaserLoopClosure::Load("posegraph_backup.zip");
+          return false;
+        }
     }
       // Update backups
       nfg_backup_ = nfg_;
@@ -1408,6 +1409,7 @@ bool LaserLoopClosure::AddFactorBetweenRobots(const gu::Transform3& delta, const
 
   NonlinearFactorGraph new_factor;
   Values new_value;
+  //TODO: Don't hard code the zero value in this function.
   new_factor.add(MakeBetweenRobotFactor(odometry_, ToGtsam(covariance)));
   // TODO Compose covariances at the same time as odometry
 

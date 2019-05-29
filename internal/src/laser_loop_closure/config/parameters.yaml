@@ -1,6 +1,6 @@
 # Toggle loop closures on or off. Setting this to off will increase run-time
 # speed by a small fraction.
-check_for_loop_closures: false
+check_for_loop_closures: true
 
 # Whether or not consolidate artifacts
 use_artifact_loop_closure: true
@@ -65,7 +65,7 @@ poses_before_reclosing: 20 #10
 
 ########################################
 # Turn on sanity checks
-b_check_deltas: true
+b_check_deltas: false
 
 # Sanity check thresholds
 translational_sanity_check_lc: 100
