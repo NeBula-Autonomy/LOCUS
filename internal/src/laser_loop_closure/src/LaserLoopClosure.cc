@@ -1020,10 +1020,13 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
       {
         // Levenberg Marquardt Optimizer
         nfg_.add(new_factor); // add new factor (new values already inserted above)
+
+        // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/beforeloop.g2o"); // for debug
         std::cout << "Running LM optimization" << std::endl;
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("SUMMARY");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
+        // writeG2o(nfg_, result, "/home/yunchang/Desktop/afterloop.g2o"); // for debug
       }
         break;
       case 2 : 
