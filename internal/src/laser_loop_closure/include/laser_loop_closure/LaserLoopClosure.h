@@ -146,6 +146,10 @@ class LaserLoopClosure {
   bool FindLoopClosures(unsigned int key,
                         std::vector<unsigned int>* closure_keys);
 
+  //Function to add factor between robots
+  bool AddFactorBetweenRobots(const geometry_utils::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
+    const ros::Time& stamp, unsigned int* key);
+
   // Build a 3D point cloud by concatenating all point clouds from poses along
   // the pose graph.
   void GetMaximumLikelihoodPoints(PointCloud* map);
@@ -230,6 +234,8 @@ class LaserLoopClosure {
   gtsam::PriorFactor<gtsam::Pose3> MakePriorFactor(
       const gtsam::Pose3& pose, const Diagonal::shared_ptr& covariance);
   gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenFactor(
+      const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
+  gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenRobotFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
   gtsam::BetweenChordalFactor<gtsam::Pose3> MakeBetweenChordalFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);

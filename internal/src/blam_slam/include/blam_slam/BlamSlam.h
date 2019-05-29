@@ -71,6 +71,7 @@ class BlamSlam {
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
 
   int marker_id_;
+  bool map_loaded_;
 
  private:
   // Node initialization.

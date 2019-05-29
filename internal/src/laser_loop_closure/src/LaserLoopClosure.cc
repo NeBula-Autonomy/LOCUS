@@ -848,6 +848,13 @@ BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactor(
   return BetweenFactor<Pose3>(key_-1, key_, delta, covariance);
 }
 
+BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenRobotFactor(
+    const Pose3& delta,
+    const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
+  odometry_edges_.push_back(std::make_pair(0, key_));
+  return BetweenFactor<Pose3>(0, key_, delta, covariance);
+}
+
 gtsam::BetweenChordalFactor<Pose3> LaserLoopClosure::MakeBetweenChordalFactor(
     const Pose3& delta, 
     const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
@@ -1377,6 +1384,81 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   return true; //result.getVariablesReeliminated() > 0;
 }
 
+bool LaserLoopClosure::AddFactorBetweenRobots(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
+    const ros::Time& stamp, unsigned int* key) {
+  if (key == NULL) {
+    ROS_ERROR("%s: Output key is null.", name_.c_str());
+    return false;
+  }
+  // Append the new odometry.
+  //TODO: Replace delta with delta computed from a function given R1 and R2 pose
+  gu::Transform3 delta1 = gu::Transform3::Identity();
+  Pose3 new_odometry = ToGtsam(delta1);
+  // CHANGE TO CONFLICT THE BELOW STATEMENT
+  // We always add new poses, but only return true if the pose is far enough
+  // away from the last one (keyframes). This lets the caller know when they
+  // can add a laser scan.
+
+  // Is the odometry translation large enough to add a new node to the graph
+  odometry_ = odometry_.compose(new_odometry);
+  odometry_kf_ = odometry_kf_.compose(new_odometry);
+
+
+  // Add a new factor
+
+  NonlinearFactorGraph new_factor;
+  Values new_value;
+  new_factor.add(MakeBetweenRobotFactor(odometry_, ToGtsam(covariance)));
+  // TODO Compose covariances at the same time as odometry
+
+  //TODO: replace 0 with the key of best fit
+  Pose3 last_pose = values_.at<Pose3>(0);
+  ROS_INFO("Key_ = %i", key_);
+  new_value.insert(key_, last_pose.compose(odometry_));
+
+  //TODO: Check if we still need this.
+  // Update ISAM2.
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
+  // Update class variables
+  values_ = isam_->calculateEstimate();
+
+  nfg_ = isam_->getFactorsUnsafe();
+
+  // Adding poses to stored hash maps
+  // Store this timestamp so that we can publish the pose graph later.
+  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
+
+  // Assign output and get ready to go again!
+  *key = key_++;
+
+  // Reset odometry to identity
+  odometry_ = Pose3::identity();
+
+  odometry_kf_ = Pose3::identity();
+  return true;
+}
+
 bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO("Visualizing factor between %i and %i.", key1, key2);
 
@@ -1764,6 +1846,7 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     boost::filesystem::remove_all(folder);
 
   ROS_INFO_STREAM("Successfully loaded pose graph from " << absPath(zipFilename) << ".");
+  key_ = 10000;
   PublishPoseGraph();
   return true;
 }
