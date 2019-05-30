@@ -146,6 +146,8 @@ class LaserLoopClosure {
   bool FindLoopClosures(unsigned int key,
                         std::vector<unsigned int>* closure_keys);
 
+  bool FindIntermapLoopClosures();
+
   //Function to add factor between robots
   bool AddFactorBetweenRobots(const geometry_utils::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
     const ros::Time& stamp, unsigned int* key);
@@ -285,6 +287,7 @@ class LaserLoopClosure {
   double translation_threshold_nodes_;
   double translation_threshold_kf_;
   double proximity_threshold_;
+  double intermap_proximity_threshold_;
   double max_tolerable_fitness_;
   double manual_lc_rot_precision_;
   double manual_lc_trans_precision_;

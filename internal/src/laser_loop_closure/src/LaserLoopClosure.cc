@@ -137,6 +137,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("translation_threshold_nodes", translation_threshold_nodes_))
     return false;
   if (!pu::Get("proximity_threshold", proximity_threshold_)) return false;
+  if (!pu::Get("intermap_proximity_threshold", intermap_proximity_threshold_)) return false;
   if (!pu::Get("max_tolerable_fitness", max_tolerable_fitness_)) return false;
   if (!pu::Get("skip_recent_poses", skip_recent_poses_)) return false;
   if (!pu::Get("poses_before_reclosing", poses_before_reclosing_)) return false;
@@ -659,6 +660,95 @@ bool LaserLoopClosure::FindLoopClosures(
   return closed_loop;
 }
 
+bool LaserLoopClosure::FindIntermapLoopClosures() {
+
+  // Get pose and scan for the provided key.
+  //TODO: Figure out how to assign initial value to the key
+
+//  const gu::Transform3 pose1 = ToGu(gtsam::Pose3::identity());
+  gu::Transform3 pose1 = gu::Transform3::Identity();
+
+  //const gu::Transform3 pose1;
+  //gu::Transform3 t2(gu::Vec3(0, 0, 0), gu::Rot3(0, 0, 0));
+  const PointCloud::ConstPtr scan1 = keyed_scans_[key_];
+  // Iterate through past poses and find those that lie close to the most
+  // recently added one.
+  bool closed_loop = false;
+  for (const auto& keyed_pose : values_) {
+    const unsigned int other_key = keyed_pose.key;
+    // Don't self-check.
+    if (other_key == key_)
+      continue;
+
+    // Don't check for loop closures against poses that are not keyframes.
+    if (!keyed_scans_.count(other_key))
+      continue;
+    
+    const gu::Transform3 pose2 = ToGu(values_.at<Pose3>(other_key));
+    const gu::Transform3 difference = gu::PoseDelta(pose1, pose2);
+    if (difference.translation.Norm() < intermap_proximity_threshold_) {
+      // Found a potential loop closure! Perform ICP between the two scans to
+      // determine if there really is a loop to close.
+      const PointCloud::ConstPtr scan2 = keyed_scans_[other_key];
+      if (!use_chordal_factor_) {
+        gu::Transform3 delta; // (Using BetweenFactor)
+        LaserLoopClosure::Mat66 covariance;
+        if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          // We found a loop closure. Add it to the pose graph.
+
+          NonlinearFactorGraph new_factor;
+          
+          new_factor.add(BetweenFactor<Pose3>(key_, other_key, ToGtsam(delta),
+                                              ToGtsam(covariance)));
+          
+          // Optimization                                
+          isam_->update(new_factor, Values());
+          closed_loop = true;
+
+          // Store for visualization and output.
+          loop_edges_.push_back(std::make_pair(key_, other_key));
+
+          // Send an empty message notifying any subscribers that we found a loop
+          // closure.
+          loop_closure_notifier_pub_.publish(std_msgs::Empty());
+
+          // break if a successful loop closure 
+          // break;
+        }
+      } else {
+        gu::Transform3 delta; // (Using BetweenChordalFactor)
+        LaserLoopClosure::Mat1212 covariance;
+        if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+
+          // We found a loop closure. Add it to the pose graph.
+          NonlinearFactorGraph new_factor;
+          new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key_, other_key, ToGtsam(delta),
+                                              ToGtsam(covariance)));
+          
+          // Optimization                                
+          isam_->update(new_factor, Values());
+          closed_loop = true;
+
+          // Store for visualization and output.
+          loop_edges_.push_back(std::make_pair(key_, other_key));
+
+          // Send an empty message notifying any subscribers that we found a loop
+          // closure.
+          loop_closure_notifier_pub_.publish(std_msgs::Empty());
+
+          // break if a successful loop closure 
+          // break;
+        }
+      }
+      values_ = isam_->calculateEstimate();
+
+      nfg_ = isam_->getFactorsUnsafe();
+    } // end of if statement 
+  
+  return closed_loop;
+      }
+  }
+
 bool LaserLoopClosure::SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost){
   // Checks loop closures to see if the translational threshold is within limits
 
@@ -895,7 +985,6 @@ bool LaserLoopClosure::PerformICP(const PointCloud::ConstPtr& scan1,
   Eigen::Matrix4d body1_to_world;
   body1_to_world.block(0, 0, 3, 3) = R1;
   body1_to_world.block(0, 3, 3, 1) = t1;
-
   const Eigen::Matrix<double, 3, 3> R2 = pose2.rotation.Eigen();
   const Eigen::Matrix<double, 3, 1> t2 = pose2.translation.Eigen();
   Eigen::Matrix4d body2_to_world;

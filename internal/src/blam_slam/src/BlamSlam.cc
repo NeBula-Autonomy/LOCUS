@@ -593,7 +593,9 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     ROS_ERROR("%s: Output boolean for new keyframe is null.", name_.c_str());
     return false;
   }
-  unsigned int pose_key;
+
+  //TODO: do not hard code the value for pose_key.
+  unsigned int pose_key = 10000;
   if(map_loaded_) {
     // Add the new pose to the pose graph (BetweenFactor)
     // TODO rename to attitude and position sigma 
@@ -604,9 +606,13 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     for (int i = 3; i < 6; ++i)
       covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-    loop_closure_.AddFactorBetweenRobots(localization_.GetIncrementalEstimate(),
-                                        covariance, stamp, &pose_key);
-      map_loaded_= false;
+/*     loop_closure_.AddFactorBetweenRobots(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key); */
+     if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {
+      return false;
+    }
+     loop_closure_.FindIntermapLoopClosures();
+     map_loaded_= false;
     } else {
       if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)
