@@ -931,14 +931,14 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
                   new_values.at<Pose3>(key2).translation().vector().z());
     
 
-    // Set prior on rotation as a hack for 0 precision on rotation 
-    gtsam::Vector6 prior_precisions; // inverse of variances
-    prior_precisions.head<3>().setConstant(10.0); // rotation precision
-    prior_precisions.tail<3>().setConstant(0.0); //
-    static const gtsam::SharedNoiseModel& prior_noise =
-    gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
+    // // Set prior on rotation as a hack for 0 precision on rotation 
+    // gtsam::Vector6 prior_precisions; // inverse of variances
+    // prior_precisions.head<3>().setConstant(10.0); // rotation precision
+    // prior_precisions.tail<3>().setConstant(0.0); //
+    // static const gtsam::SharedNoiseModel& prior_noise =
+    // gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
 
-    new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12), prior_noise));
+    // new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12), prior_noise));
   }
 
   linPoint.insert(new_values); // insert new values
