@@ -4,7 +4,7 @@ from blam_slam.srv import SaveGraph
 
 def connect(filename):
     rospy.init_node('save_graph_client')
-    save_graph = rospy.ServiceProxy('/husky/blam_slam/save_graph', SaveGraph)
+    save_graph = rospy.ServiceProxy('/husky2/blam_slam/save_graph', SaveGraph)
     if save_graph(filename).success:
         print('Successfully saved the pose graph to %s.' % filename)
     else:

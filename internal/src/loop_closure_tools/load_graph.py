@@ -4,7 +4,7 @@ from blam_slam.srv import LoadGraph
 
 def connect(filename):
     rospy.init_node('load_graph_client')
-    load_graph = rospy.ServiceProxy('/husky/blam_slam/load_graph', LoadGraph)
+    load_graph = rospy.ServiceProxy('/husky2/blam_slam/load_graph', LoadGraph)
     if load_graph(filename).success:
         print('Successfully loaded from last saved graph')
     else:
