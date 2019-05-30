@@ -56,6 +56,7 @@
 
 #include <core_msgs/Artifact.h>
 #include <uwb_msgs/Anchor.h>
+#include <mesh_msgs/DroppedArtifact.h>
 
 class BlamSlam {
  public:
@@ -106,6 +107,10 @@ class BlamSlam {
   bool RemoveFactorService(blam_slam::RemoveFactorRequest &request,
                            blam_slam::RemoveFactorResponse &response);
 
+  // Drop UWB from a robot
+  bool DropUwbService(mesh_msgs::DroppedArtifactRequest &request,
+                      mesh_msgs::DroppedArtifactResponse &response);
+
   bool use_chordal_factor_;
 
   // Service to write the pose graph and all point clouds to a zip file.
@@ -148,6 +153,7 @@ class BlamSlam {
   ros::ServiceServer add_factor_srv_;
   ros::ServiceServer remove_factor_srv_;
   ros::ServiceServer save_graph_srv_;
+  ros::ServiceServer drop_uwb_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;

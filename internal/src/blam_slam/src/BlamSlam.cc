@@ -146,6 +146,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
   remove_factor_srv_ = nl.advertiseService("remove_factor", &BlamSlam::RemoveFactorService, this);
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
+  drop_uwb_srv_ = nl.advertiseService("drop_uwb_anchor", &BlamSlam::DropUwbService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -280,6 +281,13 @@ bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
                                 blam_slam::SaveGraphResponse &response) {
   std::cout << "Saving graph..." << std::endl;
   response.success = loop_closure_.Save(request.filename);
+  return true;
+}
+
+bool BlamSlam::DropUwbService(mesh_msgs::DroppedArtifactRequest &request,
+                              mesh_msgs::DroppedArtifactResponse &response) {
+  std::cout << "UWB anchor is dropped" << std::endl;
+  ROS_INFO_STREAM("Dropped UWB anchor is " + request.node.AnchorID);
   return true;
 }
 

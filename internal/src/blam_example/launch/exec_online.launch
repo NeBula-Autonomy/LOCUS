@@ -29,6 +29,9 @@
       <remap from="~artifact_relative" to="object_localizer/artifact_relative" />
       <remap from="~uwb_signal" to="comm/uwb/anchor" />
 
+      <!-- Serives -->
+      <remap from="~drop_uwb_anchor" to="drop_uwb_anchor"/>
+
       <!-- Initial pose -->
       <rosparam param="init">
         position: {x: 0.0, y: 0.0, z: 0.0}

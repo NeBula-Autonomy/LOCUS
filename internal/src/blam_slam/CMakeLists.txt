@@ -38,6 +38,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   core_msgs
   uwb_msgs
+  mesh_msgs
   geometry_msgs
   message_generation
 )
@@ -64,6 +65,7 @@ catkin_package(
     pcl_conversions
     core_msgs
     uwb_msgs
+    mesh_msgs
     geometry_msgs
   DEPENDS
     Boost
