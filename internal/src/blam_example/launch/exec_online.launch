@@ -53,7 +53,7 @@
       <rosparam file="$(find blam_example)/config/blam_frames.yaml" subst_value="true"/>
 
       <!-- List of UWB anchors -->
-      <rosparam file="$(find comm_node_manager)/config/dropped_items_list.yaml"/>
+      <rosparam file="$(find blam_example)/config/dropped_items_list.yaml"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>

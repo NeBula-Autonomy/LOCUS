@@ -275,6 +275,7 @@ class LaserLoopClosure {
   // UWB parameters
   std::unordered_map<std::string, gtsam::Key> uwb_id2key_hash_;
   double uwb_range_measurement_error_;
+  unsigned int uwb_range_compensation_;
 
   // ISAM2 optimizer object, and best guess pose values.
   #ifdef solver

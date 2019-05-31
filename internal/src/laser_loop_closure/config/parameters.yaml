@@ -52,3 +52,9 @@ poses_before_reclosing: 20 #10
 
 # UWB range measurement noise (standard deviation)
 uwb_range_measurement_error: 0.50
+
+# Selection of UWB range measurement compensation
+# 0 - No compensation
+# 1 - RangeFactor+BetweenFactor
+# 2 - Calculate a estimated range between a certain pose key and a UWB anchor
+uwb_range_compensation: 0 

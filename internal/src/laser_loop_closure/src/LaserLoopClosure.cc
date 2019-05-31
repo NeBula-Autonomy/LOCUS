@@ -170,6 +170,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   // UWB
   if (!pu::Get("uwb_range_measurement_error", uwb_range_measurement_error_)) return false;
+  if (!pu::Get("uwb_range_compensation", uwb_range_compensation_)) return false;
 
   std::cout << "before isam reset" << std::endl; 
   #ifndef solver
@@ -450,25 +451,45 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     new_values.insert(uwb_key, pose_uwb);
     linPoint.insert(new_values);
 
-    // Add a PriorFactor for the UWB key
-    gtsam::Vector6 prior_precisions;
-    prior_precisions.head<3>().setConstant(10.0);
-    prior_precisions.tail<3>().setConstant(0.0);
-    static const gtsam::SharedNoiseModel& prior_noise = 
-    gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
-    new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(uwb_key, gtsam::Pose3(), prior_noise));
+    switch (uwb_range_compensation_) {
+      case 0 : 
+      {
+        // Add a PriorFactor for the UWB key
+        gtsam::Vector6 prior_precisions;
+        prior_precisions.head<3>().setConstant(10.0);
+        prior_precisions.tail<3>().setConstant(0.0);
+        static const gtsam::SharedNoiseModel& prior_noise = 
+        gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
+        new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(uwb_key, gtsam::Pose3(), prior_noise));
 
-    // Add a BetweenFactor between the pose key and the UWB key
-    // gtsam::Vector6 precisions;
-    // precisions.head<3>().setConstant(0.0);
-    // precisions.tail<3>().setConstant(1.0/range);
-    // static const gtsam::SharedNoiseModel& noise = 
-    // gtsam::noiseModel::Diagonal::Precisions(precisions);
-    // // TODO
-    // new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(pose_key, uwb_key, gtsam::Pose3(), noise));
+        new_factor.add(gtsam::RangeFactor<Pose3, Pose3>(pose_key, uwb_key, range, rangeNoise));
+        uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
+      }
+        break;
+      case 1 :
+      {
+        // Add a BetweenFactor between the pose key and the UWB key
+        // gtsam::Vector6 precisions;
+        // precisions.head<3>().setConstant(0.0);
+        // precisions.tail<3>().setConstant(1.0/range);
+        // static const gtsam::SharedNoiseModel& noise = 
+        // gtsam::noiseModel::Diagonal::Precisions(precisions);
+        // // TODO
+        // new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(pose_key, uwb_key, gtsam::Pose3(), noise));
+      }
+        break;
+      case 2 :
+      {
 
-    new_factor.add(gtsam::RangeFactor<Pose3, Pose3>(pose_key, uwb_key, range, rangeNoise));
-    uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
+      }
+        break;
+      default :
+      {
+        // Error
+        ROS_INFO_STREAM("ERROR, wrong compensation selection");
+        // TODO handle the error
+      }
+    }
 
     try {
       std::cout << "Optimizing manual loop closure, iteration" << std::endl;
@@ -549,8 +570,30 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
 
     NonlinearFactorGraph new_factor;
 
-    new_factor.add(gtsam::RangeFactor<Pose3, Pose3>(pose_key, uwb_key, range, rangeNoise));
-    uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
+    switch (uwb_range_compensation_) {
+      case 0 :
+      {  
+        new_factor.add(gtsam::RangeFactor<Pose3, Pose3>(pose_key, uwb_key, range, rangeNoise));
+        uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
+      }
+        break;
+      case 1 :
+      {
+
+      }
+        break;
+      case 2 :
+      {
+
+      }
+        break;
+      default :
+      {
+        // Error
+        ROS_INFO_STREAM("ERROR, wrong compensation selection");
+        // TODO handle the error
+      }
+    }
 
     try {
       std::cout << "Optimizing manual loop closure, iteration" << std::endl;
