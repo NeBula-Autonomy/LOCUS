@@ -111,6 +111,12 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
 
+  // Load dropped item ids
+  if (!pu::Get("items/uwb_id", uwb_id_list_)) return false;
+  for (int i = 0; i < uwb_id_list_.size(); i++) {
+    uwb_drop_status_[uwb_id_list_[i]] = false;
+  }
+
   if (!pu::Get("use_chordal_factor", use_chordal_factor_))
     return false;
 
@@ -292,6 +298,8 @@ bool BlamSlam::DropUwbService(mesh_msgs::DroppedArtifactRequest &request,
 
   loop_closure_.DropUwbAnchor(request.node.AnchorID, request.node.DropTime, aug_robot_position);
 
+  uwb_drop_status_[request.node.AnchorID] = true;
+  
   return true;
 }
 
