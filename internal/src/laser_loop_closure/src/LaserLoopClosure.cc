@@ -2153,7 +2153,7 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
       // Update all artifacts - loop through all - the default
       // Get position and label 
       artifact_position = GetArtifactPosition(it->first);
-      artifact_label = it->second.label;
+      artifact_label = it->second.msg.label;
 
       // Increment update count
       it->second.num_updates++;
@@ -2165,14 +2165,14 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
       ROS_INFO("Publishing only the new artifact");
       // Get position and label 
       artifact_position = GetArtifactPosition(artifact_key);
-      artifact_label = artifact_key2info_hash[artifact_key].label;
+      artifact_label = artifact_key2info_hash[artifact_key].msg.label;
 
       // Increment update count
       artifact_key2info_hash[artifact_key].num_updates++; 
     }
 
     // Create new artifact msg 
-    core_msgs::Artifact new_msg;
+    core_msgs::Artifact new_msg = artifact_key2info_hash[artifact_key].msg;
 
     new_msg.point.point.x = artifact_position[0];
     new_msg.point.point.y = artifact_position[1];

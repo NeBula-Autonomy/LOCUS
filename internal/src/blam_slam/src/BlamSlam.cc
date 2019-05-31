@@ -430,7 +430,8 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
                                                   R_artifact_position[2]));
   R_pose_A.print("Between pose is ");
 
-  ArtifactInfo artifactinfo(msg.parent_id, msg.label);
+  ArtifactInfo artifactinfo(msg.parent_id);
+  artifactinfo.msg = msg;
 
   bool result = loop_closure_.AddArtifact(
     pose_key,

@@ -102,11 +102,11 @@ private:
 
 struct ArtifactInfo {
   std::string id; // this corresponds to parent_id
-  std::string label; // what object it is
+  core_msgs::Artifact msg; // All fields in the artifact message that we need
   int num_updates; // how many times the optimizer has updated this
-  ArtifactInfo(std::string art_id="",
-               std::string art_label="") :
-               id(art_id), label(art_label), num_updates(0){}
+  ArtifactInfo(std::string art_id="") :
+               id(art_id), 
+               num_updates(0){}
 };
 
 class LaserLoopClosure {
