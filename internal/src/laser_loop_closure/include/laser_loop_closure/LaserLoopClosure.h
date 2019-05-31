@@ -37,6 +37,9 @@
 #ifndef LASER_LOOP_CLOSURE_H
 #define LASER_LOOP_CLOSURE_H
 
+// enables correct operations of GTSAM (correct Jacobians)
+#define SLOW_BUT_CORRECT_BETWEENFACTOR 
+
 #include <ros/ros.h>
 #include <geometry_utils/Matrix3x3.h>
 #include <geometry_utils/Transform3.h>
