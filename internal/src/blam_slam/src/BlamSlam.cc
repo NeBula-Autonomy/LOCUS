@@ -490,9 +490,20 @@ void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
 }
 
 void BlamSlam::UwbSignalCallback(const uwb_msgs::Anchor& msg) {
-  map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
-  map_uwbid_time_data_[msg.id][msg.header.stamp].second
-  = localization_.GetIntegratedEstimate().translation.Eigen();
+  // TODO: Screening before entering into this subscriber
+  auto itr = uwb_drop_status_.find(msg.id);
+  if (itr != end(uwb_drop_status_)) {
+    if (itr->second == true) {
+      map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
+      map_uwbid_time_data_[msg.id][msg.header.stamp].second
+      = localization_.GetIntegratedEstimate().translation.Eigen();
+    }
+  }
+  else {
+    map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
+    map_uwbid_time_data_[msg.id][msg.header.stamp].second
+    = localization_.GetIntegratedEstimate().translation.Eigen();
+  }
 }
 
 void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
