@@ -3,13 +3,13 @@
 check_for_loop_closures: true
 
 # Whether or not consolidate artifacts
-use_artifact_loop_closure: true
+use_artifact_loop_closure: false
 
 # Make true to save a backup pointcloud before every loop closure.
-save_posegraph_backup: false
+save_posegraph_backup: true
 
 #Number of keyes between each saved backup
-keys_between_each_posegraph_backup: 10
+keys_between_each_posegraph_backup: 25
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
 loop_closure_optimizer: 0
