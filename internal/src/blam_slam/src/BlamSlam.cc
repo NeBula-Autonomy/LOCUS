@@ -286,8 +286,12 @@ bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
 
 bool BlamSlam::DropUwbService(mesh_msgs::DroppedArtifactRequest &request,
                               mesh_msgs::DroppedArtifactResponse &response) {
-  std::cout << "UWB anchor is dropped" << std::endl;
   ROS_INFO_STREAM("Dropped UWB anchor is " + request.node.AnchorID);
+
+  Eigen::Vector3d aug_robot_position = localization_.GetIntegratedEstimate().translation.Eigen();
+
+  loop_closure_.DropUwbAnchor(request.node.AnchorID, request.node.DropTime, aug_robot_position);
+
   return true;
 }
 

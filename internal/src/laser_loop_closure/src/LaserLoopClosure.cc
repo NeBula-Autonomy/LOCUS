@@ -622,6 +622,126 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
   return true;
 }
 
+bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
+                                     const ros::Time& stamp,
+                                     const Eigen::Vector3d robot_position) {
+  std::cout << "test" << std::endl;
+
+  gtsam::Key uwb_key;
+  if (uwb_id2key_hash_.find(uwb_id) != uwb_id2key_hash_.end()) {
+    uwb_key = uwb_id2key_hash_[uwb_id];
+  }
+  else {
+    uwb_key = gtsam::Symbol('u', uwb_id2key_hash_.size()+1);
+    uwb_id2key_hash_[uwb_id] = uwb_key;
+  }
+
+  gtsam::Values linPoint = isam_->getLinearizationPoint();
+  nfg_ = isam_->getFactorsUnsafe();
+  double cost; // for debugging
+
+  NonlinearFactorGraph new_factor;
+  gtsam::Values new_values;
+
+  gtsam::Key pose_key = GetKeyAtTime(stamp);
+
+  // Add a UWB key
+  gtsam::Pose3 pose_uwb = gtsam::Pose3(gtsam::Rot3(), gtsam::Point3(robot_position));
+  new_values.insert(uwb_key, pose_uwb);
+  linPoint.insert(new_values);
+
+  // Add a PriorFactor for the UWB key
+  gtsam::Vector6 prior_precisions;
+  prior_precisions.head<3>().setConstant(10.0);
+  prior_precisions.tail<3>().setConstant(0.0);
+  static const gtsam::SharedNoiseModel& prior_noise = 
+  gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
+  new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(uwb_key, gtsam::Pose3(), prior_noise));
+
+  // Add a BetweenFactor between the pose key and the UWB key
+  gtsam::Vector6 precisions;
+  precisions.head<3>().setConstant(0.0);
+  precisions.tail<3>().setConstant(1.0);
+  static const gtsam::SharedNoiseModel& noise = 
+  gtsam::noiseModel::Diagonal::Precisions(precisions);
+  // TODO
+  new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(pose_key, uwb_key, gtsam::Pose3(), noise));
+
+  uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
+
+
+  try {
+    std::cout << "Optimizing manual loop closure, iteration" << std::endl;
+    gtsam::Values result;
+
+    // Switch based on optimizer input
+    switch (loop_closure_optimizer_){
+      case 0 : // only do the above isam update 
+      {
+        // ISAM2
+        isam_->update(new_factor, new_values);
+        result = isam_->calculateEstimate();
+        nfg_ = NonlinearFactorGraph(isam_->getFactorsUnsafe());
+      }
+        break;
+      case 1 : 
+      {
+        // Levenberg Marquardt Optimizer
+        nfg_.add(new_factor); // add new factor (new values already inserted above)
+        std::cout << "Running LM optimization" << std::endl;
+        gtsam::LevenbergMarquardtParams params;
+        params.setVerbosityLM("SUMMARY");
+        result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
+      }
+        break;
+      default : 
+      {
+        // Error
+        ROS_INFO_STREAM("ERROR, wrong optimizer option");
+        // TODO handle the error
+      }
+    }
+
+    std::cout << "initial error = " << nfg_.error(linPoint) << std::endl;
+    std::cout << "final error = " << nfg_.error(result) << std::endl;
+    
+    // ----------------------------------------------
+    #ifndef solver
+    // Create the ISAM2 solver.
+    ISAM2Params parameters;
+    parameters.relinearizeSkip = relinearize_skip_;
+    parameters.relinearizeThreshold = relinearize_threshold_;
+    isam_.reset(new ISAM2(parameters));
+    #endif
+    #ifdef solver
+    isam_.reset(new GenericSolver());
+    #endif
+    // Update with the new graph
+    isam_->update(nfg_,result); 
+
+    // publish 
+    uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
+
+    // Update values
+    values_ = result;//
+
+    // INFO stream new cost
+    linPoint = isam_->getLinearizationPoint();
+    cost = nfg_.error(linPoint);
+    ROS_INFO_STREAM("Error at linearization point (after adding UWB RangeFactor): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)
+
+    PublishPoseGraph();
+
+    return true;
+  }
+  catch (...) {
+    ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
+    throw;
+  }
+
+  return true;
+}
+
 bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
                                       const PointCloud::ConstPtr& scan) {
   if (keyed_scans_.count(key)) {

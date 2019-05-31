@@ -131,6 +131,10 @@ class LaserLoopClosure {
                     const double range,
                     const Eigen::Vector3d robot_position);
   
+  bool DropUwbAnchor(const std::string uwb_id,
+                     const ros::Time& stamp,
+                     const Eigen::Vector3d robot_position);
+
   void PublishUwb();
 
   // Upon successful addition of a new between factor, call this function to
