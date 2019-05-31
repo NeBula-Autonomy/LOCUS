@@ -50,9 +50,9 @@ cmake .. -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON
 $ optional: sudo make check # (this would fail because of the EXMAP args)
 sudo make install
 ```
-**Note** 
+**Note:** 
 The reason why we need EXPMAP is for the correct calculation of Jacobians. 
-Enabling this and the `#define SLOW_BUT_CORRECT_BETWEENFACTOR` and LaserLoopCLosure.h are both important. Otherwise the default are some identity approximations for rotations, which works for some cases but fails for cases with manual loop closures, or artifacts. 
+Enabling this and the `#define SLOW_BUT_CORRECT_BETWEENFACTOR` in LaserLoopCLosure.h are both important. Otherwise the default are some identity approximations for rotations, which works for some cases but fails for cases with manual loop closures, or artifacts. 
 
 `OLD ADVICE ON BLAM`:
 
