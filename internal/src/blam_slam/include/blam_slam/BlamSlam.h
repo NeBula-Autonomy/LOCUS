@@ -56,7 +56,7 @@
 
 #include <core_msgs/Artifact.h>
 #include <uwb_msgs/Anchor.h>
-#include <mesh_msgs/DroppedArtifact.h>
+#include <mesh_msgs/DroppedItems.h>
 
 class BlamSlam {
  public:
@@ -108,8 +108,8 @@ class BlamSlam {
                            blam_slam::RemoveFactorResponse &response);
 
   // Drop UWB from a robot
-  bool DropUwbService(mesh_msgs::DroppedArtifactRequest &request,
-                      mesh_msgs::DroppedArtifactResponse &response);
+  bool DropUwbService(mesh_msgs::DroppedItemsRequest &request,
+                      mesh_msgs::DroppedItemsResponse &response);
 
   bool use_chordal_factor_;
 
