@@ -704,7 +704,7 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
   // Add a BetweenFactor between the pose key and the UWB key
   gtsam::Vector6 precisions;
   precisions.head<3>().setConstant(0.0);
-  precisions.tail<3>().setConstant(1.0);
+  precisions.tail<3>().setConstant(4.0);
   static const gtsam::SharedNoiseModel& noise = 
   gtsam::noiseModel::Diagonal::Precisions(precisions);
   // TODO
