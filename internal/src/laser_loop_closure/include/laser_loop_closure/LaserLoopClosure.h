@@ -164,16 +164,16 @@ class LaserLoopClosure {
   bool FindLoopClosures(unsigned int key,
                         std::vector<unsigned int>* closure_keys);
 
-  //Function to add factor between robots
-  bool AddFactorBetweenRobots(const geometry_utils::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
-    const ros::Time& stamp, unsigned int* key);
-
   // Build a 3D point cloud by concatenating all point clouds from poses along
   // the pose graph.
   bool GetMaximumLikelihoodPoints(PointCloud* map);
 
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
+  unsigned int GetKey() const;
+
+  bool AddFactorAtRestart(const geometry_utils::Transform3& delta,const LaserLoopClosure::Mat66& covariance);
+  bool AddFactorAtLoad(const geometry_utils::Transform3& delta,const LaserLoopClosure::Mat66& covariance);
 
   // Get the most initial pose in the pose graph.
   geometry_utils::Transform3 GetInitialPose() const;
@@ -255,7 +255,7 @@ class LaserLoopClosure {
       const gtsam::Pose3& pose, const Diagonal::shared_ptr& covariance);
   gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
-  gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenRobotFactor(
+  gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenFactorAtLoad(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
   gtsam::BetweenChordalFactor<gtsam::Pose3> MakeBetweenChordalFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
@@ -292,6 +292,7 @@ class LaserLoopClosure {
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
   bool save_posegraph_backup_;
+  bool LAMP_recovery_;
   unsigned int keys_between_each_posegraph_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
