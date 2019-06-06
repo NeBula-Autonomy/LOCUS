@@ -47,8 +47,6 @@ translation_threshold_nodes: 1.0  # For adding nodes to pose graph
 # that are within this distance of the current pose.
 proximity_threshold: 4
 
-intermap_proximity_threshold: 6
-
 # To compute a loop closure we perform ICP between the current scan and laser
 # scans captured from nearby poses. In order to be considered a loop closure,
 # the ICP "fitness score" must be less than this number.

@@ -126,6 +126,9 @@ class BlamSlam {
   // The delta between where LAMP was last saved, and where it is restarted.
   geometry_utils::Transform3 delta_after_restart_;
 
+  geometry_utils::Transform3 delta_after_load_;
+  
+
 
   // Update rates and callback timers.
   double estimate_update_rate_;

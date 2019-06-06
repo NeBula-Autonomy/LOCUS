@@ -137,7 +137,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("translation_threshold_nodes", translation_threshold_nodes_))
     return false;
   if (!pu::Get("proximity_threshold", proximity_threshold_)) return false;
-  if (!pu::Get("intermap_proximity_threshold", intermap_proximity_threshold_)) return false;
   if (!pu::Get("max_tolerable_fitness", max_tolerable_fitness_)) return false;
   if (!pu::Get("skip_recent_poses", skip_recent_poses_)) return false;
   if (!pu::Get("poses_before_reclosing", poses_before_reclosing_)) return false;
@@ -288,6 +287,52 @@ bool LaserLoopClosure::AddFactorAtRestart(const gu::Transform3& delta, const Las
   Values new_value;
   new_factor.add(MakeBetweenFactor(odometry_, ToGtsam(covariance)));
   new_value.insert(key_, last_pose.compose(odometry_));
+  // TODO Compose covariances at the same time as odometry
+   // Update ISAM2.
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
+  // Update class variables
+  values_ = isam_->calculateEstimate();
+
+  nfg_ = isam_->getFactorsUnsafe();
+
+  key_++;
+
+  return true;
+}
+
+bool LaserLoopClosure::AddFactorAtLoad(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance){
+  // Append the new odometry.
+  Pose3 new_odometry = ToGtsam(delta);
+
+  // Is the odometry translation large enough to add a new node to the graph
+  odometry_ = odometry_.compose(new_odometry);
+  //add a new factor
+  Pose3 first_pose = values_.at<Pose3>(0);
+
+  NonlinearFactorGraph new_factor;
+  Values new_value;
+  new_factor.add(MakeBetweenFactorAtLoad(odometry_, ToGtsam(covariance)));
+  new_value.insert(key_, first_pose.compose(odometry_));
   // TODO Compose covariances at the same time as odometry
    // Update ISAM2.
   try{
@@ -706,95 +751,6 @@ bool LaserLoopClosure::FindLoopClosures(
   return closed_loop;
 }
 
-bool LaserLoopClosure::FindIntermapLoopClosures() {
-
-  // Get pose and scan for the provided key.
-  //TODO: Figure out how to assign initial value to the key
-
-//  const gu::Transform3 pose1 = ToGu(gtsam::Pose3::identity());
-  gu::Transform3 pose1 = gu::Transform3::Identity();
-
-  //const gu::Transform3 pose1;
-  //gu::Transform3 t2(gu::Vec3(0, 0, 0), gu::Rot3(0, 0, 0));
-  const PointCloud::ConstPtr scan1 = keyed_scans_[key_];
-  // Iterate through past poses and find those that lie close to the most
-  // recently added one.
-  bool closed_loop = false;
-  for (const auto& keyed_pose : values_) {
-    const unsigned int other_key = keyed_pose.key;
-    // Don't self-check.
-    if (other_key == key_)
-      continue;
-
-    // Don't check for loop closures against poses that are not keyframes.
-    if (!keyed_scans_.count(other_key))
-      continue;
-    
-    const gu::Transform3 pose2 = ToGu(values_.at<Pose3>(other_key));
-    const gu::Transform3 difference = gu::PoseDelta(pose1, pose2);
-    if (difference.translation.Norm() < intermap_proximity_threshold_) {
-      // Found a potential loop closure! Perform ICP between the two scans to
-      // determine if there really is a loop to close.
-      const PointCloud::ConstPtr scan2 = keyed_scans_[other_key];
-      if (!use_chordal_factor_) {
-        gu::Transform3 delta; // (Using BetweenFactor)
-        LaserLoopClosure::Mat66 covariance;
-        if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-          // We found a loop closure. Add it to the pose graph.
-
-          NonlinearFactorGraph new_factor;
-          
-          new_factor.add(BetweenFactor<Pose3>(key_, other_key, ToGtsam(delta),
-                                              ToGtsam(covariance)));
-          
-          // Optimization                                
-          isam_->update(new_factor, Values());
-          closed_loop = true;
-
-          // Store for visualization and output.
-          loop_edges_.push_back(std::make_pair(key_, other_key));
-
-          // Send an empty message notifying any subscribers that we found a loop
-          // closure.
-          loop_closure_notifier_pub_.publish(std_msgs::Empty());
-
-          // break if a successful loop closure 
-          // break;
-        }
-      } else {
-        gu::Transform3 delta; // (Using BetweenChordalFactor)
-        LaserLoopClosure::Mat1212 covariance;
-        if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-
-          // We found a loop closure. Add it to the pose graph.
-          NonlinearFactorGraph new_factor;
-          new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key_, other_key, ToGtsam(delta),
-                                              ToGtsam(covariance)));
-          
-          // Optimization                                
-          isam_->update(new_factor, Values());
-          closed_loop = true;
-
-          // Store for visualization and output.
-          loop_edges_.push_back(std::make_pair(key_, other_key));
-
-          // Send an empty message notifying any subscribers that we found a loop
-          // closure.
-          loop_closure_notifier_pub_.publish(std_msgs::Empty());
-
-          // break if a successful loop closure 
-          // break;
-        }
-      }
-      values_ = isam_->calculateEstimate();
-
-      nfg_ = isam_->getFactorsUnsafe();
-    } // end of if statement 
-  
-  return closed_loop;
-      }
-  }
-
 bool LaserLoopClosure::SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost){
   // Checks loop closures to see if the translational threshold is within limits
 
@@ -989,12 +945,11 @@ BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactor(
   return BetweenFactor<Pose3>(key_-1, key_, delta, covariance);
 }
 
-BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenRobotFactor(
-    unsigned int other_key,
+BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactorAtLoad(
     const Pose3& delta,
     const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
   odometry_edges_.push_back(std::make_pair(0, key_));
-  return BetweenFactor<Pose3>(other_key, key_, delta, covariance);
+  return BetweenFactor<Pose3>(0, key_, delta, covariance);
 }
 
 gtsam::BetweenChordalFactor<Pose3> LaserLoopClosure::MakeBetweenChordalFactor(
@@ -1523,110 +1478,6 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   // PublishPoseGraph();
 
   return true; //result.getVariablesReeliminated() > 0;
-}
-
-bool LaserLoopClosure::AddFactorBetweenRobots(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
-    const ros::Time& stamp, unsigned int* key) {
-  if (key == NULL) {
-    ROS_ERROR("%s: Output key is null.", name_.c_str());
-    return false;
-  }
-  // Append the new odometry.
-  //TODO: Replace delta with delta computed from a function given R1 and R2 pose
-  gu::Transform3 delta1 = gu::Transform3::Identity();
-  Pose3 new_odometry = ToGtsam(delta1);
-  // CHANGE TO CONFLICT THE BELOW STATEMENT
-  // We always add new poses, but only return true if the pose is far enough
-  // away from the last one (keyframes). This lets the caller know when they
-  // can add a laser scan.
-
-  // Is the odometry translation large enough to add a new node to the graph
-  odometry_ = odometry_.compose(new_odometry);
-  odometry_kf_ = odometry_kf_.compose(new_odometry);
-
-
-  const gu::Transform3 pose1 = ToGu(values_.at<Pose3>(100));
-  const PointCloud::ConstPtr scan1 = keyed_scans_[key_];
-  bool closed_loop = false;
-  for (const auto& keyed_pose : values_) {
-    const unsigned int other_key = keyed_pose.key;
-
-    // Don't self-check.
-    if (other_key == key_)
-      continue;
-
-    // Don't check for loop closures against poses that are not keyframes.
-    if (!keyed_scans_.count(other_key))
-      continue;
-
-    const gu::Transform3 pose2 = ToGu(values_.at<Pose3>(other_key));
-    const gu::Transform3 difference = gu::PoseDelta(pose1, pose2);
-    if (difference.translation.Norm() < proximity_threshold_) {
-      // Found a potential loop closure! Perform ICP between the two scans to
-      // determine if there really is a loop to close.
-      const PointCloud::ConstPtr scan2 = keyed_scans_[other_key];
-      gu::Transform3 delta; // (Using BetweenFactor)
-      LaserLoopClosure::Mat66 covariance;
-      if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
-        closed_loop = true;
-        // Function to save the posegraph regularly
-          // Add a new factor
-        NonlinearFactorGraph new_factor;
-        Values new_value;
-         //TODO: Don't hard code the zero value in this function.
-        new_factor.add(MakeBetweenRobotFactor(other_key, odometry_, ToGtsam(covariance)));
-        // TODO Compose covariances at the same time as odometry
-
-        Pose3 last_pose = values_.at<Pose3>(other_key);
-        ROS_INFO("Key_ = %i", key_);
-        new_value.insert(key_, last_pose.compose(odometry_));
-
-          //TODO: Check if we still need this.
-        // Update ISAM2.
-        try{
-          isam_->update(new_factor, new_value); 
-        } catch (...){
-          // redirect cout to file
-          std::ofstream nfgFile;
-          std::string home_folder(getenv("HOME"));
-          nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
-          std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
-          std::cout.rdbuf(nfgFile.rdbuf());
-
-          // save entire factor graph to file and debug if loop closure is correct
-          gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
-          nfg.print();
-          nfgFile.close();
-
-          std::cout.rdbuf(coutbuf); //reset to standard output again
-
-          ROS_ERROR("ISAM update error in AddBetweenFactors");
-          throw;
-        }
-      }
-    }
-    if (closed_loop) 
-      break;
-  }
-  
-  // Update class variables
-  values_ = isam_->calculateEstimate();
-
-  nfg_ = isam_->getFactorsUnsafe();
-
-  // Adding poses to stored hash maps
-  // Store this timestamp so that we can publish the pose graph later.
-  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
-  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
-
-  // Assign output and get ready to go again!
-  *key = key_++;
-
-  // Reset odometry to identity
-  odometry_ = Pose3::identity();
-
-  odometry_kf_ = Pose3::identity();
-  return true;
 }
 
 bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int key2) {
