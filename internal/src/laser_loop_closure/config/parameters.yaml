@@ -57,4 +57,7 @@ uwb_range_measurement_error: 0.50
 # 0 - No compensation
 # 1 - RangeFactor+BetweenFactor
 # 2 - Calculate a estimated range between a certain pose key and a UWB anchor
-uwb_range_compensation: 0 
+uwb_range_compensation: 0
+
+# Optimizer selection for UWB factors: 0 - ISAM2, 1 - LM
+uwb_factor_optimizer: 1

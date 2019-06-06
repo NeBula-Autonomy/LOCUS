@@ -171,6 +171,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // UWB
   if (!pu::Get("uwb_range_measurement_error", uwb_range_measurement_error_)) return false;
   if (!pu::Get("uwb_range_compensation", uwb_range_compensation_)) return false;
+  if (!pu::Get("uwb_factor_optimizer", uwb_factor_optimizer_)) return false;
 
   std::cout << "before isam reset" << std::endl; 
   #ifndef solver
@@ -486,7 +487,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       gtsam::Values result;
 
       // Switch based on optimizer input
-      switch (loop_closure_optimizer_){
+      switch (uwb_factor_optimizer_){
         case 0 : // only do the above isam update 
         {
           // ISAM2
@@ -590,7 +591,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       gtsam::Values result;
 
       // Switch based on optimizer input
-      switch (loop_closure_optimizer_){
+      switch (uwb_factor_optimizer_){
         case 0 : // only do the above isam update 
         {
           // ISAM2
@@ -707,7 +708,7 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
     gtsam::Values result;
 
     // Switch based on optimizer input
-    switch (loop_closure_optimizer_){
+    switch (uwb_factor_optimizer_){
       case 0 : // only do the above isam update 
       {
         // ISAM2
@@ -2173,7 +2174,6 @@ void LaserLoopClosure::PublishPoseGraph() {
     }
   }
 
-  // UWB
   PublishUwb();
 
 }
