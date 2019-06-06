@@ -305,6 +305,7 @@ bool LaserLoopClosure::AddBetweenFactor(
   new_factor.add(MakeBetweenFactor(odometry_, ToGtsam(covariance)));
   // TODO Compose covariances at the same time as odometry
 
+  ROS_INFO("Checking for key %d",key_-1);
   Pose3 last_pose = values_.at<Pose3>(key_-1);
   new_value.insert(key_, last_pose.compose(odometry_));
 
@@ -314,7 +315,7 @@ bool LaserLoopClosure::AddBetweenFactor(
   Values values_temp = isam_->getLinearizationPoint();
   values_temp.insert(key_, last_pose.compose(odometry_));
   double cost_old = nfg_temp.error(values_temp); // Assume values is up to date - no new values
-  //ROS_INFO("Cost before optimization is: %f", cost_old);
+  ROS_INFO("Cost before optimization is: %f", cost_old);
 
   // Update ISAM2.
   try{
@@ -338,18 +339,22 @@ bool LaserLoopClosure::AddBetweenFactor(
     throw;
   }
   
+  ROS_INFO("Pre calculateEtimate");
   // Update class variables
   values_ = isam_->calculateEstimate();
 
+  ROS_INFO("Pre getFacrorsUnsafe");
   nfg_ = isam_->getFactorsUnsafe();
 
   // Get updated cost
+  ROS_INFO("Getting cost");
   double cost = nfg_.error(values_);
 
   //ROS_INFO("Cost after optimization is: %f", cost);
 
   // Do sanity check on result
   bool b_accept_update;
+  ROS_INFO("Starting sanity check");
   if (b_check_deltas_ && values_backup_.exists(key_-1)){ // Only check if the values_backup has been stored (a loop closure has occured)
     ROS_INFO("Sanity checking output");
     b_accept_update = SanityCheckForLoopClosure(translational_sanity_check_odom_, cost_old, cost);
@@ -389,7 +394,7 @@ bool LaserLoopClosure::AddBetweenFactor(
 }
 
 //function to change keynumber for multiple robots
-bool LaserLoopClosure::ChageKeyNumber(){
+bool LaserLoopClosure::ChangeKeyNumber(){
     key_ = 10000;
 }
 
@@ -2292,6 +2297,7 @@ void GenericSolver::update(gtsam::NonlinearFactorGraph nfg,
 
   // Do not optimize for just odometry additions 
   // odometry values would not have prefix 'l' unlike artifact values
+  // TODO change this for handling more node types (i.e. uwbs)
   if (nfg.size() == 1 && values.size() == 1) {
     const gtsam::Symbol symb(values.keys()[0]); 
     if (symb.chr() != 'l') {do_optimize = false;}

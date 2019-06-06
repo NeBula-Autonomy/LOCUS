@@ -177,7 +177,7 @@ class LaserLoopClosure {
   // Publish artifacts for visualization. 
   void PublishArtifacts(gtsam::Key artifact_key = '-1');
 
-  bool ChageKeyNumber();
+  bool ChangeKeyNumber();
   
   // makeMenuMaker
   void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;

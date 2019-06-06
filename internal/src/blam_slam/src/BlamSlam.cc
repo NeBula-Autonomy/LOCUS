@@ -320,7 +320,7 @@ bool BlamSlam::LoadGraphService(blam_slam::LoadGraphRequest &request,
   mapper_.Reset();
   PointCloud::Ptr unused(new PointCloud);
   mapper_.InsertPoints(regenerated_map, unused.get());
-  loop_closure_.ChageKeyNumber();
+  loop_closure_.ChangeKeyNumber();
 
   // Also reset the robot's estimated position.
   localization_.SetIntegratedEstimate(loop_closure_.GetInitialPose());
@@ -621,6 +621,7 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
 
   unsigned int pose_key;
   if(map_loaded_) {
+    ROS_INFO("Map is loaded, adding factors between robots");
     // Add the new pose to the pose graph (BetweenFactor)
     // TODO rename to attitude and position sigma 
     gu::MatrixNxNBase<double, 6> covariance;
