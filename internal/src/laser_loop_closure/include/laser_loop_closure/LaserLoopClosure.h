@@ -74,7 +74,7 @@
 #include <vector>
 
 // default is isam, LM for LevenbergMarquardt
-#define solver LM 
+// #define solver LM 
 
 class GenericSolver {
 public:
@@ -302,7 +302,6 @@ class LaserLoopClosure {
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
   ros::Publisher confirm_edge_pub_;
-  // UWB
   ros::Publisher uwb_node_pub_;
   ros::Publisher uwb_edge_pub_;
 
@@ -316,7 +315,6 @@ class LaserLoopClosure {
   typedef std::pair<unsigned int, unsigned int> Edge;
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
-  // UWB
   std::vector<std::pair<unsigned int, gtsam::Key>> uwb_edges_;
 
   // For filtering laser scans prior to ICP.

@@ -43,5 +43,3 @@ internal/install_isolated
 
 # CSV files
 *.csv
-
-run_blam_test.sh
