@@ -155,7 +155,7 @@ class LaserLoopClosure {
 
   // Build a 3D point cloud by concatenating all point clouds from poses along
   // the pose graph.
-  void GetMaximumLikelihoodPoints(PointCloud* map);
+  bool GetMaximumLikelihoodPoints(PointCloud* map);
 
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
@@ -172,7 +172,7 @@ class LaserLoopClosure {
   Eigen::Vector3d GetArtifactPosition(const gtsam::Key artifact_key) const;
 
   // Publish pose graph for visualization.
-  void PublishPoseGraph();
+  bool PublishPoseGraph();
 
   // Publish artifacts for visualization. 
   void PublishArtifacts(gtsam::Key artifact_key = '-1');
