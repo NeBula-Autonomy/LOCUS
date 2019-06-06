@@ -70,3 +70,14 @@ b_check_deltas: false
 # Sanity check thresholds
 translational_sanity_check_lc: 100
 translational_sanity_check_odom: 3
+# UWB range measurement noise (standard deviation)
+uwb_range_measurement_error: 0.50
+
+# Selection of UWB range measurement compensation
+# 0 - No compensation
+# 1 - RangeFactor+BetweenFactor
+# 2 - Calculate a estimated range between a certain pose key and a UWB anchor
+uwb_range_compensation: 0
+
+# Optimizer selection for UWB factors: 0 - ISAM2, 1 - LM
+uwb_factor_optimizer: 1

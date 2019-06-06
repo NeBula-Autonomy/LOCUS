@@ -10,6 +10,7 @@ Panels:
         - /3D Incremental Octree1/Autocompute Value Bounds1
         - /3D Octree1
         - /Marker1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 359
   - Class: rviz/Selection
@@ -24,6 +25,7 @@ Panels:
   - Class: rviz/Views
     Expanded:
       - /Current View1
+      - /Current View1/Focal Point1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
@@ -286,6 +288,22 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
+      Marker Topic: /husky/blam_slam/uwb_edges
+      Name: UWB Edges
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/uwb_nodes
+      Name: UWB Nodes
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
       Marker Topic: /husky/blam_slam/loop_edges
       Name: Loop Edges
       Namespaces:
@@ -312,7 +330,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -329,7 +347,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /husky/blam_slam/closure_area
