@@ -425,10 +425,6 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     uwb_id2key_hash_[uwb_id] = uwb_key;
   }
 
-  std::cout << "UWB ID is " << uwb_id;
-  gtsam::PrintKey(uwb_key, ", UWB Key is ");
-  std::cout << std::endl;
-
   // TODO: Range measurement error may depend on a distance between a transmitter and a receiver
   double sigmaR = uwb_range_measurement_error_;
   gtsam::noiseModel::Base::shared_ptr gaussian = gtsam::noiseModel::Isotropic::Sigma(1, sigmaR);
@@ -486,7 +482,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     }
 
     try {
-      std::cout << "Optimizing uwb-based loop closure, iteration" << std::endl;
+      ROS_INFO("Optimizing uwb-based loop closure, iteration");
       gtsam::Values result;
 
       // Switch based on optimizer input
@@ -503,7 +499,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         {
           // Levenberg Marquardt Optimizer
           nfg_.add(new_factor); // add new factor (new values already inserted above)
-          std::cout << "Running LM optimization" << std::endl;
+          ROS_INFO("Running LM optimization");
           gtsam::LevenbergMarquardtParams params;
           params.setVerbosityLM("SUMMARY");
           result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
@@ -517,8 +513,8 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         }
       }
 
-      std::cout << "initial error = " << nfg_.error(linPoint) << std::endl;
-      std::cout << "final error = " << nfg_.error(result) << std::endl;
+      ROS_INFO_STREAM("initial error = " << nfg_.error(linPoint));
+      ROS_INFO_STREAM("final error = " << nfg_.error(result));
       
       // ----------------------------------------------
       #ifndef solver
@@ -590,7 +586,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     }
 
     try {
-      std::cout << "Optimizing uwb-based loop closure, iteration" << std::endl;
+      ROS_INFO_STREAM("Optimizing uwb-based loop closure, iteration");
       gtsam::Values result;
 
       // Switch based on optimizer input
@@ -607,7 +603,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         {
           // Levenberg Marquardt Optimizer
           nfg_.add(new_factor); // add new factor (new values already inserted above)
-          std::cout << "Running LM optimization" << std::endl;
+          ROS_INFO_STREAM("Running LM optimization");
           gtsam::LevenbergMarquardtParams params;
           params.setVerbosityLM("SUMMARY");
           result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
@@ -621,8 +617,8 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         }
       }
 
-      std::cout << "initial error = " << nfg_.error(linPoint) << std::endl;
-      std::cout << "final error = " << nfg_.error(result) << std::endl;
+      ROS_INFO_STREAM("initial error = " << nfg_.error(linPoint));
+      ROS_INFO_STREAM("final error = " << nfg_.error(result));
 
       // ----------------------------------------------
       #ifndef solver
@@ -707,7 +703,7 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
 
 
   try {
-    std::cout << "Optimizing uwb-based loop closure, iteration" << std::endl;
+    ROS_INFO_STREAM("Optimizing uwb-based loop closure, iteration");
     gtsam::Values result;
 
     // Switch based on optimizer input
@@ -724,7 +720,7 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
       {
         // Levenberg Marquardt Optimizer
         nfg_.add(new_factor); // add new factor (new values already inserted above)
-        std::cout << "Running LM optimization" << std::endl;
+        ROS_INFO("Running LM optimization");
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("SUMMARY");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
@@ -738,8 +734,8 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
       }
     }
 
-    std::cout << "initial error = " << nfg_.error(linPoint) << std::endl;
-    std::cout << "final error = " << nfg_.error(result) << std::endl;
+    ROS_INFO_STREAM("initial error = " << nfg_.error(linPoint));
+    ROS_INFO_STREAM("final error = " << nfg_.error(result));
     
     // ----------------------------------------------
     #ifndef solver

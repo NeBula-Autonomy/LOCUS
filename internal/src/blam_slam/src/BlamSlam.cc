@@ -424,9 +424,9 @@ void BlamSlam::UwbTimerCallback(const ros::TimerEvent& ev) {
 
   // Show range data for debug
   for (auto itr = map_uwbid_time_data_.begin(); itr != map_uwbid_time_data_.end(); itr++) {
-    std::cout << "UWB-ID: " << itr->first << std::endl;
+    ROS_DEBUG_STREAM("UWB-ID: " + itr->first);
     for (auto itr_child = (itr->second).begin(); itr_child != (itr->second).end(); itr_child++) {
-      std::cout << "time = " << itr_child->first << ", range = " << itr_child->second.first << std::endl;
+      ROS_DEBUG_STREAM("time = " << itr_child->first << ", range = " << itr_child->second.first);
     }
   }
 
@@ -443,7 +443,7 @@ void BlamSlam::UwbTimerCallback(const ros::TimerEvent& ev) {
           itr->second.clear();
         }
         else {
-          std::cout << "Number of range measurement is NOT enough" << std::endl;
+          ROS_INFO("Number of range measurement is NOT enough");
           itr->second.clear();
         }
         
@@ -453,7 +453,7 @@ void BlamSlam::UwbTimerCallback(const ros::TimerEvent& ev) {
 }
 
 void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
-  std::cout << "Start to process UWB range measurement data of " << uwb_id << std::endl;
+  ROS_INFO_STREAM("Start to process UWB range measurement data of " << uwb_id);
 
   std::map<double, ros::Time> map_range_time_;
 
@@ -468,7 +468,7 @@ void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
   Eigen::Vector3d aug_robot_position = map_uwbid_time_data_[uwb_id][aug_time].second;
 
   if (loop_closure_.AddUwbFactor(uwb_id, aug_time, aug_range, aug_robot_position)) {
-    std::cout << "Updating the map" << std::endl;
+    ROS_INFO("Updating the map by UWB data");
     PointCloud::Ptr regenerated_map(new PointCloud);
     loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
 
@@ -485,7 +485,7 @@ void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
     // Publish updated map
     mapper_.PublishMap();
 
-    std::cout << "Updated the map by UWB Range Factors" << std::endl;
+    ROS_INFO("Updated the map by UWB Range Factors");
   }
 }
 
