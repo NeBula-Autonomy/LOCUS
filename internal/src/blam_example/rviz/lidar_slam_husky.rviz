@@ -10,6 +10,7 @@ Panels:
         - /3D Incremental Octree1/Autocompute Value Bounds1
         - /3D Octree1
         - /Marker1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 363
   - Class: rviz/Selection
@@ -20,10 +21,11 @@ Panels:
       - /2D Nav Goal1
       - /Publish Point1
     Name: Tool Properties
-    Splitter Ratio: 0.5886790156364441
+    Splitter Ratio: 0.588679016
   - Class: rviz/Views
     Expanded:
       - /Current View1
+      - /Current View1/Focal Point1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
@@ -44,7 +46,7 @@ Visualization Manager:
       Color: 160; 160; 164
       Enabled: false
       Line Style:
-        Line Width: 0.029999999329447746
+        Line Width: 0.0299999993
         Value: Lines
       Name: Grid
       Normal Cell Count: 0
@@ -58,7 +60,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/TF
       Enabled: false
-      Frame Timeout: 1e+8
+      Frame Timeout: 100000000
       Frames:
         All Enabled: false
       Marker Scale: 1
@@ -73,8 +75,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.2648072242736816
-        Min Value: -1.0782254934310913
+        Max Value: 2.26480722
+        Min Value: -1.07822549
         Value: true
       Axis: Z
       Channel Name: ring
@@ -93,7 +95,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 2
-      Size (m): 0.019999999552965164
+      Size (m): 0.0199999996
       Style: Points
       Topic: /husky/blam_slam/base_frame_point_cloud
       Unreliable: false
@@ -115,15 +117,15 @@ Visualization Manager:
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 5.003359794616699
+      Max Intensity: 5.00335979
       Min Color: 0; 0; 0
-      Min Intensity: -2.5538198947906494
+      Min Intensity: -2.55381989
       Name: Odometry Query
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.10000000149011612
+      Size (m): 0.100000001
       Style: Points
       Topic: /husky/blam_slam/odometry_query_points
       Unreliable: false
@@ -153,7 +155,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.10000000149011612
+      Size (m): 0.100000001
       Style: Points
       Topic: /husky/blam_slam/octree_map_updates
       Unreliable: false
@@ -183,7 +185,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 2
-      Size (m): 0.009999999776482582
+      Size (m): 0.00999999978
       Style: Points
       Topic: /husky/blam_slam/localization_query_points
       Unreliable: false
@@ -213,7 +215,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 2
-      Size (m): 0.009999999776482582
+      Size (m): 0.00999999978
       Style: Points
       Topic: /husky/blam_slam/localization_reference_points
       Unreliable: false
@@ -243,7 +245,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 2
-      Size (m): 0.009999999776482582
+      Size (m): 0.00999999978
       Style: Points
       Topic: /husky/blam_slam/localization_aligned_points
       Unreliable: false
@@ -273,7 +275,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 1
-      Size (m): 0.009999999776482582
+      Size (m): 0.00999999978
       Style: Points
       Topic: /husky/blam_slam/octree_map_updates
       Unreliable: false
@@ -284,6 +286,22 @@ Visualization Manager:
       Enabled: true
       Marker Topic: /husky/blam_slam/odometry_edges
       Name: Odometry Edges
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/uwb_edges
+      Name: UWB Edges
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/uwb_nodes
+      Name: UWB Nodes
       Namespaces:
         husky/blam: true
       Queue Size: 100
@@ -316,7 +334,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -333,7 +351,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /husky/blam_slam/closure_area
@@ -395,7 +413,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.00999999978
       Style: Points
       Topic: /husky/blam_slam/loop_closure_scan2
       Unreliable: false
@@ -453,15 +471,15 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Axes Length: 1
-      Axes Radius: 0.10000000149011612
+      Axes Radius: 0.100000001
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
-      Head Length: 0.30000001192092896
-      Head Radius: 0.10000000149011612
+      Head Length: 0.300000012
+      Head Radius: 0.100000001
       Name: BLAM_pose
       Shaft Length: 1
-      Shaft Radius: 0.05000000074505806
+      Shaft Radius: 0.0500000007
       Shape: Arrow
       Topic: /husky/blam_slam/localization_integrated_estimate
       Unreliable: false
@@ -535,7 +553,7 @@ Visualization Manager:
       Class: rviz/Orbit
       Distance: 104.67640686035156
       Enable Stereo Rendering:
-        Stereo Eye Separation: 0.05999999865889549
+        Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
@@ -544,11 +562,11 @@ Visualization Manager:
         Y: -12.446380615234375
         Z: -0.7712502479553223
       Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
+      Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Near Clip Distance: 0.00999999978
+      Pitch: 0.664797187
       Target Frame: base
       Value: Orbit (rviz)
       Yaw: 1.5447773933410645

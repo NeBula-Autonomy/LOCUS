@@ -27,6 +27,10 @@
       <remap from="~pcld" to="velodyne_points/transformed"/>
       <remap from="~artifact" to="~artifact_global" />
       <remap from="~artifact_relative" to="artifact_reconciliation/reconciled_artifact" />
+      <remap from="~uwb_signal" to="comm/uwb/anchor" />
+
+      <!-- Serives -->
+      <remap from="~drop_uwb_anchor" to="drop_uwb_anchor"/>
 
       <!-- Initial pose -->
       <rosparam param="init">
@@ -47,6 +51,9 @@
 
       <!-- Frames -->
       <rosparam file="$(find blam_example)/config/blam_frames.yaml" subst_value="true"/>
+
+      <!-- List of UWB anchors -->
+      <rosparam file="$(find blam_example)/config/dropped_items_list.yaml"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>

@@ -1,3 +1,4 @@
 rate:
   estimate: 20.0
   visualization: 0.5
+  uwb_update: 0.1
