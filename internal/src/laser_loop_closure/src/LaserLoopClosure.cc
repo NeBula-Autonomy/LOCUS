@@ -2599,7 +2599,6 @@ bool LaserLoopClosure::PublishPoseGraph() {
     }
   }
 
-<<<<<<< HEAD
   PublishUwb();
 
 }
@@ -2649,9 +2648,6 @@ void LaserLoopClosure::PublishUwb() {
     uwb_edge_pub_.publish(m);
   }
 
-=======
-  return true;
->>>>>>> lamp_hackathon
 }
 
 void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {

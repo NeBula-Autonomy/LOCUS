@@ -146,13 +146,10 @@ class BlamSlam {
   ros::Subscriber pcld_sub_;
   ros::Subscriber artifact_sub_;
   ros::Subscriber uwb_sub_;
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
   
-
   // Services
   ros::ServiceServer add_factor_srv_;
   ros::ServiceServer remove_factor_srv_;
