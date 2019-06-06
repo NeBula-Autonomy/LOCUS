@@ -1,42 +1,52 @@
 <launch>
-  <!-- True for simulation, false for real-time and bagfiles -->
-  <param name="/use_sim_time" value="false"/>
+  <arg name="robot_namespace" default="husky"/>
+
+  <!-- Velodyne topic throttle params -->
+  <arg name="vlp_throttle_freq" default="5.0"/><!-- Hz -->
+
+  <!-- Map processing params -->
+  <arg name="process_map" default="true"/>
+  <arg name="map_update_freq" default="1.0"/><!-- Hz -->
+  <arg name="map_topic_input" default="blam_slam/octree_map"/>
+  <arg name="map_topic_output" default="blam_slam/octree_map_downsampled"/>
 
   <!-- optional filename of the zip archive of a pose graph to be loaded -->
   <arg name="load_pose_graph_file" default="" /> 
 
-  <group ns="blam">
+  <group ns="$(arg robot_namespace)">
     <!-- SLAM -->
     <node pkg="blam_slam"
           name="blam_slam"
           type="blam_slam_node"
           output="screen">
 
+      <!-- Load graph -->
       <param name="load_graph" value="$(arg load_pose_graph_file)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="/velodyne_points"/>
+      <remap from="~artifact" to="~artifact_global" />
+      <remap from="~artifact_relative" to="/object_localizer/reconciled_artifact" />
 
       <!-- Initial pose -->
       <rosparam param="init">
         position: {x: 0.0, y: 0.0, z: 0.0}
         orientation: {roll: 0.0, pitch: 0.0, yaw: 0.0}
-        position_sigma: {x: 0.1, y: 0.1, z: 0.1}
-        orientation_sigma: {roll: 0.02, pitch: 0.02, yaw: 0.02}
+        position_sigma: {x: 0.316, y: 0.316, z: 0.316}
+        orientation_sigma: {roll: 0.141, pitch: 0.141, yaw: 0.141}
       </rosparam>
 
       <!-- Noise parameters -->
-      <!-- these are variances -->
       <rosparam param="noise">
-        odom_position_sigma: 0.4
-        odom_attitude_sigma: 0.1
-      </rosparam>
+        odom_position_sigma: 0.6324
+        odom_attitude_sigma: 0.316
+      </rosparam>      
 
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
 
       <!-- Frames -->
-      <rosparam file="$(find blam_example)/config/blam_frames.yaml"/>
+      <rosparam file="$(find blam_example)/config/blam_frames.yaml" subst_value="true"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
@@ -55,10 +65,40 @@
 
       <!-- Loop closure -->
       <rosparam file="$(find laser_loop_closure)/config/parameters.yaml"/>
+
+
     </node>
+
+    <!-- Trotthling input cloud -->
+    <node name="point_cloud_throttler" type="throttle" pkg="topic_tools" args="messages velodyne_points $(arg vlp_throttle_freq)">
+    </node>
+
+    <!-- PC throttling and filtering -->
+    <group if="$(arg process_map)">
+        <include file="$(find blam_example)/launch/map_processing.launch">
+          <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+          <arg name="map_update_freq" value="$(arg map_update_freq)"/>
+          <arg name="map_topic_input" value="$(arg map_topic_input)"/>
+          <arg name="map_topic_output" value="$(arg map_topic_output)"/>
+        </include>
+    </group>
+
+    <!-- BLAM frame/process manager -->
+    <node pkg="blam_slam"
+          name="blam_manager"
+          type="reinit_blam.py">
+      <param name="map_frame" value="$(arg robot_namespace)/map"/>
+      <param name="blam_frame" value="$(arg robot_namespace)/blam"/>
+    </node>
+
+    <node pkg="tf" 
+        type="static_transform_publisher" 
+        name="map2world" 
+        args="0 0 0 0 0 0 world $(arg robot_namespace)/map 100" />
+
   </group>
 
   <!-- launch rviz  -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find blam_example)/rviz/lidar_slam_husky.rviz" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find blam_example)/rviz/lidar_slam.rviz" />
 
 </launch>

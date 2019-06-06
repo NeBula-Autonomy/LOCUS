@@ -26,7 +26,7 @@
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
       <remap from="~artifact" to="~artifact_global" />
-      <remap from="~artifact_relative" to="object_localizer/artifact_relative" />
+      <remap from="~artifact_relative" to="artifact_reconciliation/reconciled_artifact" />
 
       <!-- Initial pose -->
       <rosparam param="init">
@@ -40,7 +40,7 @@
       <rosparam param="noise">
         odom_position_sigma: 0.6324
         odom_attitude_sigma: 0.316
-      </rosparam>     
+      </rosparam>      
 
       <!-- Rates -->
       <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
@@ -77,7 +77,8 @@
     <!-- Republish node with different frame_id -->
     <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
           args="standalone pcl/PassThrough">
-      <remap from="~input" to="velodyne_points_throttle"/>
+      <remap from="~input" to="velodyne_points"/>
+      <!-- <remap from="~input" to="velodyne_points_throttle"/> -->
       <remap from="~output" to="velodyne_points/transformed"/>
       <rosparam subst_value="true">
         filter_field_name: z
@@ -100,7 +101,7 @@
 
     <!-- Convert output PoseStamped message to Odometry -->
     <node pkg="topic_tools" type="transform" name="pose_to_odom"
-          respawn="true"
+          respawn="true" output="screen"
           args="/$(arg robot_namespace)/blam_slam/localization_integrated_estimate
                 /$(arg robot_namespace)/blam_slam/odometry
                 nav_msgs/Odometry

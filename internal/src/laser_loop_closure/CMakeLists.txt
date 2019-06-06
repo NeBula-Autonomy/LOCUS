@@ -28,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   pcl_ros
   interactive_markers
+  core_msgs
 )
 
 catkin_package(
@@ -44,6 +45,7 @@ catkin_package(
     std_msgs
     pcl_ros
     interactive_markers
+    core_msgs
 )
 
 

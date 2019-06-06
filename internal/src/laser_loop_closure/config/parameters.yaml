@@ -1,6 +1,9 @@
 # Toggle loop closures on or off. Setting this to off will increase run-time
 # speed by a small fraction.
-check_for_loop_closures: true
+check_for_loop_closures: false
+
+# Whether or not consolidate artifacts
+use_artifact_loop_closure: true
 
 # Optimizer selection: 0 - ISAM2, 1 - LM, 2 - Dogleg, 3 - Gauss-Newton
 loop_closure_optimizer: 1
@@ -17,12 +20,16 @@ use_chordal_factor: false
 publish_interactive_markers: true
 
 # Noise parameters (as precisions) for manual loop closure
-manual_lc_rot_precision: 0.1 # default 0.0 (no information)
+manual_lc_rot_precision: 0.0 # default 0.0 (no information)
 manual_lc_trans_precision: 10.0 # default 0.001 (~30 m sd)
 
 # Noise parameters (as variances) for Laser loop closure
 laser_lc_rot_sigma: 0.01 #0.316 # default 0.01
 laser_lc_trans_sigma: 0.01 #0.6324 # default 0.04 
+
+# Noise parameters (as precisions) for artifacts 
+artifact_rot_precision: 0.0
+artifact_trans_precision: 1.0
 
 # Amount of translational distance the sensor must travel before adding a new
 # pose to the pose graph. This helps keep the graph sparse so that loop closures

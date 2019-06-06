@@ -37,6 +37,9 @@
 #ifndef LASER_LOOP_CLOSURE_H
 #define LASER_LOOP_CLOSURE_H
 
+// enables correct operations of GTSAM (correct Jacobians)
+#define SLOW_BUT_CORRECT_BETWEENFACTOR 
+
 #include <ros/ros.h>
 #include <geometry_utils/Matrix3x3.h>
 #include <geometry_utils/Transform3.h>
@@ -57,6 +60,12 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/slam/InitializePose3.h>
 #include <gtsam/nonlinear/NonlinearConjugateGradientOptimizer.h>
+#include <gtsam/inference/Symbol.h>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <core_msgs/Artifact.h>
 
 // #include "SESync/SESync.h"
 // #include "SESync/SESync_utils.h"
@@ -69,8 +78,8 @@
 #include <map>
 #include <vector>
 
-// default is isam, LM for LevenbergMarquardt
-// #define solver LM 
+// default is isam, 1 for LevenbergMarquardt, 2 for GaussNewton, 3 for SESync (WIP)
+#define SOLVER 1
 
 class GenericSolver {
 public:
@@ -92,6 +101,15 @@ public:
 private:
   gtsam::Values values_gs_;
   gtsam::NonlinearFactorGraph nfg_gs_;
+};
+
+struct ArtifactInfo {
+  std::string id; // this corresponds to parent_id
+  std::string label; // what object it is
+  int num_updates; // how many times the optimizer has updated this
+  ArtifactInfo(std::string art_id="",
+               std::string art_label="") :
+               id(art_id), label(art_label), num_updates(0){}
 };
 
 class LaserLoopClosure {
@@ -139,21 +157,35 @@ class LaserLoopClosure {
   geometry_utils::Transform3 GetLastPose() const;
 
   // Get pose at an input time
-  geometry_utils::Transform3 GetPoseAtTime(const ros::Time& stamp) const;
+  gtsam::Key GetKeyAtTime(const ros::Time& stamp) const;
+
+  // Get pose at an input key 
+  geometry_utils::Transform3 GetPoseAtKey(const gtsam::Key& key) const; 
+
+  Eigen::Vector3d GetArtifactPosition(const gtsam::Key artifact_key) const;
 
   // Publish pose graph for visualization.
   void PublishPoseGraph();
 
+  // Publish artifacts for visualization. 
+  void PublishArtifacts(gtsam::Key artifact_key = '-1');
+  
   // makeMenuMaker
   void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;
 
-  // Add factor between the two keys to connect them. This function is
+  // AddManualLoopClosure between the two keys to connect them. This function is
   // designed for a scenario where a human operator can manually perform
   // loop closures by adding these factors to the pose graph.
-  // Optionally, a quaternion defining the attitude of the loop closure
-  // can be specified via the qw, qx, qy, qz coordinates (in radians).
-  bool AddFactor(unsigned int key1, unsigned int key2,
-                 double qw=1, double qx=0, double qy=0, double qz=0);
+  bool AddManualLoopClosure(gtsam::Key key1, gtsam::Key key2, gtsam::Pose3 pose12);
+
+  bool AddArtifact(gtsam::Key posekey, gtsam::Key artifact_key, gtsam::Pose3 pose12,
+                   ArtifactInfo artifact);
+
+  bool AddFactor(gtsam::Key key1, gtsam::Key key2, 
+                 gtsam::Pose3 pose12, 
+                 bool is_manual_loop_closure,
+                 double rot_precision, 
+                 double trans_precision);
 
   // Removes the factor between the two keys from the pose graph.
   bool RemoveFactor(unsigned int key1, unsigned int key2);
@@ -240,6 +272,8 @@ class LaserLoopClosure {
   double max_tolerable_fitness_;
   double manual_lc_rot_precision_;
   double manual_lc_trans_precision_;
+  double artifact_rot_precision_;
+  double artifact_trans_precision_;
   double laser_lc_rot_sigma_;
   double laser_lc_trans_sigma_;
   unsigned int relinearize_skip_;
@@ -254,10 +288,10 @@ class LaserLoopClosure {
   unsigned int icp_iterations_;
 
   // ISAM2 optimizer object, and best guess pose values.
-  #ifdef solver
+  #ifdef SOLVER
   std::unique_ptr<GenericSolver> isam_;
   #endif
-  #ifndef solver 
+  #ifndef SOLVER
   std::unique_ptr<gtsam::ISAM2> isam_;
   #endif
 
@@ -268,9 +302,13 @@ class LaserLoopClosure {
   std::string fixed_frame_id_;
   std::string base_frame_id_;
 
+  // Artifacts and labels 
+  std::unordered_map<gtsam::Key, ArtifactInfo> artifact_key2info_hash;
+
   // Visualization publishers.
   ros::Publisher odometry_edge_pub_;
   ros::Publisher loop_edge_pub_;
+  ros::Publisher artifact_edge_pub_;
   ros::Publisher graph_node_pub_;
   ros::Publisher graph_node_id_pub_;
   ros::Publisher keyframe_node_pub_;
@@ -278,8 +316,13 @@ class LaserLoopClosure {
   ros::Publisher scan1_pub_;
   ros::Publisher scan2_pub_;
   ros::Publisher confirm_edge_pub_;
+  ros::Publisher artifact_pub_;
+  ros::Publisher marker_pub_;
 
   // ros::ServiceServer add_factor_srv_;
+
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 
   // Pose graph publishers.
   ros::Publisher pose_graph_pub_;
@@ -287,8 +330,10 @@ class LaserLoopClosure {
   ros::Publisher loop_closure_notifier_pub_;
 
   typedef std::pair<unsigned int, unsigned int> Edge;
+  typedef std::pair<gtsam::Key, gtsam::Key> ArtifactEdge;
   std::vector<Edge> odometry_edges_;
   std::vector<Edge> loop_edges_;
+  std::vector<ArtifactEdge> artifact_edges_;
 
   // For filtering laser scans prior to ICP.
   PointCloudFilter filter_;

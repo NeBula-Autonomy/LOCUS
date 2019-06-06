@@ -4,12 +4,20 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /TF1/Frames1
+        - /TF1/Frames1/husky/base_link1/Position1
+        - /TF1/Frames1/husky/base_link1/Orientation1
+        - /TF1/Frames1/husky/base_link1/Relative Position1
         - /3D Octree1/Autocompute Value Bounds1
         - /3D Incremental Octree1/Autocompute Value Bounds1
         - /Loop Edges1
+        - /Artifacts Markers1
+        - /Odometry Edges2
+        - /Artifact Edges1
+        - /Artifact Edges1/Namespaces1
       Splitter Ratio: 0.5
-    Tree Height: 743
+    Tree Height: 815
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -28,7 +36,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 2
-    SyncSource: ""
+    SyncSource: 3D Octree
 Visualization Manager:
   Class: ""
   Displays:
@@ -55,13 +63,231 @@ Visualization Manager:
       Frame Timeout: 100000000
       Frames:
         All Enabled: false
-      Marker Scale: 1
+        husky/arch:
+          Value: false
+        husky/base_footprint:
+          Value: false
+        husky/base_link:
+          Value: true
+        husky/base_link_2d:
+          Value: false
+        husky/base_link_blam_odometry:
+          Value: false
+        husky/blam:
+          Value: false
+        husky/camera/camera_color_frame:
+          Value: false
+        husky/camera/camera_color_optical_frame:
+          Value: false
+        husky/camera/camera_depth_frame:
+          Value: false
+        husky/camera/camera_depth_optical_frame:
+          Value: false
+        husky/camera/camera_ir2_frame:
+          Value: false
+        husky/camera/camera_ir2_optical_frame:
+          Value: false
+        husky/camera/camera_ir_frame:
+          Value: false
+        husky/camera/camera_ir_optical_frame:
+          Value: false
+        husky/camera/camera_link:
+          Value: false
+        husky/evo_64px_frame:
+          Value: false
+        husky/evo_64px_link:
+          Value: false
+        husky/front_bumper_link:
+          Value: false
+        husky/front_left_wheel_link:
+          Value: false
+        husky/front_right_wheel_link:
+          Value: false
+        husky/husky/flashlight_flashlight_link:
+          Value: false
+        husky/husky/overhead_light_led_link:
+          Value: false
+        husky/imu_link:
+          Value: false
+        husky/inertial_link:
+          Value: false
+        husky/map:
+          Value: false
+        husky/map_g_aligned:
+          Value: false
+        husky/odom:
+          Value: false
+        husky/rear_bumper_link:
+          Value: false
+        husky/rear_left_wheel_link:
+          Value: false
+        husky/rear_right_wheel_link:
+          Value: false
+        husky/top_chassis_link:
+          Value: false
+        husky/top_plate_link:
+          Value: false
+        husky/user_rail_link:
+          Value: false
+        husky/velodyne:
+          Value: false
+        husky/velodyne_base_link:
+          Value: false
+        husky_2d/arch:
+          Value: false
+        husky_2d/base_footprint:
+          Value: false
+        husky_2d/base_link:
+          Value: false
+        husky_2d/camera/camera_color_frame:
+          Value: false
+        husky_2d/camera/camera_color_optical_frame:
+          Value: false
+        husky_2d/camera/camera_depth_frame:
+          Value: false
+        husky_2d/camera/camera_depth_optical_frame:
+          Value: false
+        husky_2d/camera/camera_ir2_frame:
+          Value: false
+        husky_2d/camera/camera_ir2_optical_frame:
+          Value: false
+        husky_2d/camera/camera_ir_frame:
+          Value: false
+        husky_2d/camera/camera_ir_optical_frame:
+          Value: false
+        husky_2d/camera/camera_link:
+          Value: false
+        husky_2d/evo_64px_frame:
+          Value: false
+        husky_2d/evo_64px_link:
+          Value: false
+        husky_2d/front_bumper_link:
+          Value: false
+        husky_2d/husky_2d/flashlight_flashlight_link:
+          Value: false
+        husky_2d/husky_2d/overhead_light_led_link:
+          Value: false
+        husky_2d/imu_link:
+          Value: false
+        husky_2d/inertial_link:
+          Value: false
+        husky_2d/rear_bumper_link:
+          Value: false
+        husky_2d/top_chassis_link:
+          Value: false
+        husky_2d/top_plate_link:
+          Value: false
+        husky_2d/user_rail_link:
+          Value: false
+        husky_2d/velodyne:
+          Value: false
+        husky_2d/velodyne_base_link:
+          Value: false
+        world:
+          Value: true
+      Marker Scale: 3
       Name: TF
       Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        world:
+          husky/map:
+            husky/blam:
+              husky/base_link:
+                husky/base_footprint:
+                  {}
+                husky/camera/camera_link:
+                  husky/camera/camera_color_frame:
+                    husky/camera/camera_color_optical_frame:
+                      {}
+                  husky/camera/camera_depth_frame:
+                    husky/camera/camera_depth_optical_frame:
+                      {}
+                  husky/camera/camera_ir2_frame:
+                    husky/camera/camera_ir2_optical_frame:
+                      {}
+                  husky/camera/camera_ir_frame:
+                    husky/camera/camera_ir_optical_frame:
+                      {}
+                husky/evo_64px_link:
+                  husky/evo_64px_frame:
+                    {}
+                husky/front_bumper_link:
+                  {}
+                husky/front_left_wheel_link:
+                  {}
+                husky/front_right_wheel_link:
+                  {}
+                husky/imu_link:
+                  {}
+                husky/inertial_link:
+                  {}
+                husky/rear_bumper_link:
+                  {}
+                husky/rear_left_wheel_link:
+                  {}
+                husky/rear_right_wheel_link:
+                  {}
+                husky/top_chassis_link:
+                  {}
+                husky/top_plate_link:
+                  husky/arch:
+                    husky/husky/flashlight_flashlight_link:
+                      {}
+                    husky/husky/overhead_light_led_link:
+                      {}
+                    husky/velodyne_base_link:
+                      husky/velodyne:
+                        {}
+                husky/user_rail_link:
+                  {}
+              husky/base_link_blam_odometry:
+                {}
+            husky/odom:
+              husky/base_link_2d:
+                husky_2d/base_link:
+                  husky_2d/base_footprint:
+                    {}
+                  husky_2d/camera/camera_link:
+                    husky_2d/camera/camera_color_frame:
+                      husky_2d/camera/camera_color_optical_frame:
+                        {}
+                    husky_2d/camera/camera_depth_frame:
+                      husky_2d/camera/camera_depth_optical_frame:
+                        {}
+                    husky_2d/camera/camera_ir2_frame:
+                      husky_2d/camera/camera_ir2_optical_frame:
+                        {}
+                    husky_2d/camera/camera_ir_frame:
+                      husky_2d/camera/camera_ir_optical_frame:
+                        {}
+                  husky_2d/evo_64px_link:
+                    husky_2d/evo_64px_frame:
+                      {}
+                  husky_2d/front_bumper_link:
+                    {}
+                  husky_2d/imu_link:
+                    {}
+                  husky_2d/inertial_link:
+                    {}
+                  husky_2d/rear_bumper_link:
+                    {}
+                  husky_2d/top_chassis_link:
+                    {}
+                  husky_2d/top_plate_link:
+                    husky_2d/arch:
+                      husky_2d/husky_2d/flashlight_flashlight_link:
+                        {}
+                      husky_2d/husky_2d/overhead_light_led_link:
+                        {}
+                      husky_2d/velodyne_base_link:
+                        husky_2d/velodyne:
+                          {}
+                  husky_2d/user_rail_link:
+                    {}
+          husky/map_g_aligned:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -119,7 +345,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.100000001
       Style: Points
-      Topic: /blam/blam_slam/odometry_query_points
+      Topic: /husky/blam_slam/odometry_query_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: false
@@ -149,7 +375,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.100000001
       Style: Points
-      Topic: /blam/blam_slam/octree_map_updates
+      Topic: /husky/blam_slam/octree_map_updates
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -179,7 +405,7 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.00999999978
       Style: Points
-      Topic: /blam/blam_slam/localization_query_points
+      Topic: /husky/blam_slam/odometry_query_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -209,7 +435,7 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.00999999978
       Style: Points
-      Topic: /blam/blam_slam/localization_reference_points
+      Topic: /husky/blam_slam/localization_reference_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -239,7 +465,7 @@ Visualization Manager:
       Size (Pixels): 2
       Size (m): 0.00999999978
       Style: Points
-      Topic: /blam/blam_slam/localization_aligned_points
+      Topic: /husky/blam_slam/localization_aligned_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -269,7 +495,7 @@ Visualization Manager:
       Size (Pixels): 1
       Size (m): 0.100000001
       Style: Points
-      Topic: /blam/blam_slam/octree_map
+      Topic: /husky/blam_slam/octree_map
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -299,14 +525,14 @@ Visualization Manager:
       Size (Pixels): 1
       Size (m): 0.00999999978
       Style: Points
-      Topic: /blam/blam_slam/octree_map_updates
+      Topic: /husky/blam_slam/octree_map_updates
       Unreliable: false
       Use Fixed Frame: false
       Use rainbow: true
       Value: false
     - Class: rviz/Marker
       Enabled: false
-      Marker Topic: /blam/blam_slam/odometry_edges
+      Marker Topic: /husky/blam_slam/odometry_edges
       Name: Odometry Edges
       Namespaces:
         {}
@@ -314,44 +540,44 @@ Visualization Manager:
       Value: false
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /blam/blam_slam/loop_edges
+      Marker Topic: /husky/blam_slam/loop_edges
       Name: Loop Edges
       Namespaces:
-        {}
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /blam/blam_slam/graph_nodes
+      Marker Topic: /husky/blam_slam/graph_nodes
       Name: Graph Nodes
       Namespaces:
-        {}
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /blam/blam_slam/graph_node_ids
+      Marker Topic: /husky/blam_slam/graph_node_ids
       Name: Node IDs
       Namespaces:
-        {}
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /blam/blam_slam/keyframe_nodes
+      Marker Topic: /husky/blam_slam/keyframe_nodes
       Name: Key Frames
       Namespaces:
-        {}
+        husky/blam: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /blam/blam_slam/closure_area
+      Enabled: false
+      Marker Topic: /husky/blam_slam/closure_area
       Name: Closure Area
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -377,7 +603,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 5
       Style: Points
-      Topic: /blam/blam_slam/loop_closure_scan1
+      Topic: /husky/blam_slam/loop_closure_scan1
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -407,24 +633,48 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.00999999978
       Style: Points
-      Topic: /blam/blam_slam/loop_closure_scan2
+      Topic: /husky/blam_slam/loop_closure_scan2
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /blam/blam_slam/confirm_edge
+      Marker Topic: /husky/blam_slam/confirm_edge
       Name: Confirm Edge
       Namespaces:
         {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/artifact_markers
+      Name: Artifacts Markers
+      Namespaces:
+        artifact: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/odometry_edges
+      Name: Odometry Edges
+      Namespaces:
+        husky/blam: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /husky/blam_slam/artifact_edges
+      Name: Artifact Edges
+      Namespaces:
+        husky/blam: true
       Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
     Default Light: true
-    Fixed Frame: world
+    Fixed Frame: husky/blam
     Frame Rate: 30
   Name: root
   Tools:
@@ -445,16 +695,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 50.293232
+      Distance: 20.4769917
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 38.325367
-        Y: -12.75103
-        Z: -0.953264713
+        X: 13.4242573
+        Y: 0.573363543
+        Z: -2.98203635
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
@@ -463,15 +713,15 @@ Visualization Manager:
       Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.29858088
+      Yaw: 1.57858741
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: true
+    collapsed: false
   Height: 1028
-  Hide Left Dock: true
+  Hide Left Dock: false
   Hide Right Dock: true
-  QMainWindow State: 000000ff00000000fd00000004000000000000020200000397fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006f00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000004000000397000000f800fffffffb0000000800540069006d00650000000328000000da0000005800fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c0000026100000001000002c5000003dafc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000028000003da000000e300fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000002d00000003efc0100000001fb0000000800540069006d006501000000000000045000000000000000000000074d0000039700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000202000003befc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006100fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000028000003be000000d700fffffffb0000000800540069006d00650000000328000000da0000003b00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c0000026100000001000002c5000003dafc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000028000003da000000ad00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000002d00000003efc0100000001fb0000000800540069006d0065010000000000000450000000000000000000000537000003be00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -480,6 +730,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: true
-  Width: 1869
-  X: 51
+  Width: 1855
+  X: 65
   Y: 24
