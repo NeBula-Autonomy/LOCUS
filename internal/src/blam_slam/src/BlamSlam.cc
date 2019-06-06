@@ -47,6 +47,7 @@ namespace gu = geometry_utils;
 BlamSlam::BlamSlam()
   : estimate_update_rate_(0.0),
     visualization_update_rate_(0.0),
+    uwb_update_rate_(0.0),
     position_sigma_(0.01),
     attitude_sigma_(0.04),
     marker_id_(0),
@@ -102,6 +103,7 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Load update rates.
   if (!pu::Get("rate/estimate", estimate_update_rate_)) return false;
   if (!pu::Get("rate/visualization", visualization_update_rate_)) return false;
+  if (!pu::Get("rate/uwb_update", uwb_update_rate_)) return false;
 
   // Load frame ids.
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
@@ -112,6 +114,12 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Covariance for odom factors
   if (!pu::Get("noise/odom_position_sigma", position_sigma_)) return false;
   if (!pu::Get("noise/odom_attitude_sigma", attitude_sigma_)) return false;
+
+  // Load dropped item ids
+  if (!pu::Get("items/uwb_id", uwb_id_list_)) return false;
+  for (int i = 0; i < uwb_id_list_.size(); i++) {
+    uwb_drop_status_[uwb_id_list_[i]] = false;
+  }
 
   if (!pu::Get("use_chordal_factor", use_chordal_factor_))
     return false;
@@ -152,6 +160,7 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
   restart_srv_ = nl.advertiseService("restart", &BlamSlam::RestartService, this);
   load_graph_srv_ = nl.advertiseService("load_graph", &BlamSlam::LoadGraphService, this);
+  drop_uwb_srv_ = nl.advertiseService("drop_uwb_anchor", &BlamSlam::DropUwbService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -172,10 +181,14 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
+  
+  uwb_update_timer_ = nl.createTimer(uwb_update_rate_, &BlamSlam::UwbTimerCallback, this);
 
   pcld_sub_ = nl.subscribe("pcld", 100000, &BlamSlam::PointCloudCallback, this);
 
   artifact_sub_ = nl.subscribe("artifact_relative", 10, &BlamSlam::ArtifactCallback, this);
+
+  uwb_sub_ = nl.subscribe("uwb_signal", 10, &BlamSlam::UwbSignalCallback, this);
 
   return CreatePublishers(n);
 }
@@ -327,6 +340,19 @@ bool BlamSlam::LoadGraphService(blam_slam::LoadGraphRequest &request,
   return true;
 }
 
+
+bool BlamSlam::DropUwbService(mesh_msgs::ProcessCommNodeRequest &request,
+                              mesh_msgs::ProcessCommNodeResponse &response) {
+  ROS_INFO_STREAM("Dropped UWB anchor is " + request.node.AnchorID);
+
+  Eigen::Vector3d aug_robot_position = localization_.GetIntegratedEstimate().translation.Eigen();
+
+  loop_closure_.DropUwbAnchor(request.node.AnchorID, request.node.DropTime, aug_robot_position);
+
+  uwb_drop_status_[request.node.AnchorID] = true;
+  
+  return true;
+}
 
 void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   synchronizer_.AddPCLPointCloudMessage(msg);
@@ -498,6 +524,92 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
 
     // Publish updated map // TODO have criteria of change for when to publish the map?
     mapper_.PublishMap();
+  }
+}
+
+void BlamSlam::UwbTimerCallback(const ros::TimerEvent& ev) {
+
+  // Show range data for debug
+  for (auto itr = map_uwbid_time_data_.begin(); itr != map_uwbid_time_data_.end(); itr++) {
+    ROS_DEBUG_STREAM("UWB-ID: " + itr->first);
+    for (auto itr_child = (itr->second).begin(); itr_child != (itr->second).end(); itr_child++) {
+      ROS_DEBUG_STREAM("time = " << itr_child->first << ", range = " << itr_child->second.first);
+    }
+  }
+
+  for (auto itr = map_uwbid_time_data_.begin(); itr != map_uwbid_time_data_.end(); itr++) {
+    if (!itr->second.empty()) {
+      auto itr_end = (itr->second).end();
+      itr_end--;
+      auto time_diff = ros::Time::now() - itr_end->first;
+      if (time_diff.toSec() > 20.0) {
+        if (itr->second.size() > 4) {
+
+          ProcessUwbRangeData(itr->first);
+
+          itr->second.clear();
+        }
+        else {
+          ROS_INFO("Number of range measurement is NOT enough");
+          itr->second.clear();
+        }
+        
+      }
+    }
+  }
+}
+
+void BlamSlam::ProcessUwbRangeData(const std::string uwb_id) {
+  ROS_INFO_STREAM("Start to process UWB range measurement data of " << uwb_id);
+
+  std::map<double, ros::Time> map_range_time_;
+
+  for (auto itr = map_uwbid_time_data_[uwb_id].begin(); itr != map_uwbid_time_data_[uwb_id].end(); itr++) {
+    map_range_time_[itr->second.first] = itr->first;
+  }
+
+  auto minItr = std::min_element(map_range_time_.begin(), map_range_time_.end());
+
+  ros::Time aug_time = minItr->second;
+  double aug_range = minItr->first;
+  Eigen::Vector3d aug_robot_position = map_uwbid_time_data_[uwb_id][aug_time].second;
+
+  if (loop_closure_.AddUwbFactor(uwb_id, aug_time, aug_range, aug_robot_position)) {
+    ROS_INFO("Updating the map by UWB data");
+    PointCloud::Ptr regenerated_map(new PointCloud);
+    loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+    mapper_.Reset();
+    PointCloud::Ptr unused(new PointCloud);
+    mapper_.InsertPoints(regenerated_map, unused.get());
+
+    // Also reset the robot's estimated position.
+    localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+
+    // Visualize the pose graph and current loop closure radius.
+    loop_closure_.PublishPoseGraph();
+
+    // Publish updated map
+    mapper_.PublishMap();
+
+    ROS_INFO("Updated the map by UWB Range Factors");
+  }
+}
+
+void BlamSlam::UwbSignalCallback(const uwb_msgs::Anchor& msg) {
+  // TODO: Screening before entering into this subscriber
+  auto itr = uwb_drop_status_.find(msg.id);
+  if (itr != end(uwb_drop_status_)) {
+    if (itr->second == true) {
+      map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
+      map_uwbid_time_data_[msg.id][msg.header.stamp].second
+      = localization_.GetIntegratedEstimate().translation.Eigen();
+    }
+  }
+  else {
+    map_uwbid_time_data_[msg.id][msg.header.stamp].first = msg.range;
+    map_uwbid_time_data_[msg.id][msg.header.stamp].second
+    = localization_.GetIntegratedEstimate().translation.Eigen();
   }
 }
 
