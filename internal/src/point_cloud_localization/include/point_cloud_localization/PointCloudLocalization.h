@@ -81,6 +81,10 @@ class PointCloudLocalization {
   void SetIntegratedEstimate(
       const geometry_utils::Transform3& integrated_estimate);
 
+  // Pose estimate.
+  geometry_utils::Transform3 incremental_estimate_;
+  geometry_utils::Transform3 integrated_estimate_;
+  
  private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -96,10 +100,6 @@ class PointCloudLocalization {
 
   // The node's name.
   std::string name_;
-
-  // Pose estimate.
-  geometry_utils::Transform3 incremental_estimate_;
-  geometry_utils::Transform3 integrated_estimate_;
 
   // Publishers.
   ros::Publisher reference_pub_;

@@ -60,6 +60,8 @@ bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
   //TODO: Move this to a better location.
   map_loaded_ = false;
 
+  initial_key_ = 0;
+
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
     return false;
@@ -320,10 +322,28 @@ bool BlamSlam::LoadGraphService(blam_slam::LoadGraphRequest &request,
   mapper_.Reset();
   PointCloud::Ptr unused(new PointCloud);
   mapper_.InsertPoints(regenerated_map, unused.get());
+  // change the key number for the second robot to 10000
   loop_closure_.ChangeKeyNumber();
 
+  initial_key_ = loop_closure_.GetKey();
+  gu::MatrixNxNBase<double, 6> covariance;
+  covariance.Zeros();
+  for (int i = 0; i < 3; ++i)
+    covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
+  for (int i = 3; i < 6; ++i)
+    covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+
+  // Obtain the second robot's initial pose from the tf
+  //TODO: Kamak: write a callback function to get the tf
+  // compute the delta and put it in this format.
+  double init_x = 0.0, init_y = 0.0, init_z = 0.0;
+  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
+  delta_after_load_.translation = gu::Vec3(init_x, init_y, init_z);
+  delta_after_load_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
+  loop_closure_.AddFactorAtLoad(delta_after_load_, covariance);
+
   // Also reset the robot's estimated position.
-  localization_.SetIntegratedEstimate(loop_closure_.GetInitialPose());
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
   return true;
 }
 
@@ -516,7 +536,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
-    loop_closure_.AddKeyScanPair(0, msg);
+    loop_closure_.AddKeyScanPair(initial_key_, msg);
     return;
   }
 
@@ -563,7 +583,6 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     // No new loop closures - but was there a new key frame? If so, add new
     // points to the map.
     if (new_keyframe) {
-      // ROS_INFO("Updating with a new key frame");
       localization_.MotionUpdate(gu::Transform3::Identity());
       localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
       PointCloud::Ptr unused(new PointCloud);
@@ -608,6 +627,22 @@ bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
   PointCloud::Ptr unused(new PointCloud);
   mapper_.InsertPoints(regenerated_map, unused.get());
 
+  initial_key_ = loop_closure_.GetKey();
+  gu::MatrixNxNBase<double, 6> covariance;
+  covariance.Zeros();
+  for (int i = 0; i < 3; ++i)
+    covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
+  for (int i = 3; i < 6; ++i)
+    covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+
+
+  // This will add a between factor after obtaining the delta between poses.
+  double init_x = 8.0, init_y = 0.0, init_z = 0.0;
+  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
+  delta_after_restart_.translation = gu::Vec3(init_x, init_y, init_z);
+  delta_after_restart_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
+  loop_closure_.AddFactorAtRestart(delta_after_restart_, covariance);
+
   // Also reset the robot's estimated position.
   localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
   return true;
@@ -621,60 +656,40 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   }
 
   unsigned int pose_key;
-  if(map_loaded_) {
-    ROS_INFO("Map is loaded, adding factors between robots");
+  if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)
-    // TODO rename to attitude and position sigma 
     gu::MatrixNxNBase<double, 6> covariance;
     covariance.Zeros();
     for (int i = 0; i < 3; ++i)
       covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
     for (int i = 3; i < 6; ++i)
       covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
 
-    // Add factor between robots
-    loop_closure_.AddFactorBetweenRobots(localization_.GetIncrementalEstimate(),
-                                        covariance, stamp, &pose_key);
-    
-    // Reset flag
-    map_loaded_= false;
-   } else {
+    // Add between factor
+    if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key)) {
+      return false;
+    }
+  } else {
+    // Add the new pose to the pose graph (BetweenChordalFactor)
+    gu::MatrixNxNBase<double, 12> covariance;
+    covariance.Zeros();
+    for (int i = 0; i < 9; ++i)
+      covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+    for (int i = 9; i < 12; ++i)
+      covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
 
-      if (!use_chordal_factor_) {
-        // Add the new pose to the pose graph (BetweenFactor)
-        // TODO rename to attitude and position sigma 
-        gu::MatrixNxNBase<double, 6> covariance;
-        covariance.Zeros();
-        for (int i = 0; i < 3; ++i)
-          covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
-        for (int i = 3; i < 6; ++i)
-          covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+    const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
 
-        const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-        if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
-                                            covariance, stamp, &pose_key)) {
-          // ROS_INFO("No new pose from add between factor. Pose key is %f",pose_key);
-          return false;
-        }
-
-      } else {
-        // Add the new pose to the pose graph (BetweenChordalFactor)
-        gu::MatrixNxNBase<double, 12> covariance;
-        covariance.Zeros();
-        for (int i = 0; i < 9; ++i)
-          covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
-        for (int i = 9; i < 12; ++i)
-          covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
-
-        const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-        if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
-                                                  covariance, stamp, &pose_key)) {
-          return false;
-        }
+    // Add between factor
+    if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
+                                                covariance, stamp, &pose_key)) {
+      return false;
     }
   }
-  
+
   *new_keyframe = true;
 
   if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {

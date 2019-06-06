@@ -273,6 +273,95 @@ bool LaserLoopClosure::RegisterCallbacks(const ros::NodeHandle& n) {
   return true;
 }
 
+bool LaserLoopClosure::AddFactorAtRestart(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance){
+  // Append the new odometry.
+  Pose3 new_odometry = ToGtsam(delta);
+
+  //add a new factor
+  Pose3 last_pose = values_.at<Pose3>(key_-1);
+
+  NonlinearFactorGraph new_factor;
+  Values new_value;
+  new_factor.add(MakeBetweenFactor(new_odometry, ToGtsam(covariance)));
+
+  new_value.insert(key_, last_pose.compose(new_odometry));
+  // TODO Compose covariances at the same time as odometry
+   // Update ISAM2.
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
+  // Update class variables
+  values_ = isam_->calculateEstimate();
+
+  nfg_ = isam_->getFactorsUnsafe();
+
+  key_++;
+
+  return true;
+}
+
+bool LaserLoopClosure::AddFactorAtLoad(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance){
+  // Append the new odometry.
+  Pose3 new_odometry = ToGtsam(delta);
+
+  //add a new factor
+  Pose3 first_pose = values_.at<Pose3>(0);
+
+  NonlinearFactorGraph new_factor;
+  Values new_value;
+  new_factor.add(MakeBetweenFactorAtLoad(new_odometry, ToGtsam(covariance)));
+  new_value.insert(key_, first_pose.compose(new_odometry));
+  // TODO Compose covariances at the same time as odometry
+   // Update ISAM2.
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
+  // Update class variables
+  values_ = isam_->calculateEstimate();
+
+  nfg_ = isam_->getFactorsUnsafe();
+
+  key_++;
+
+  return true;
+}
+
 bool LaserLoopClosure::AddBetweenFactor(
     const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
     const ros::Time& stamp, unsigned int* key) {
@@ -315,7 +404,7 @@ bool LaserLoopClosure::AddBetweenFactor(
   Values values_temp = isam_->getLinearizationPoint();
   values_temp.insert(key_, last_pose.compose(odometry_));
   double cost_old = nfg_temp.error(values_temp); // Assume values is up to date - no new values
-  ROS_INFO("Cost before optimization is: %f", cost_old);
+  //ROS_INFO("Cost before optimization is: %f", cost_old);
 
   // Update ISAM2.
   try{
@@ -779,6 +868,10 @@ bool LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
   }
 }
 
+unsigned int LaserLoopClosure::GetKey() const {
+  return key_;
+}
+
 gu::Transform3 LaserLoopClosure::GetLastPose() const {
   if (key_ > 1) {
     return ToGu(values_.at<Pose3>(key_-1));
@@ -870,7 +963,7 @@ BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactor(
   return BetweenFactor<Pose3>(key_-1, key_, delta, covariance);
 }
 
-BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenRobotFactor(
+BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactorAtLoad(
     const Pose3& delta,
     const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
   odometry_edges_.push_back(std::make_pair(0, key_));
@@ -1251,13 +1344,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
       {
         // Levenberg Marquardt Optimizer
         nfg_.add(new_factor); // add new factor (new values already inserted above)
-
-        // writeG2o(nfg_, linPoint, "/home/yunchang/Desktop/beforeloop.g2o"); // for debug
         std::cout << "Running LM optimization" << std::endl;
         gtsam::LevenbergMarquardtParams params;
         params.setVerbosityLM("SUMMARY");
         result = gtsam::LevenbergMarquardtOptimizer(nfg_, linPoint, params).optimize();
-        // writeG2o(nfg_, result, "/home/yunchang/Desktop/afterloop.g2o"); // for debug
       }
         break;
       case 2 : 
@@ -1410,82 +1500,6 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   return true; //result.getVariablesReeliminated() > 0;
 }
 
-bool LaserLoopClosure::AddFactorBetweenRobots(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
-    const ros::Time& stamp, unsigned int* key) {
-  if (key == NULL) {
-    ROS_ERROR("%s: Output key is null.", name_.c_str());
-    return false;
-  }
-  // Append the new odometry.
-  //TODO: Replace delta with delta computed from a function given R1 and R2 pose
-  gu::Transform3 delta1 = gu::Transform3::Identity();
-  Pose3 new_odometry = ToGtsam(delta1);
-  // CHANGE TO CONFLICT THE BELOW STATEMENT
-  // We always add new poses, but only return true if the pose is far enough
-  // away from the last one (keyframes). This lets the caller know when they
-  // can add a laser scan.
-
-  // Is the odometry translation large enough to add a new node to the graph
-  odometry_ = odometry_.compose(new_odometry);
-  odometry_kf_ = odometry_kf_.compose(new_odometry);
-
-
-  // Add a new factor
-
-  NonlinearFactorGraph new_factor;
-  Values new_value;
-  //TODO: Don't hard code the zero value in this function.
-  new_factor.add(MakeBetweenRobotFactor(odometry_, ToGtsam(covariance)));
-  // TODO Compose covariances at the same time as odometry
-
-  //TODO: replace 0 with the key of best fit
-  Pose3 last_pose = values_.at<Pose3>(0);
-  ROS_INFO("Key_ = %i", key_);
-  new_value.insert(key_, last_pose.compose(odometry_));
-
-  //TODO: Check if we still need this.
-  // Update ISAM2.
-  try{
-    isam_->update(new_factor, new_value); 
-  } catch (...){
-    // redirect cout to file
-    std::ofstream nfgFile;
-    std::string home_folder(getenv("HOME"));
-    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
-    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
-    std::cout.rdbuf(nfgFile.rdbuf());
-
-    // save entire factor graph to file and debug if loop closure is correct
-    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
-    nfg.print();
-    nfgFile.close();
-
-    std::cout.rdbuf(coutbuf); //reset to standard output again
-
-    ROS_ERROR("ISAM update error in AddBetweenFactors");
-    throw;
-  }
-  
-  // Update class variables
-  values_ = isam_->calculateEstimate();
-
-  nfg_ = isam_->getFactorsUnsafe();
-
-  // Adding poses to stored hash maps
-  // Store this timestamp so that we can publish the pose graph later.
-  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
-  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
-
-  // Assign output and get ready to go again!
-  *key = key_++;
-
-  // Reset odometry to identity
-  odometry_ = Pose3::identity();
-
-  odometry_kf_ = Pose3::identity();
-  return true;
-}
-
 bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int key2) {
   ROS_INFO("Visualizing factor between %i and %i.", key1, key2);
 
@@ -1615,10 +1629,8 @@ bool LaserLoopClosure::ErasePosegraph(){
   odometry_ = Pose3::identity();
   odometry_kf_ = Pose3::identity();
   odometry_edges_.clear();
-
-  key_ = 0;
   
-	//Initilize interactive marker server
+  //Initilize interactive marker server
   if (publish_interactive_markers_) {
     server.reset(new interactive_markers::InteractiveMarkerServer(
         "interactive_node", "", false));
