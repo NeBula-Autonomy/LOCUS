@@ -278,15 +278,14 @@ bool LaserLoopClosure::AddFactorAtRestart(const gu::Transform3& delta, const Las
   // Append the new odometry.
   Pose3 new_odometry = ToGtsam(delta);
 
-  // Is the odometry translation large enough to add a new node to the graph
-  odometry_ = odometry_.compose(new_odometry);
   //add a new factor
   Pose3 last_pose = values_.at<Pose3>(key_-1);
 
   NonlinearFactorGraph new_factor;
   Values new_value;
-  new_factor.add(MakeBetweenFactor(odometry_, ToGtsam(covariance)));
-  new_value.insert(key_, last_pose.compose(odometry_));
+  new_factor.add(MakeBetweenFactor(new_odometry, ToGtsam(covariance)));
+
+  new_value.insert(key_, last_pose.compose(new_odometry));
   // TODO Compose covariances at the same time as odometry
    // Update ISAM2.
   try{
@@ -324,15 +323,13 @@ bool LaserLoopClosure::AddFactorAtLoad(const gu::Transform3& delta, const LaserL
   // Append the new odometry.
   Pose3 new_odometry = ToGtsam(delta);
 
-  // Is the odometry translation large enough to add a new node to the graph
-  odometry_ = odometry_.compose(new_odometry);
   //add a new factor
   Pose3 first_pose = values_.at<Pose3>(0);
 
   NonlinearFactorGraph new_factor;
   Values new_value;
-  new_factor.add(MakeBetweenFactorAtLoad(odometry_, ToGtsam(covariance)));
-  new_value.insert(key_, first_pose.compose(odometry_));
+  new_factor.add(MakeBetweenFactorAtLoad(new_odometry, ToGtsam(covariance)));
+  new_value.insert(key_, first_pose.compose(new_odometry));
   // TODO Compose covariances at the same time as odometry
    // Update ISAM2.
   try{

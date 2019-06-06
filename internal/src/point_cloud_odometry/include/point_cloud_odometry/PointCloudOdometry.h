@@ -64,6 +64,10 @@ class PointCloudOdometry {
   // not initialized.
   bool GetLastPointCloud(PointCloud::Ptr& out) const;
 
+  // Pose estimates.
+  geometry_utils::Transform3 integrated_estimate_;
+  geometry_utils::Transform3 incremental_estimate_;
+  
  private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -82,10 +86,6 @@ class PointCloudOdometry {
 
   // The node's name.
   std::string name_;
-
-  // Pose estimates.
-  geometry_utils::Transform3 integrated_estimate_;
-  geometry_utils::Transform3 incremental_estimate_;
 
   // Publishers.
   ros::Publisher reference_pub_;

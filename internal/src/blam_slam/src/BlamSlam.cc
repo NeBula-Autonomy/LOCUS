@@ -612,12 +612,11 @@ bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
 
 
   // This will add a between factor after obtaining the delta between poses.
-  double init_x = 0.0, init_y = 0.0, init_z = 0.0;
+  double init_x = 8.0, init_y = 0.0, init_z = 0.0;
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
   delta_after_restart_.translation = gu::Vec3(init_x, init_y, init_z);
   delta_after_restart_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
   loop_closure_.AddFactorAtRestart(delta_after_restart_, covariance);
-
 
   // Also reset the robot's estimated position.
   localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
@@ -630,11 +629,10 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     ROS_ERROR("%s: Output boolean for new keyframe is null.", name_.c_str());
     return false;
   }
-  //TODO: do not hard code the value for pose_key.
+
   unsigned int pose_key;
   if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)
-    // TODO rename to attitude and position sigma 
     gu::MatrixNxNBase<double, 6> covariance;
     covariance.Zeros();
     for (int i = 0; i < 3; ++i)
@@ -645,7 +643,6 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
     if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
                                         covariance, stamp, &pose_key)) {
-      // ROS_INFO("No new pose from add between factor. Pose key is %f",pose_key);
       return false;
     }
   } else {

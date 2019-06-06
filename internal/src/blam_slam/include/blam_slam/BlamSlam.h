@@ -127,8 +127,6 @@ class BlamSlam {
   geometry_utils::Transform3 delta_after_restart_;
 
   geometry_utils::Transform3 delta_after_load_;
-  
-
 
   // Update rates and callback timers.
   double estimate_update_rate_;
