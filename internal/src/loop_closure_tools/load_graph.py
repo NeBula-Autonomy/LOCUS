@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 import rospy, sys
-from blam_slam.srv import SaveGraph
+from blam_slam.srv import LoadGraph
 
 def connect(filename, namespace):
-    rospy.init_node('save_graph_client')
-    save_graph = rospy.ServiceProxy(namespace + '/blam_slam/save_graph', SaveGraph)
-    if save_graph(filename).success:
-        print('Successfully saved the pose graph to %s.' % filename)
+    rospy.init_node('load_graph_client')
+    load_graph = rospy.ServiceProxy(namespace + '/blam_slam/load_graph', LoadGraph)
+    if load_graph(filename).success:
+        print('Successfully loaded from last saved graph')
     else:
-        print('An error occurred while trying to save the pose graph to %s.' % filename)
+        print('Error: posegraph_backup.zip missing from directory or has been corrupted')
 
 if __name__ == '__main__':
     try:
@@ -19,3 +19,4 @@ if __name__ == '__main__':
         else:
             connect(sys.argv[1], sys.argv[2])
     except rospy.ROSInterruptException: pass
+

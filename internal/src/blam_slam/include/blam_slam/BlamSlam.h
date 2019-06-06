@@ -42,6 +42,8 @@
 #include <blam_slam/AddFactor.h>
 #include <blam_slam/RemoveFactor.h>
 #include <blam_slam/SaveGraph.h>
+#include <blam_slam/Restart.h>
+#include <blam_slam/LoadGraph.h>
 
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <point_cloud_filter/PointCloudFilter.h>
@@ -69,6 +71,7 @@ class BlamSlam {
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
 
   int marker_id_;
+  bool map_loaded_;
 
  private:
   // Node initialization.
@@ -97,11 +100,18 @@ class BlamSlam {
   bool RemoveFactorService(blam_slam::RemoveFactorRequest &request,
                            blam_slam::RemoveFactorResponse &response);
 
+  // Generic restart service - for restarting from last saved posegraph
+  bool RestartService(blam_slam::RestartRequest &request,
+                        blam_slam::RestartResponse &response);
+
   bool use_chordal_factor_;
 
   // Service to write the pose graph and all point clouds to a zip file.
   bool SaveGraphService(blam_slam::SaveGraphRequest &request,
                         blam_slam::SaveGraphResponse &response);
+
+  bool LoadGraphService(blam_slam::LoadGraphRequest &request,
+                        blam_slam::LoadGraphResponse &response);                      
 
   // Publish Artifacts
   void PublishArtifact(const Eigen::Vector3d& W_artifact_position,
@@ -132,6 +142,8 @@ class BlamSlam {
   ros::ServiceServer add_factor_srv_;
   ros::ServiceServer remove_factor_srv_;
   ros::ServiceServer save_graph_srv_;
+  ros::ServiceServer restart_srv_;
+  ros::ServiceServer load_graph_srv_;
 
   // Names of coordinate frames.
   std::string fixed_frame_id_;

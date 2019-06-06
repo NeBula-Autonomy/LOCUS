@@ -105,11 +105,11 @@ private:
 
 struct ArtifactInfo {
   std::string id; // this corresponds to parent_id
-  std::string label; // what object it is
+  core_msgs::Artifact msg; // All fields in the artifact message that we need
   int num_updates; // how many times the optimizer has updated this
-  ArtifactInfo(std::string art_id="",
-               std::string art_label="") :
-               id(art_id), label(art_label), num_updates(0){}
+  ArtifactInfo(std::string art_id="") :
+               id(art_id), 
+               num_updates(0){}
 };
 
 class LaserLoopClosure {
@@ -149,12 +149,19 @@ class LaserLoopClosure {
   bool FindLoopClosures(unsigned int key,
                         std::vector<unsigned int>* closure_keys);
 
+  //Function to add factor between robots
+  bool AddFactorBetweenRobots(const geometry_utils::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
+    const ros::Time& stamp, unsigned int* key);
+
   // Build a 3D point cloud by concatenating all point clouds from poses along
   // the pose graph.
   void GetMaximumLikelihoodPoints(PointCloud* map);
 
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
+
+  // Get the most initial pose in the pose graph.
+  geometry_utils::Transform3 GetInitialPose() const;
 
   // Get pose at an input time
   gtsam::Key GetKeyAtTime(const ros::Time& stamp) const;
@@ -169,6 +176,8 @@ class LaserLoopClosure {
 
   // Publish artifacts for visualization. 
   void PublishArtifacts(gtsam::Key artifact_key = '-1');
+
+  bool ChageKeyNumber();
   
   // makeMenuMaker
   void makeMenuMarker( geometry_utils::Transform3 position, const std::string id_number) ;
@@ -196,6 +205,9 @@ class LaserLoopClosure {
   // Removes the factor that was visualized for confirmation.
   void RemoveConfirmFactorVisualization();
 
+  //Erase the posegraph
+  bool ErasePosegraph();
+
   // Saves pose graph and accompanying point clouds to a zip file.
   bool Save(const std::string &zipFilename) const;
 
@@ -205,6 +217,9 @@ class LaserLoopClosure {
  private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
+
+  // Checks on loop closure 
+  bool SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost);
 
   // Pose conversion from/to GTSAM format.
   geometry_utils::Transform3 ToGu(const gtsam::Pose3& pose) const;
@@ -224,6 +239,8 @@ class LaserLoopClosure {
   gtsam::PriorFactor<gtsam::Pose3> MakePriorFactor(
       const gtsam::Pose3& pose, const Diagonal::shared_ptr& covariance);
   gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenFactor(
+      const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
+  gtsam::BetweenFactor<gtsam::Pose3> MakeBetweenRobotFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
   gtsam::BetweenChordalFactor<gtsam::Pose3> MakeBetweenChordalFactor(
       const gtsam::Pose3& pose, const Gaussian::shared_ptr& covariance);
@@ -259,6 +276,8 @@ class LaserLoopClosure {
 
   // Pose graph and ISAM2 parameters.
   bool check_for_loop_closures_;
+  bool save_posegraph_backup_;
+  unsigned int keys_between_each_posegraph_backup_;
   unsigned int loop_closure_optimizer_;
   unsigned int key_;
   unsigned int last_closure_key_;
@@ -281,6 +300,11 @@ class LaserLoopClosure {
   bool use_chordal_factor_;
   bool publish_interactive_markers_;
 
+  // Sanity check parameters
+  bool b_check_deltas_; 
+  double translational_sanity_check_lc_;
+  double translational_sanity_check_odom_;
+
   // ICP parameters.
   double icp_ransac_thresh_;
   double icp_tf_epsilon_;
@@ -297,6 +321,10 @@ class LaserLoopClosure {
 
   gtsam::NonlinearFactorGraph nfg_;
   gtsam::Values values_;
+
+  // Backup values
+  gtsam::NonlinearFactorGraph nfg_backup_;
+  gtsam::Values values_backup_;
 
   // Frames.
   std::string fixed_frame_id_;

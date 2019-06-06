@@ -57,6 +57,8 @@ BlamSlam::~BlamSlam() {}
 
 bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
   name_ = ros::names::append(n.getNamespace(), "BlamSlam");
+  //TODO: Move this to a better location.
+  map_loaded_ = false;
 
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
@@ -148,6 +150,8 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   add_factor_srv_ = nl.advertiseService("add_factor", &BlamSlam::AddFactorService, this);
   remove_factor_srv_ = nl.advertiseService("remove_factor", &BlamSlam::RemoveFactorService, this);
   save_graph_srv_ = nl.advertiseService("save_graph", &BlamSlam::SaveGraphService, this);
+  restart_srv_ = nl.advertiseService("restart", &BlamSlam::RestartService, this);
+  load_graph_srv_ = nl.advertiseService("load_graph", &BlamSlam::LoadGraphService, this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -303,6 +307,27 @@ bool BlamSlam::SaveGraphService(blam_slam::SaveGraphRequest &request,
   return true;
 }
 
+bool BlamSlam::LoadGraphService(blam_slam::LoadGraphRequest &request,
+                                blam_slam::LoadGraphResponse &response) {
+  std::cout << "Loading graph..." << std::endl;
+  response.success = loop_closure_.Load(request.filename);
+  map_loaded_ = true;
+
+  // Regenerate the 3D map from the loaded posegraph
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+  loop_closure_.ChageKeyNumber();
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetInitialPose());
+  return true;
+}
+
+
 void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
@@ -420,7 +445,8 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
                                                   R_artifact_position[2]));
   R_pose_A.print("Between pose is ");
 
-  ArtifactInfo artifactinfo(msg.parent_id, msg.label);
+  ArtifactInfo artifactinfo(msg.parent_id);
+  artifactinfo.msg = msg;
 
   bool result = loop_closure_.AddArtifact(
     pose_key,
@@ -455,14 +481,14 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
     // Update to the pose of the last key
     // Current estimate
     gu::Transform3 new_pose = localization_.GetIntegratedEstimate();
-    // Delta translation
+    // Delta translation from the loop closure change to the last pose node
     new_pose.translation = new_pose.translation + (new_key_pose.translation - last_key_pose.translation);
     // Delta rotation
     new_pose.rotation = new_pose.rotation*(new_key_pose.rotation*last_key_pose.rotation.Trans());
 
     // Update localization
     // Also reset the robot's estimated position.
-    localization_.SetIntegratedEstimate(new_key_pose);
+    localization_.SetIntegratedEstimate(new_pose);
 
     // Visualize the pose graph updates
     loop_closure_.PublishPoseGraph();
@@ -532,10 +558,11 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     loop_closure_.PublishArtifacts();
 
   } else {
+    // ROS_INFO("No new loop closures");
     // No new loop closures - but was there a new key frame? If so, add new
     // points to the map.
     if (new_keyframe) {
-      ROS_INFO("Updating with a new key frame");
+      // ROS_INFO("Updating with a new key frame");
       localization_.MotionUpdate(gu::Transform3::Identity());
       localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
       PointCloud::Ptr unused(new PointCloud);
@@ -564,6 +591,27 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   }
 }
 
+bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
+                                blam_slam::RestartResponse &response) {    
+  ROS_INFO_STREAM(request.filename);
+  // Erase the current posegraph to make space for the backup
+  loop_closure_.ErasePosegraph();  
+  // Run the load function to retrieve the posegraph
+  response.success = loop_closure_.Load(request.filename);
+
+  // Regenerate the 3D map from the loaded posegraph
+  PointCloud::Ptr regenerated_map(new PointCloud);
+  loop_closure_.GetMaximumLikelihoodPoints(regenerated_map.get());
+
+  mapper_.Reset();
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(regenerated_map, unused.get());
+
+  // Also reset the robot's estimated position.
+  localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+  return true;
+}
+
 bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
                                   bool* new_keyframe) {
   if (new_keyframe == NULL) {
@@ -572,7 +620,7 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
   }
 
   unsigned int pose_key;
-  if (!use_chordal_factor_) {
+  if(map_loaded_) {
     // Add the new pose to the pose graph (BetweenFactor)
     // TODO rename to attitude and position sigma 
     gu::MatrixNxNBase<double, 6> covariance;
@@ -581,28 +629,50 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
       covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
     for (int i = 3; i < 6; ++i)
       covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
-
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-    if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
-                                        covariance, stamp, &pose_key)) {
-      return false;
-    }
 
-  } else {
-    // Add the new pose to the pose graph (BetweenChordalFactor)
-    gu::MatrixNxNBase<double, 12> covariance;
-    covariance.Zeros();
-    for (int i = 0; i < 9; ++i)
-      covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
-    for (int i = 9; i < 12; ++i)
-      covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
+    // Add factor between robots
+    loop_closure_.AddFactorBetweenRobots(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key);
+    
+    // Reset flag
+    map_loaded_= false;
+   } else {
 
-    const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-    if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
-                                               covariance, stamp, &pose_key)) {
-      return false;
+      if (!use_chordal_factor_) {
+        // Add the new pose to the pose graph (BetweenFactor)
+        // TODO rename to attitude and position sigma 
+        gu::MatrixNxNBase<double, 6> covariance;
+        covariance.Zeros();
+        for (int i = 0; i < 3; ++i)
+          covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
+        for (int i = 3; i < 6; ++i)
+          covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+
+        const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+        if (!loop_closure_.AddBetweenFactor(localization_.GetIncrementalEstimate(),
+                                            covariance, stamp, &pose_key)) {
+          // ROS_INFO("No new pose from add between factor. Pose key is %f",pose_key);
+          return false;
+        }
+
+      } else {
+        // Add the new pose to the pose graph (BetweenChordalFactor)
+        gu::MatrixNxNBase<double, 12> covariance;
+        covariance.Zeros();
+        for (int i = 0; i < 9; ++i)
+          covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+        for (int i = 9; i < 12; ++i)
+          covariance(i, i) = position_sigma_*position_sigma_; //0.4, 0.004; 0.2 m sd
+
+        const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
+        if (!loop_closure_.AddBetweenChordalFactor(localization_.GetIncrementalEstimate(),
+                                                  covariance, stamp, &pose_key)) {
+          return false;
+        }
     }
   }
+  
   *new_keyframe = true;
 
   if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {

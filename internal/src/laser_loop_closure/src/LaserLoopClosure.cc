@@ -114,6 +114,12 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   // Should we turn loop closure checking on or off?
   if (!pu::Get("check_for_loop_closures", check_for_loop_closures_)) return false;
 
+  // Should we save a backup pointcloud?
+  if (!pu::Get("save_posegraph_backup", save_posegraph_backup_)) return false;
+
+  // Should we save a backup pointcloud?
+  if (!pu::Get("keys_between_each_posegraph_backup", keys_between_each_posegraph_backup_)) return false;
+
   // Optimizer selection
   if (!pu::Get("loop_closure_optimizer", loop_closure_optimizer_)) return false;
   
@@ -170,6 +176,11 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("init/orientation_sigma/pitch", sigma_pitch)) return false;
   if (!pu::Get("init/orientation_sigma/yaw", sigma_yaw)) return false;
 
+  // Sanity check parameters
+  if (!pu::Get("b_check_deltas", b_check_deltas_)) return false;
+  if (!pu::Get("translational_sanity_check_lc", translational_sanity_check_lc_)) return false;
+  if (!pu::Get("translational_sanity_check_odom", translational_sanity_check_odom_)) return false;
+
   std::cout << "before isam reset" << std::endl; 
   #ifndef SOLVER
   // Create the ISAM2 solver.
@@ -207,7 +218,7 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
   Values new_value;
   new_factor.add(MakePriorFactor(pose, covariance));
   new_value.insert(key_, pose);
-
+  
   isam_->update(new_factor, new_value);
   values_ = isam_->calculateEstimate();
   nfg_ = isam_->getFactorsUnsafe();
@@ -215,7 +226,6 @@ bool LaserLoopClosure::LoadParameters(const ros::NodeHandle& n) {
 
   // Set the initial odometry.
   odometry_ = Pose3::identity();
-
 
 	//Initilize interactive marker server
   if (publish_interactive_markers_) {
@@ -298,9 +308,13 @@ bool LaserLoopClosure::AddBetweenFactor(
   Pose3 last_pose = values_.at<Pose3>(key_-1);
   new_value.insert(key_, last_pose.compose(odometry_));
 
-  // Store this timestamp so that we can publish the pose graph later.
-  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
-  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
+  // Compute cost before optimization
+  NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
+  nfg_temp.add(new_factor);
+  Values values_temp = isam_->getLinearizationPoint();
+  values_temp.insert(key_, last_pose.compose(odometry_));
+  double cost_old = nfg_temp.error(values_temp); // Assume values is up to date - no new values
+  //ROS_INFO("Cost before optimization is: %f", cost_old);
 
   // Update ISAM2.
   try{
@@ -329,6 +343,34 @@ bool LaserLoopClosure::AddBetweenFactor(
 
   nfg_ = isam_->getFactorsUnsafe();
 
+  // Get updated cost
+  double cost = nfg_.error(values_);
+
+  //ROS_INFO("Cost after optimization is: %f", cost);
+
+  // Do sanity check on result
+  bool b_accept_update;
+  if (b_check_deltas_ && values_backup_.exists(key_-1)){ // Only check if the values_backup has been stored (a loop closure has occured)
+    ROS_INFO("Sanity checking output");
+    b_accept_update = SanityCheckForLoopClosure(translational_sanity_check_odom_, cost_old, cost);
+    // TODO - remove vizualization keys if it is rejected 
+
+    if (!b_accept_update){
+      ROS_WARN("Returning false for add between factor - have reset, waiting for next pose update");
+      // Erase the current posegraph to make space for the backup
+      LaserLoopClosure::ErasePosegraph();  
+      // Run the load function to retrieve the posegraph
+      LaserLoopClosure::Load("posegraph_backup.zip");
+      return false;
+    }
+    ROS_INFO("Sanity check passed");
+  }
+
+  // Adding poses to stored hash maps
+  // Store this timestamp so that we can publish the pose graph later.
+  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
+
   // Assign output and get ready to go again!
   *key = key_++;
 
@@ -344,6 +386,11 @@ bool LaserLoopClosure::AddBetweenFactor(
   }
 
   return false;
+}
+
+//function to change keynumber for multiple robots
+bool LaserLoopClosure::ChageKeyNumber(){
+    key_ = 10000;
 }
 
 bool LaserLoopClosure::AddBetweenChordalFactor(
@@ -445,6 +492,12 @@ bool LaserLoopClosure::AddKeyScanPair(unsigned int key,
 
 bool LaserLoopClosure::FindLoopClosures(
     unsigned int key, std::vector<unsigned int>* closure_keys) {
+
+  // Function to save the posegraph regularly
+  if (key % keys_between_each_posegraph_backup_ == 0 && save_posegraph_backup_){
+    LaserLoopClosure::Save("posegraph_backup.zip");
+  } 
+
   // If loop closure checking is off, don't do this step. This will save some
   // computation time.
   if (!check_for_loop_closures_)
@@ -456,6 +509,14 @@ bool LaserLoopClosure::FindLoopClosures(
     return false;
   }
   closure_keys->clear();
+
+  // Update backups
+  nfg_backup_ = isam_->getFactorsUnsafe();
+  values_backup_ = isam_->getLinearizationPoint();
+
+  // To track change in cost
+  double cost;
+  double cost_old;
 
   // If a loop has already been closed recently, don't try to close a new one.
   if (std::fabs(key - last_closure_key_) < poses_before_reclosing_)
@@ -494,13 +555,30 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenFactor)
         LaserLoopClosure::Mat66 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+            // Function to save the posegraph regularly
+          if (save_posegraph_backup_){
+            LaserLoopClosure::Save("posegraph_backup.zip");
+          } 
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(BetweenFactor<Pose3>(key, other_key, ToGtsam(delta),
                                               ToGtsam(covariance)));
+          
+          // Compute cost before optimization
+          NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
+          nfg_temp.add(new_factor);
+          cost_old = nfg_temp.error(values_); // Assume values is up to date - no new values
+
+
+          // Optimization                                
           isam_->update(new_factor, Values());
           closed_loop = true;
           last_closure_key_ = key;
+
+          // Get updated cost
+          nfg_temp = isam_->getFactorsUnsafe();
+          cost = nfg_temp.error(isam_->getLinearizationPoint());
+
 
           // Store for visualization and output.
           loop_edges_.push_back(std::make_pair(key, other_key));
@@ -518,13 +596,28 @@ bool LaserLoopClosure::FindLoopClosures(
         gu::Transform3 delta; // (Using BetweenChordalFactor)
         LaserLoopClosure::Mat1212 covariance;
         if (PerformICP(scan1, scan2, pose1, pose2, &delta, &covariance)) {
+          if (save_posegraph_backup_){
+            LaserLoopClosure::Save("posegraph_backup.zip");
+          } 
           // We found a loop closure. Add it to the pose graph.
           NonlinearFactorGraph new_factor;
           new_factor.add(gtsam::BetweenChordalFactor<Pose3>(key, other_key, ToGtsam(delta),
                                               ToGtsam(covariance)));
+          
+          // Compute cost before optimization
+          NonlinearFactorGraph nfg_temp = isam_->getFactorsUnsafe();
+          nfg_temp.add(new_factor);
+          cost_old = nfg_temp.error(values_); // Assume values is up to date - no new values
+
+          // Optimization                                
           isam_->update(new_factor, Values());
           closed_loop = true;
           last_closure_key_ = key;
+
+          // Get updated cost
+          nfg_temp = isam_->getFactorsUnsafe();
+          cost = nfg_temp.error(isam_->getLinearizationPoint());
+
 
           // Store for visualization and output.
           loop_edges_.push_back(std::make_pair(key, other_key));
@@ -538,13 +631,100 @@ bool LaserLoopClosure::FindLoopClosures(
           // break;
         }
       }
+      values_ = isam_->calculateEstimate();
+
+      nfg_ = isam_->getFactorsUnsafe();
+
+      // Check the change in pose to see if it exceeds criteria
+      if (b_check_deltas_ && closed_loop){
+        ROS_INFO("Sanity checking output");
+        closed_loop = SanityCheckForLoopClosure(translational_sanity_check_lc_, cost_old, cost);
+        // TODO - remove vizualization keys if it is rejected 
+      
+        if (!closed_loop){
+          ROS_WARN("Returning false for bad loop closure - have reset, waiting for next pose update");
+          // Erase the current posegraph to make space for the backup
+          LaserLoopClosure::ErasePosegraph();
+          // Run the load function to retrieve the posegraph  
+          LaserLoopClosure::Load("posegraph_backup.zip");
+          return false;
+        }
     }
-  }
-  values_ = isam_->calculateEstimate();
-
-  nfg_ = isam_->getFactorsUnsafe();
-
+      // Update backups
+      nfg_backup_ = nfg_;
+      values_backup_ = values_;
+    } // end of if statement 
+  } // end of for loop
+  
   return closed_loop;
+}
+
+bool LaserLoopClosure::SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost){
+  // Checks loop closures to see if the translational threshold is within limits
+
+  // if (!values_backup_.exists(key_-1)){
+  //   ROS_INFO("")
+  // }
+
+  // Init poses
+  gtsam::Pose3 old_pose;
+  gtsam::Pose3 new_pose;
+
+  if (key_ > 1){
+    ROS_INFO("Key is more than 1, checking pose change");
+    // Previous pose
+    old_pose = values_backup_.at<Pose3>(key_-1);
+    // New pose
+    new_pose = values_.at<Pose3>(key_-1);
+  }
+  else{
+    ROS_INFO("Key is less than or equal to 1, not checking pose change");
+    // Second pose - return 
+    return true;
+  }
+
+  // Translational change 
+  double delta = old_pose.compose(new_pose.inverse()).translation().norm();
+  
+  ROS_INFO("Translational change with update is %f",delta);
+
+  // TODO vary the sanity check values based on what kind of update it is
+  // e.g. have the odom update to have a smaller sanity check 
+  if (delta > translational_sanity_check || cost > cost_old){ // TODO - add threshold for error in the graph - if it increases after loop closure then reject
+    if (delta > translational_sanity_check)
+      ROS_WARN("Update delta exceeds threshold, rejecting");
+    
+    if (cost > cost_old)
+      ROS_WARN("Cost increases, rejecting");
+
+    // Updating 
+    values_ = values_backup_;
+    nfg_ = nfg_backup_;
+    // Reset
+    #ifndef SOLVER
+    // Create the ISAM2 solver.
+    ISAM2Params parameters;
+    parameters.relinearizeSkip = relinearize_skip_;
+    parameters.relinearizeThreshold = relinearize_threshold_;
+    isam_.reset(new ISAM2(parameters));
+    #endif
+    #ifdef SOLVER
+    isam_.reset(new GenericSolver());
+    #endif
+    ROS_INFO("Reset isam");
+    isam_->update(nfg_, values_);
+    ROS_INFO("updated isam to reset");
+
+    // Save updated values
+    values_ = isam_->calculateEstimate();
+    nfg_ = isam_->getFactorsUnsafe();
+    ROS_INFO("updated stored values");
+
+    return false;
+  }
+
+  return true;
+
 }
 
 void LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
@@ -586,6 +766,16 @@ gu::Transform3 LaserLoopClosure::GetLastPose() const {
     return ToGu(values_.at<Pose3>(0));
   }
 }
+
+gu::Transform3 LaserLoopClosure::GetInitialPose() const {
+  if (key_ > 1) {
+    return ToGu(values_.at<Pose3>(0));
+  } else {
+    ROS_WARN("%s: The graph only contains its initial pose.", name_.c_str());
+    return ToGu(values_.at<Pose3>(0));
+  }
+}
+
 
 gu::Transform3 LaserLoopClosure::ToGu(const Pose3& pose) const {
   gu::Transform3 out;
@@ -657,6 +847,13 @@ BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenFactor(
     const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
   odometry_edges_.push_back(std::make_pair(key_-1, key_));
   return BetweenFactor<Pose3>(key_-1, key_, delta, covariance);
+}
+
+BetweenFactor<Pose3> LaserLoopClosure::MakeBetweenRobotFactor(
+    const Pose3& delta,
+    const LaserLoopClosure::Gaussian::shared_ptr& covariance) {
+  odometry_edges_.push_back(std::make_pair(0, key_));
+  return BetweenFactor<Pose3>(0, key_, delta, covariance);
 }
 
 gtsam::BetweenChordalFactor<Pose3> LaserLoopClosure::MakeBetweenChordalFactor(
@@ -901,6 +1098,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
   gtsam::Values linPoint = isam_->getLinearizationPoint();
   nfg_ = isam_->getFactorsUnsafe();
 
+  // Update backups
+  nfg_backup_ = isam_->getFactorsUnsafe();
+  values_backup_ = isam_->getLinearizationPoint();
+
   // Remove visualization of edge to be confirmed
   if (is_manual_loop_closure) {
     RemoveConfirmFactorVisualization();
@@ -911,7 +1112,8 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     }
   }
 
-  double cost; // for debugging
+  double cost_old;
+  double cost; // for sanity checks
 
   NonlinearFactorGraph new_factor;
   gtsam::Values new_values;
@@ -971,6 +1173,10 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     // add factor to factor graph
     new_factor.add(factor);
 
+    // Store cost before optimization
+    cost_old = new_factor.error(linPoint);
+
+
   } else {
     // Use BetweenChordalFactor  
     gtsam::Vector12 precisions; 
@@ -995,6 +1201,9 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
 
     // add factor to factor graph
     new_factor.add(factor);
+
+    // Store cost before optimization
+    cost_old = new_factor.error(linPoint);
   }
 
   // optimize
@@ -1092,6 +1301,12 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     cost = nfg_.error(linPoint);
     ROS_INFO_STREAM("iSAM2 Error at linearization point (after loop closure): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances) 
 
+    // Check the change in pose to see if it exceeds criteria
+    if (b_check_deltas_){
+      ROS_INFO("Sanity checking output");
+      bool check_result = SanityCheckForLoopClosure(translational_sanity_check_lc_, cost_old, cost);
+    }
+
     // // Publish
     // PublishPoseGraph();
 
@@ -1171,6 +1386,82 @@ bool LaserLoopClosure::RemoveFactor(unsigned int key1, unsigned int key2) {
   // PublishPoseGraph();
 
   return true; //result.getVariablesReeliminated() > 0;
+}
+
+bool LaserLoopClosure::AddFactorBetweenRobots(const gu::Transform3& delta, const LaserLoopClosure::Mat66& covariance,
+    const ros::Time& stamp, unsigned int* key) {
+  if (key == NULL) {
+    ROS_ERROR("%s: Output key is null.", name_.c_str());
+    return false;
+  }
+  // Append the new odometry.
+  //TODO: Replace delta with delta computed from a function given R1 and R2 pose
+  gu::Transform3 delta1 = gu::Transform3::Identity();
+  Pose3 new_odometry = ToGtsam(delta1);
+  // CHANGE TO CONFLICT THE BELOW STATEMENT
+  // We always add new poses, but only return true if the pose is far enough
+  // away from the last one (keyframes). This lets the caller know when they
+  // can add a laser scan.
+
+  // Is the odometry translation large enough to add a new node to the graph
+  odometry_ = odometry_.compose(new_odometry);
+  odometry_kf_ = odometry_kf_.compose(new_odometry);
+
+
+  // Add a new factor
+
+  NonlinearFactorGraph new_factor;
+  Values new_value;
+  //TODO: Don't hard code the zero value in this function.
+  new_factor.add(MakeBetweenRobotFactor(odometry_, ToGtsam(covariance)));
+  // TODO Compose covariances at the same time as odometry
+
+  //TODO: replace 0 with the key of best fit
+  Pose3 last_pose = values_.at<Pose3>(0);
+  ROS_INFO("Key_ = %i", key_);
+  new_value.insert(key_, last_pose.compose(odometry_));
+
+  //TODO: Check if we still need this.
+  // Update ISAM2.
+  try{
+    isam_->update(new_factor, new_value); 
+  } catch (...){
+    // redirect cout to file
+    std::ofstream nfgFile;
+    std::string home_folder(getenv("HOME"));
+    nfgFile.open(home_folder + "/Desktop/factor_graph.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+    std::cout.rdbuf(nfgFile.rdbuf());
+
+    // save entire factor graph to file and debug if loop closure is correct
+    gtsam::NonlinearFactorGraph nfg = isam_->getFactorsUnsafe();
+    nfg.print();
+    nfgFile.close();
+
+    std::cout.rdbuf(coutbuf); //reset to standard output again
+
+    ROS_ERROR("ISAM update error in AddBetweenFactors");
+    throw;
+  }
+  
+  // Update class variables
+  values_ = isam_->calculateEstimate();
+
+  nfg_ = isam_->getFactorsUnsafe();
+
+  // Adding poses to stored hash maps
+  // Store this timestamp so that we can publish the pose graph later.
+  keyed_stamps_.insert(std::pair<unsigned int, ros::Time>(key_, stamp));
+  stamps_keyed_.insert(std::pair<double, unsigned int>(stamp.toSec(), key_));
+
+  // Assign output and get ready to go again!
+  *key = key_++;
+
+  // Reset odometry to identity
+  odometry_ = Pose3::identity();
+
+  odometry_kf_ = Pose3::identity();
+  return true;
 }
 
 bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int key2) {
@@ -1283,6 +1574,25 @@ bool writeFileToZip(zipFile &zip, const std::string &filename) {
   }
   return true;
 }
+
+bool LaserLoopClosure::ErasePosegraph(){
+  keyed_scans_.clear();
+  keyed_stamps_.clear();
+  stamps_keyed_.clear();
+
+  loop_edges_.clear();
+  odometry_ = Pose3::identity();
+  odometry_kf_ = Pose3::identity();
+  odometry_edges_.clear();
+
+  key_ = 0;
+  
+	//Initilize interactive marker server
+  if (publish_interactive_markers_) {
+    server.reset(new interactive_markers::InteractiveMarkerServer(
+        "interactive_node", "", false));
+  }
+} 
 
 bool LaserLoopClosure::Save(const std::string &zipFilename) const {
   const std::string path = "pose_graph";
@@ -1485,7 +1795,11 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
     ros::Time t;
     t.fromNSec(std::stol(timeStr));
     keyed_stamps_[key_] = t;
+    //stamps_keyed_[t] = key_ ;
   }
+
+  // Increment key to be ready for more scans
+  key_++;
 
   ROS_INFO("Restored all point clouds.");
   info_file.close();
@@ -1842,7 +2156,7 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
       // Update all artifacts - loop through all - the default
       // Get position and label 
       artifact_position = GetArtifactPosition(it->first);
-      artifact_label = it->second.label;
+      artifact_label = it->second.msg.label;
 
       // Increment update count
       it->second.num_updates++;
@@ -1854,14 +2168,14 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
       ROS_INFO("Publishing only the new artifact");
       // Get position and label 
       artifact_position = GetArtifactPosition(artifact_key);
-      artifact_label = artifact_key2info_hash[artifact_key].label;
+      artifact_label = artifact_key2info_hash[artifact_key].msg.label;
 
       // Increment update count
       artifact_key2info_hash[artifact_key].num_updates++; 
     }
 
     // Create new artifact msg 
-    core_msgs::Artifact new_msg;
+    core_msgs::Artifact new_msg = artifact_key2info_hash[artifact_key].msg;
 
     new_msg.point.point.x = artifact_position[0];
     new_msg.point.point.y = artifact_position[1];
@@ -2017,7 +2331,7 @@ gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
   // std::cout << "Got iterator at lower_bound. Input: " << stamp.toSec() << ", found " << iterTime->first << std::endl;
 
   // TODO - interpolate - currently just take one
-  double t2 = iterTime->first; 
+  double t2 = iterTime->first;
   double t1 = std::prev(iterTime,1)->first; 
 
   // std::cout << "Time 1 is: " << t1 << ", Time 2 is: " << t2 << std::endl;

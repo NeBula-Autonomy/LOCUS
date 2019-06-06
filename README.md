@@ -100,7 +100,7 @@ static_transform_publisher 0 0 0 0 0 0 1 /husky/base_link /velodyne
 In addition, a static transform publisher is needed to take place of the tf from world to blam:
 
 ```bash
-static_transform_publisher 0 0 0 0 0 0 1 /world /husky/blam
+static_transform_publisher 0 0 0 0 0 0 /husky/blam /world
 ```
 **Note:** 
 If you are using the ``run_blam.sh`` script, there is no need to run the static transform publisher from `/world` to `/husky/blam` as this is already captured in the script.
