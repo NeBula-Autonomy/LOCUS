@@ -1600,8 +1600,6 @@ bool LaserLoopClosure::ErasePosegraph(){
   odometry_ = Pose3::identity();
   odometry_kf_ = Pose3::identity();
   odometry_edges_.clear();
-
-  key_ = 0;
   
 	//Initilize interactive marker server
   if (publish_interactive_markers_) {

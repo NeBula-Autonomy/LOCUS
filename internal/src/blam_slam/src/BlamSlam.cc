@@ -321,7 +321,7 @@ bool BlamSlam::LoadGraphService(blam_slam::LoadGraphRequest &request,
   // Obtain the second robot's initial pose from the tf
   //TODO: Kamak: write a callback function to get the tf
   // compute the delta and put it in this format.
-  double init_x = 0.0, init_y = 20.0, init_z = 0.0;
+  double init_x = 0.0, init_y = 0.0, init_z = 0.0;
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
   delta_after_load_.translation = gu::Vec3(init_x, init_y, init_z);
   delta_after_load_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
@@ -612,7 +612,7 @@ bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
 
 
   // This will add a between factor after obtaining the delta between poses.
-  double init_x = 9.0, init_y = 0.0, init_z = 0.0;
+  double init_x = 0.0, init_y = 0.0, init_z = 0.0;
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
   delta_after_restart_.translation = gu::Vec3(init_x, init_y, init_z);
   delta_after_restart_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
