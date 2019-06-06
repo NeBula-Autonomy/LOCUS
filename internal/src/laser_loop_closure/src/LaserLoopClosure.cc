@@ -436,6 +436,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
 
   gtsam::Key pose_key = GetKeyAtTime(stamp);
 
+  // Change the process according to whether the uwb anchor is observed for the first time or not
   if (!values_.exists(uwb_key)) {
 
     gtsam::Values linPoint = isam_->getLinearizationPoint();
@@ -445,7 +446,6 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     NonlinearFactorGraph new_factor;
     gtsam::Values new_values;
 
-    // TODO
     // Add a UWB key
     gtsam::Pose3 pose_uwb = gtsam::Pose3(gtsam::Rot3(), gtsam::Point3(robot_position));
     new_values.insert(uwb_key, pose_uwb);
@@ -462,37 +462,31 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         gtsam::noiseModel::Diagonal::Precisions(prior_precisions);
         new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(uwb_key, gtsam::Pose3(), prior_noise));
 
+        // Add a RangeFactor between the nearest pose key and the UWB key
         new_factor.add(gtsam::RangeFactor<Pose3, Pose3>(pose_key, uwb_key, range, rangeNoise));
         uwb_edges_.push_back(std::make_pair(pose_key, uwb_key));
       }
         break;
       case 1 :
       {
-        // Add a BetweenFactor between the pose key and the UWB key
-        // gtsam::Vector6 precisions;
-        // precisions.head<3>().setConstant(0.0);
-        // precisions.tail<3>().setConstant(1.0/range);
-        // static const gtsam::SharedNoiseModel& noise = 
-        // gtsam::noiseModel::Diagonal::Precisions(precisions);
-        // // TODO
-        // new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(pose_key, uwb_key, gtsam::Pose3(), noise));
+        // TODO: Add a BetweenFactor between the pose key and the UWB key
       }
         break;
       case 2 :
       {
-
+        // TODO: Calculate a estimated range between a certain pose key and a UWB anchor
       }
         break;
       default :
       {
         // Error
         ROS_INFO_STREAM("ERROR, wrong compensation selection");
-        // TODO handle the error
+        // TODO: handle the error
       }
     }
 
     try {
-      std::cout << "Optimizing manual loop closure, iteration" << std::endl;
+      std::cout << "Optimizing uwb-based loop closure, iteration" << std::endl;
       gtsam::Values result;
 
       // Switch based on optimizer input
@@ -549,19 +543,19 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       // INFO stream new cost
       linPoint = isam_->getLinearizationPoint();
       cost = nfg_.error(linPoint);
-      ROS_INFO_STREAM("Error at linearization point (after adding UWB RangeFactor): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)
+      ROS_INFO_STREAM("Error at linearization point (after adding UWB RangeFactor): " << cost);
 
       PublishPoseGraph();
 
       return true;
     }
     catch (...) {
-      ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
+      ROS_ERROR("An error occurred while adding a factor");
       throw;
     }
   }
   else {
-    // Add a RangeFactor 
+    // Add a RangeFactor when the UWB is already registered in the pose graph.
 
     gtsam::Values linPoint = isam_->getLinearizationPoint();
     nfg_ = isam_->getFactorsUnsafe();
@@ -579,12 +573,12 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         break;
       case 1 :
       {
-
+        // TODO: Add a BetweenFactor between the pose key and the UWB key
       }
         break;
       case 2 :
       {
-
+        // TODO: Calculate a estimated range between a certain pose key and a UWB anchor
       }
         break;
       default :
@@ -596,7 +590,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
     }
 
     try {
-      std::cout << "Optimizing manual loop closure, iteration" << std::endl;
+      std::cout << "Optimizing uwb-based loop closure, iteration" << std::endl;
       gtsam::Values result;
 
       // Switch based on optimizer input
@@ -623,7 +617,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
         {
           // Error
           ROS_INFO_STREAM("ERROR, wrong optimizer option");
-          // TODO handle the error
+          // TODO: handle the error
         }
       }
 
@@ -657,7 +651,7 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       return true;
     }
     catch (...) {
-      ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
+      ROS_ERROR("An error occurred while manually adding a factor.");
       throw;
     }
   }
@@ -668,7 +662,6 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
 bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
                                      const ros::Time& stamp,
                                      const Eigen::Vector3d robot_position) {
-  std::cout << "test" << std::endl;
 
   gtsam::Key uwb_key;
   if (uwb_id2key_hash_.find(uwb_id) != uwb_id2key_hash_.end()) {
@@ -714,7 +707,7 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
 
 
   try {
-    std::cout << "Optimizing manual loop closure, iteration" << std::endl;
+    std::cout << "Optimizing uwb-based loop closure, iteration" << std::endl;
     gtsam::Values result;
 
     // Switch based on optimizer input
@@ -771,14 +764,14 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
     // INFO stream new cost
     linPoint = isam_->getLinearizationPoint();
     cost = nfg_.error(linPoint);
-    ROS_INFO_STREAM("Error at linearization point (after adding UWB RangeFactor): " << cost); // 10^6 - 10^9 is ok (re-adjust covariances)
+    ROS_INFO_STREAM("Error at linearization point (after adding UWB RangeFactor): " << cost);
 
     PublishPoseGraph();
 
     return true;
   }
   catch (...) {
-    ROS_ERROR("An error occurred while manually adding a factor to iSAM2.");
+    ROS_ERROR("An error occurred while manually adding a factor.");
     throw;
   }
 
