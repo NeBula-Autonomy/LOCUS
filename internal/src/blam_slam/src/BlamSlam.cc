@@ -60,6 +60,8 @@ bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
   //TODO: Move this to a better location.
   map_loaded_ = false;
 
+  initial_key_ = 0;
+
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
     return false;
@@ -490,13 +492,13 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
-
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
-    loop_closure_.AddKeyScanPair(0, msg);
+    //loop_closure_.AddKeyScanPair(initial_key_, msg);
+    loop_closure_.AddKeyScanPair(initial_key_, msg);
     return;
   }
 
@@ -582,6 +584,23 @@ bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
   PointCloud::Ptr unused(new PointCloud);
   mapper_.InsertPoints(regenerated_map, unused.get());
 
+  initial_key_ = loop_closure_.GetKey();
+  gu::MatrixNxNBase<double, 6> covariance;
+  covariance.Zeros();
+  for (int i = 0; i < 3; ++i)
+    covariance(i, i) = attitude_sigma_*attitude_sigma_; //0.4, 0.004; 0.2 m sd
+  for (int i = 3; i < 6; ++i)
+    covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
+
+
+  // This will add a between factor after obtaining the delta between poses.
+  double init_x = 9.0, init_y = 0.0, init_z = 0.0;
+  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
+  delta_after_restart_.translation = gu::Vec3(init_x, init_y, init_z);
+  delta_after_restart_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
+  loop_closure_.AddFactorAtRestart(delta_after_restart_, covariance);
+
+
   // Also reset the robot's estimated position.
   localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
   return true;
@@ -593,10 +612,10 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     ROS_ERROR("%s: Output boolean for new keyframe is null.", name_.c_str());
     return false;
   }
-
   //TODO: do not hard code the value for pose_key.
-  unsigned int pose_key = 10000;
+  unsigned int pose_key;
   if(map_loaded_) {
+    pose_key = 10000;
     // Add the new pose to the pose graph (BetweenFactor)
     // TODO rename to attitude and position sigma 
     gu::MatrixNxNBase<double, 6> covariance;
@@ -606,13 +625,11 @@ bool BlamSlam::HandleLoopClosures(const PointCloud::ConstPtr& scan,
     for (int i = 3; i < 6; ++i)
       covariance(i, i) = position_sigma_*position_sigma_; //0.1, 0.01; sqrt(0.01) rad sd
     const ros::Time stamp = pcl_conversions::fromPCL(scan->header.stamp);
-/*     loop_closure_.AddFactorBetweenRobots(localization_.GetIncrementalEstimate(),
-                                        covariance, stamp, &pose_key); */
-     if (!loop_closure_.AddKeyScanPair(pose_key, scan)) {
-      return false;
-    }
-     loop_closure_.FindIntermapLoopClosures();
-     map_loaded_= false;
+    loop_closure_.AddKeyScanPair(pose_key, scan);
+    loop_closure_.AddFactorBetweenRobots(localization_.GetIncrementalEstimate(),
+                                        covariance, stamp, &pose_key);
+
+    map_loaded_= false;
     } else {
       if (!use_chordal_factor_) {
     // Add the new pose to the pose graph (BetweenFactor)

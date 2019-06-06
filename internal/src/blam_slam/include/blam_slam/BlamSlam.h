@@ -120,6 +120,13 @@ class BlamSlam {
   // The node's name.
   std::string name_;
 
+  // The intial key in the pose graph
+  unsigned int initial_key_;
+
+  // The delta between where LAMP was last saved, and where it is restarted.
+  geometry_utils::Transform3 delta_after_restart_;
+
+
   // Update rates and callback timers.
   double estimate_update_rate_;
   double visualization_update_rate_;
