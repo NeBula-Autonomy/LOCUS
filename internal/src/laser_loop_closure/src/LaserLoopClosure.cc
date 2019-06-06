@@ -2600,6 +2600,8 @@ bool LaserLoopClosure::PublishPoseGraph() {
   }
 
   PublishUwb();
+  
+  return true;
 
 }
 
