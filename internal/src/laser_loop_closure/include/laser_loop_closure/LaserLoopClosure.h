@@ -175,7 +175,7 @@ class LaserLoopClosure {
   bool PublishPoseGraph();
 
   // Publish artifacts for visualization. 
-  void PublishArtifacts(gtsam::Key artifact_key = '-1');
+  void PublishArtifacts(gtsam::Key artifact_key = gtsam::Key(gtsam::Symbol('z',0)));
 
   bool ChangeKeyNumber();
   

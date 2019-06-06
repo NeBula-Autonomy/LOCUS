@@ -2243,14 +2243,15 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
   for (auto it = artifact_key2info_hash.begin();
             it != artifact_key2info_hash.end(); it++ ) {
 
-    ROS_INFO_STREAM("Artifact hash key is" << gtsam::DefaultKeyFormatter(it->first));
-    if (it->first.chr() != 'l') {
+    ROS_INFO_STREAM("Artifact hash key is " << gtsam::DefaultKeyFormatter(it->first));
+    std::string label = "l";
+    if ((std::string(gtsam::Symbol(it->first)).compare(0,1,label)) != 0){
       ROS_WARN("ERROR - have a non-landmark ID");
       ROS_INFO_STREAM("Bad ID is " << gtsam::DefaultKeyFormatter(it->first));
       continue;
     }
 
-    if (artifact_key == '-1'){ // The default value
+    if (gtsam::Symbol(artifact_key).chr() == 'z'){ // The default value
       // Update all artifacts - loop through all - the default
       // Get position and label 
       ROS_INFO_STREAM("Artifact key to publish is " << gtsam::DefaultKeyFormatter(it->first));
