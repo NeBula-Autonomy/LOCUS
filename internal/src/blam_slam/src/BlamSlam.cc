@@ -489,6 +489,7 @@ void BlamSlam::ArtifactCallback(const core_msgs::Artifact& msg) {
   if (b_is_new_artifact){
     // Don't need to update the map at all - just publish artifacts
     // Publish artifacts - from pose-graph positions
+    ROS_INFO_STREAM("Publishing new artifact key: " << gtsam::DefaultKeyFormatter(cur_artifact_key));
     loop_closure_.PublishArtifacts(cur_artifact_key);
   }else{
     // Loop closure has been performed - update the graph

@@ -897,6 +897,12 @@ bool LaserLoopClosure::FindLoopClosures(
   if (std::fabs(key - last_closure_key_) < poses_before_reclosing_)
     return false;
 
+  // Check that the key exists
+  if (!values_.exists(key)){
+    ROS_WARN("Key %u does not exist in find loop closures",key);
+    return false;
+  }
+
   // Get pose and scan for the provided key.
   const gu::Transform3 pose1 = ToGu(values_.at<Pose3>(key));
   const PointCloud::ConstPtr scan1 = keyed_scans_[key];
@@ -919,6 +925,11 @@ bool LaserLoopClosure::FindLoopClosures(
     if (!keyed_scans_.count(other_key))
       continue;
 
+    // Check that the key exists
+    if (!values_.exists(other_key)){
+      ROS_WARN("Key %u does not exist in loop closure search (other key)",other_key);
+      return false;
+    }
     const gu::Transform3 pose2 = ToGu(values_.at<Pose3>(other_key));
     const gu::Transform3 difference = gu::PoseDelta(pose1, pose2);
     if (difference.translation.Norm() < proximity_threshold_) {
@@ -1037,9 +1048,9 @@ bool LaserLoopClosure::FindLoopClosures(
 bool LaserLoopClosure::SanityCheckForLoopClosure(double translational_sanity_check, double cost_old, double cost){
   // Checks loop closures to see if the translational threshold is within limits
 
-  // if (!values_backup_.exists(key_-1)){
-  //   ROS_INFO("")
-  // }
+  if (!values_backup_.exists(key_-1)){
+    ROS_WARN("Key %u does not exist in backup in SanityCheckForLoopClosure");
+  }
 
   // Init poses
   gtsam::Pose3 old_pose;
@@ -1102,10 +1113,10 @@ bool LaserLoopClosure::SanityCheckForLoopClosure(double translational_sanity_che
 
 }
 
-void LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
+bool LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
   if (points == NULL) {
     ROS_ERROR("%s: Output point cloud container is null.", name_.c_str());
-    return;
+    return false;
   }
   points->points.clear();
 
@@ -1119,6 +1130,11 @@ void LaserLoopClosure::GetMaximumLikelihoodPoints(PointCloud* points) {
     if (!keyed_scans_.count(key))
       continue;
 
+    // Check that the key exists
+    if (!values_.exists(key)){
+      ROS_WARN("Key %u does not exist in GetMaximumLikelihoodPoints",key);
+      return false;
+    }
     const gu::Transform3 pose = ToGu(values_.at<Pose3>(key));
     Eigen::Matrix4d b2w;
     b2w.block(0, 0, 3, 3) = pose.rotation.Eigen();
@@ -1453,7 +1469,7 @@ bool LaserLoopClosure::AddArtifact(gtsam::Key posekey, gtsam::Key artifact_key,
 
   // keep track of artifact info: add to hash if not added
   if (artifact_key2info_hash.find(artifact_key) == artifact_key2info_hash.end()) {
-    ROS_INFO("New artifact detected with id %d",artifact.id);
+    ROS_INFO_STREAM("New artifact detected with id" << artifact.id);
     artifact_key2info_hash[artifact_key] = artifact;
   }
   // add to pose graph 
@@ -1501,6 +1517,7 @@ bool LaserLoopClosure::AddFactor(gtsam::Key key1, gtsam::Key key2,
     }
     // We should add initial guess to values 
     new_values.insert(key2, linPoint.at<gtsam::Pose3>(key1).compose(pose12));
+    ROS_INFO("New artifact added");
 
     ROS_INFO("Initial global position of artifact is: %f, %f, %f",
                   new_values.at<Pose3>(key2).translation().vector().x(),
@@ -1863,6 +1880,15 @@ bool LaserLoopClosure::VisualizeConfirmFactor(unsigned int key1, unsigned int ke
   m.color.b = 0.0;
   m.color.a = 1.0;
   m.scale.x = 0.05;
+  // Check that the key exists
+  if (!values_.exists(key1)){
+    ROS_WARN("Key1,  %u, does not exist in VisualizeConfirmFactor",key1);
+    return false;
+  }
+  if (!values_.exists(key2)){
+    ROS_WARN("Key2,  %u, does not exist in VisualizeConfirmFactor",key2);
+    return false;
+  }
   const gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
   const gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
 
@@ -1996,6 +2022,10 @@ bool LaserLoopClosure::Save(const std::string &zipFilename) const {
 
     ROS_INFO("Saved point cloud %d/%d.", i+1, (int) keyed_scans_.size());
     keys_file << pcd_filename << ",";
+    if (!values_.exists(entry.first)){
+      ROS_WARN("Key,  %u, does not exist in Save",entry.first);
+      return false;
+    }
     keys_file << keyed_stamps_.at(entry.first).toNSec() << "\n";
     ++i;
   }
@@ -2140,6 +2170,11 @@ bool LaserLoopClosure::Load(const std::string &zipFilename) {
   const LaserLoopClosure::Diagonal::shared_ptr covariance(
       LaserLoopClosure::Diagonal::Sigmas(initial_noise_));
   const gtsam::Key key0 = *nfg_.keys().begin();
+
+  if (!values_.exists(key0)){
+    ROS_WARN("Key0, %s, does not exist in Load",key0);
+    return false;
+  }
   nfg_.add(gtsam::PriorFactor<Pose3>(key0, values_.at<Pose3>(key0), covariance));
   isam_->update(nfg_, values_); 
 
@@ -2264,7 +2299,7 @@ void LaserLoopClosure::makeMenuMarker( gu::Transform3 position, const std::strin
   //server->applyChanges();
 }
 
-void LaserLoopClosure::PublishPoseGraph() {
+bool LaserLoopClosure::PublishPoseGraph() {
 
   // Publish odometry edges.
   if (odometry_edge_pub_.getNumSubscribers() > 0) {
@@ -2283,6 +2318,15 @@ void LaserLoopClosure::PublishPoseGraph() {
     for (size_t ii = 0; ii < odometry_edges_.size(); ++ii) {
       gtsam::Key key1 = odometry_edges_[ii].first;
       gtsam::Key key2 = odometry_edges_[ii].second;
+
+      if (!values_.exists(key1)){
+        ROS_WARN("Key1,  %u, does not exist in PublishPoseGraph",key1);
+        return false;
+      }
+      if (!values_.exists(key2)){
+        ROS_WARN("Key2,  %u, does not exist in PublishPoseGraph",key2);
+        return false;
+      }
 
       gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
       gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
@@ -2313,6 +2357,15 @@ void LaserLoopClosure::PublishPoseGraph() {
       gtsam::Key key1 = loop_edges_[ii].first;
       gtsam::Key key2 = loop_edges_[ii].second;
 
+      if (!values_.exists(key1)){
+        ROS_WARN("Key1,  %u, does not exist in PublishPoseGraph",key1);
+        return false;
+      }
+      if (!values_.exists(key2)){
+        ROS_WARN("Key2,  %u, does not exist in PublishPoseGraph",key2);
+        return false;
+      }
+
       gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
       gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
 
@@ -2341,6 +2394,15 @@ void LaserLoopClosure::PublishPoseGraph() {
     for (size_t ii = 0; ii < artifact_edges_.size(); ++ii) {
       gtsam::Key key1 = artifact_edges_[ii].first;
       gtsam::Key key2 = artifact_edges_[ii].second;
+
+      if (!values_.exists(key1)){
+        ROS_WARN("Key1,  %u, does not exist in PublishPoseGraph artifact edges",key1);
+        return false;
+      }
+      if (!values_.exists(key2)){
+        ROS_WARN("Key2,  %u, does not exist in PublishPoseGraph artifact edges",key2);
+        return false;
+      }
 
       gu::Vec3 p1 = ToGu(values_.at<Pose3>(key1)).translation;
       gu::Vec3 p2 = ToGu(values_.at<Pose3>(key2)).translation;
@@ -2373,6 +2435,12 @@ void LaserLoopClosure::PublishPoseGraph() {
       std::string label = "l";
       if ((std::string(gtsam::Symbol(keyed_pose.key)).compare(0,1,label)) != 0){
         // If it is not a landmark keypose 
+
+        if (!values_.exists(keyed_pose.key)){
+          ROS_WARN("Key,  %u, does not exist in PublishPoseGraph pose nodes",keyed_pose.key);
+          return false;
+        }
+
         gu::Vec3 p = ToGu(values_.at<Pose3>(keyed_pose.key)).translation;
         m.points.push_back(gr::ToRosPoint(p));
       }
@@ -2399,6 +2467,10 @@ void LaserLoopClosure::PublishPoseGraph() {
     int id_base = 100;
     int counter = 0;
     for (const auto& keyed_pose : values_) {
+      if (!values_.exists(keyed_pose.key)){
+        ROS_WARN("Key, %u, does not exist in PublishPoseGraph pose ids",keyed_pose.key);
+        return false;
+      }
       gu::Transform3 p = ToGu(values_.at<Pose3>(keyed_pose.key));
       m.pose = gr::ToRosPose(p);
       // Display text for the node
@@ -2432,6 +2504,10 @@ void LaserLoopClosure::PublishPoseGraph() {
 
     for (const auto& keyed_pose : values_) {
       if (keyed_scans_.count(keyed_pose.key)) {
+        if (!values_.exists(keyed_pose.key)){
+          ROS_WARN("Key, %u, does not exist in PublishPoseGraph keyframe nodes",keyed_pose.key);
+          return false;
+        }
         gu::Vec3 p = ToGu(values_.at<Pose3>(keyed_pose.key)).translation;
         m.points.push_back(gr::ToRosPoint(p));
       }
@@ -2469,6 +2545,10 @@ void LaserLoopClosure::PublishPoseGraph() {
     g.header.frame_id = fixed_frame_id_;
 
     for (const auto& keyed_pose : values_) {
+      if (!values_.exists(keyed_pose.key)){
+        ROS_WARN("Key, %u, does not exist in PublishPoseGraph pose graph pub",keyed_pose.key);
+        return false;
+      }
       gu::Transform3 t = ToGu(values_.at<Pose3>(keyed_pose.key));
 
       // Populate the message with the pose's data.
@@ -2505,6 +2585,10 @@ void LaserLoopClosure::PublishPoseGraph() {
   if (publish_interactive_markers_) {
     for (const auto& keyed_pose : values_) {
       if (keyed_pose.key % 1 == 0) {
+        if (!values_.exists(keyed_pose.key)){
+          ROS_WARN("Key, %u, does not exist in PublishPoseGraph interactive marker",keyed_pose.key);
+          return false;
+        }
         gu::Transform3 position = ToGu(values_.at<Pose3>(keyed_pose.key));
         const std::string id_number = std::to_string(keyed_pose.key);
         LaserLoopClosure::makeMenuMarker(position, id_number);
@@ -2515,6 +2599,7 @@ void LaserLoopClosure::PublishPoseGraph() {
     }
   }
 
+<<<<<<< HEAD
   PublishUwb();
 
 }
@@ -2564,6 +2649,9 @@ void LaserLoopClosure::PublishUwb() {
     uwb_edge_pub_.publish(m);
   }
 
+=======
+  return true;
+>>>>>>> lamp_hackathon
 }
 
 void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
@@ -2575,11 +2663,20 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
 
   // loop through values 
   for (auto it = artifact_key2info_hash.begin();
-            it != artifact_key2info_hash.end(); ++it ) {
-    
-    if (artifact_key == '-1'){
+            it != artifact_key2info_hash.end(); it++ ) {
+
+    ROS_INFO_STREAM("Artifact hash key is " << gtsam::DefaultKeyFormatter(it->first));
+    std::string label = "l";
+    if ((std::string(gtsam::Symbol(it->first)).compare(0,1,label)) != 0){
+      ROS_WARN("ERROR - have a non-landmark ID");
+      ROS_INFO_STREAM("Bad ID is " << gtsam::DefaultKeyFormatter(it->first));
+      continue;
+    }
+
+    if (gtsam::Symbol(artifact_key).chr() == 'z'){ // The default value
       // Update all artifacts - loop through all - the default
       // Get position and label 
+      ROS_INFO_STREAM("Artifact key to publish is " << gtsam::DefaultKeyFormatter(it->first));
       artifact_position = GetArtifactPosition(it->first);
       artifact_label = it->second.msg.label;
 
@@ -2591,6 +2688,7 @@ void LaserLoopClosure::PublishArtifacts(gtsam::Key artifact_key) {
       // Updating a single artifact - will return at the end of this first loop
       // Using the artifact key to publish that artifact
       ROS_INFO("Publishing only the new artifact");
+      ROS_INFO_STREAM("Artifact key to publish is " << gtsam::DefaultKeyFormatter(artifact_key));
       // Get position and label 
       artifact_position = GetArtifactPosition(artifact_key);
       artifact_label = artifact_key2info_hash[artifact_key].msg.label;
@@ -2789,10 +2887,18 @@ gtsam::Key LaserLoopClosure::GetKeyAtTime(const ros::Time& stamp) const {
 
 gu::Transform3 LaserLoopClosure::GetPoseAtKey(const gtsam::Key& key) const {
   // Get the pose at that key
+  if (!values_.exists(key)){
+    ROS_WARN("Key, %u, does not exist in GetPoseAtKey",key);
+    return gu::Transform3();
+  }
   return ToGu(values_.at<Pose3>(key));
 }
 
 Eigen::Vector3d LaserLoopClosure::GetArtifactPosition(const gtsam::Key artifact_key) const {
+  if (!values_.exists(artifact_key)){
+    ROS_WARN("Key, %u, does not exist in GetArtifactPosition",artifact_key);
+    return Eigen::Vector3d();
+  }
   return values_.at<Pose3>(artifact_key).translation().vector();
 }
 
