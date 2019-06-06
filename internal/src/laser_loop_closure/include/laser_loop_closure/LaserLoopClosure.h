@@ -172,10 +172,6 @@ class LaserLoopClosure {
   // the pose graph.
   void GetMaximumLikelihoodPoints(PointCloud* map);
 
-  // TEMP : From the branch feature/artifact
-  // Get pose at an input time
-  gtsam::Key GetKeyAtTime(const ros::Time& stamp) const;
-
   // Get the most recent pose in the pose graph.
   geometry_utils::Transform3 GetLastPose() const;
 

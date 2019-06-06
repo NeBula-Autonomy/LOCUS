@@ -576,14 +576,14 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       ROS_INFO_STREAM("final error = " << nfg_.error(result));
       
       // ----------------------------------------------
-      #ifndef solver
+      #ifndef SOLVER
       // Create the ISAM2 solver.
       ISAM2Params parameters;
       parameters.relinearizeSkip = relinearize_skip_;
       parameters.relinearizeThreshold = relinearize_threshold_;
       isam_.reset(new ISAM2(parameters));
       #endif
-      #ifdef solver
+      #ifdef SOLVER
       isam_.reset(new GenericSolver());
       #endif
       // Update with the new graph
@@ -680,14 +680,14 @@ bool LaserLoopClosure::AddUwbFactor(const std::string uwb_id,
       ROS_INFO_STREAM("final error = " << nfg_.error(result));
 
       // ----------------------------------------------
-      #ifndef solver
+      #ifndef SOLVER
       // Create the ISAM2 solver.
       ISAM2Params parameters;
       parameters.relinearizeSkip = relinearize_skip_;
       parameters.relinearizeThreshold = relinearize_threshold_;
       isam_.reset(new ISAM2(parameters));
       #endif
-      #ifdef solver
+      #ifdef SOLVER
       isam_.reset(new GenericSolver());
       #endif
       // Update with the new graph
@@ -797,14 +797,14 @@ bool LaserLoopClosure::DropUwbAnchor(const std::string uwb_id,
     ROS_INFO_STREAM("final error = " << nfg_.error(result));
     
     // ----------------------------------------------
-    #ifndef solver
+    #ifndef SOLVER
     // Create the ISAM2 solver.
     ISAM2Params parameters;
     parameters.relinearizeSkip = relinearize_skip_;
     parameters.relinearizeThreshold = relinearize_threshold_;
     isam_.reset(new ISAM2(parameters));
     #endif
-    #ifdef solver
+    #ifdef SOLVER
     isam_.reset(new GenericSolver());
     #endif
     // Update with the new graph
