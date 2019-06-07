@@ -47,12 +47,7 @@ namespace gu = geometry_utils;
 BlamSlam::BlamSlam()
   : estimate_update_rate_(0.0),
     visualization_update_rate_(0.0),
-    uwb_update_rate_(0.0),
-    position_sigma_(0.01),
-    attitude_sigma_(0.04),
-    marker_id_(0),
-    largest_artifact_id_(0),
-    use_artifact_loop_closure_(false) {}
+    marker_id_(0) {}
 
 BlamSlam::~BlamSlam() {}
 
@@ -235,7 +230,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   localization_.MeasurementUpdate(msg_filtered, msg_neighbors, msg_base.get());
 
   // Check for new loop closures.
-  bool new_keyframe = false;
+  bool new_keyframe = true;
 
   //todo: need determine when to add keyframe 
 
