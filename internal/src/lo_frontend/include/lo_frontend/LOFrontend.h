@@ -49,7 +49,11 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 
+#include <geometry_utils/GeometryUtilsROS.h>
+
+
 #include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/Time.h> 
 
 class BlamSlam {
  public:
@@ -95,6 +99,7 @@ class BlamSlam {
 
   //position when points were last added to map
   geometry_utils::Transform3 last_keyframe_; 
+  ros::Time last_pcld_stamp_; 
 
   // The node's name.
   std::string name_;

@@ -148,6 +148,8 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
+  // ROS_INFO_STREAM("recieved pointcloud message " << msg->header.stamp); 
+  last_pcld_stamp_.fromNSec(msg->header.stamp*1000); //todo: maybe store these in a buffer, in case we get two pointcloud messages in the queue
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
 
@@ -256,13 +258,15 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   }
 
   geometry_msgs::PoseStamped poseMsg;
+
+  ros::Time stamp; 
+  stamp.fromNSec(msg->header.stamp*1e3); 
   //todo get header from original ros msg
   // poseMsg.header = msg->header; 
-  poseMsg.pose.position.x = currPose.translation(0); 
-  poseMsg.pose.position.y = currPose.translation(1); 
-  poseMsg.pose.position.z = currPose.translation(2); 
+  poseMsg.pose = geometry_utils::ros::ToRosPose(currPose); 
+  // poseMsg.header.stamp = stamp; 
+  poseMsg.header.stamp = last_pcld_stamp_; 
   //todo: convert to quaternion orientation and add
-  poseMsg.pose.orientation.w = 1; 
   pose_pub_.publish(poseMsg); 
 
 }
