@@ -46,6 +46,9 @@
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Rot3.h>
+
 #include <geometry_msgs/PoseStamped.h>
 
 class BlamSlam {
@@ -81,11 +84,17 @@ class BlamSlam {
   void EstimateTimerCallback(const ros::TimerEvent& ev);
   void VisualizationTimerCallback(const ros::TimerEvent& ev);
 
+  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
+
   // Generic restart service - for restarting from last saved posegraph
   // bool RestartService(blam_slam::RestartRequest &request,
   //                       blam_slam::RestartResponse &response);
 
   bool use_chordal_factor_;                    
+
+
+  //position when points were last added to map
+  geometry_utils::Transform3 last_keyframe_; 
 
   // The node's name.
   std::string name_;
@@ -101,6 +110,7 @@ class BlamSlam {
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
+  ros::Publisher pose_pub_; 
   
   // Services
   ros::ServiceServer restart_srv_;

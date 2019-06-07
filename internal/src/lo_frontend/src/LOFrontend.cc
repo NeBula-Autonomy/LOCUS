@@ -142,6 +142,8 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
 
+  pose_pub_ = nl.advertise<geometry_msgs::PoseStamped>("pose", 10, false); 
+
   return true;
 }
 
@@ -185,6 +187,19 @@ void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
   mapper_.PublishMap();
 }
 
+gtsam::Pose3 BlamSlam::ToGtsam(const geometry_utils::Transform3& pose) const {
+  gtsam::Vector3 t;
+  t(0) = pose.translation(0);
+  t(1) = pose.translation(1);
+  t(2) = pose.translation(2);
+
+  gtsam::Rot3 r(pose.rotation(0, 0), pose.rotation(0, 1), pose.rotation(0, 2),
+         pose.rotation(1, 0), pose.rotation(1, 1), pose.rotation(1, 2),
+         pose.rotation(2, 0), pose.rotation(2, 1), pose.rotation(2, 2));
+
+  return gtsam::Pose3(r, t);
+}
+
 void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
@@ -220,12 +235,10 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // sensor frame.
   localization_.MeasurementUpdate(msg_filtered, msg_neighbors, msg_base.get());
 
-  // Check for new loop closures.
-  bool new_keyframe = true;
+  geometry_utils::Transform3 currPose = localization_.GetIntegratedEstimate(); 
 
-  //todo: need determine when to add keyframe 
-
-  if (new_keyframe) {
+  //todo replace 1 with threshold parameter
+  if (ToGtsam(geometry_utils::PoseDelta(currPose, this->last_keyframe_)).translation().norm() > 1)  {
       localization_.MotionUpdate(gu::Transform3::Identity());
       localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
       PointCloud::Ptr unused(new PointCloud);
@@ -241,6 +254,17 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
+
+  geometry_msgs::PoseStamped poseMsg;
+  //todo get header from original ros msg
+  // poseMsg.header = msg->header; 
+  poseMsg.pose.position.x = currPose.translation(0); 
+  poseMsg.pose.position.y = currPose.translation(1); 
+  poseMsg.pose.position.z = currPose.translation(2); 
+  //todo: convert to quaternion orientation and add
+  poseMsg.pose.orientation.w = 1; 
+  pose_pub_.publish(poseMsg); 
+
 }
 
 // bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
