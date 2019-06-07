@@ -50,6 +50,8 @@
 
 #include <mesh_msgs/ProcessCommNode.h>
 
+#include <geometry_msgs/PoseStamped>
+
 class BlamSlam {
  public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
