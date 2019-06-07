@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>blam_example</name>
+  <name>blam_example_frontend</name>
   <version>0.0.0</version>
   <description>The blam_example package</description>
 
