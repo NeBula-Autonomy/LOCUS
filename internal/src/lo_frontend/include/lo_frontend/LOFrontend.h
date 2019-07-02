@@ -54,6 +54,9 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/Time.h> 
+#include <core_msgs/PoseAndScan.h>
+
+// TODO: Clean up naming to LO front-end
 
 class BlamSlam {
  public:
@@ -115,7 +118,7 @@ class BlamSlam {
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
-  ros::Publisher pose_pub_; 
+  ros::Publisher pose_scan_pub_; 
   
   // Services
   ros::ServiceServer restart_srv_;

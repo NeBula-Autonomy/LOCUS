@@ -142,7 +142,7 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
 
-  pose_pub_ = nl.advertise<geometry_msgs::PoseStamped>("pose", 10, false); 
+  pose_scan_pub_ = nl.advertise<core_msgs::PoseAndScan>("pose_and_scan", 10, false); 
 
   return true;
 }
@@ -257,17 +257,25 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
-  geometry_msgs::PoseStamped poseMsg;
+  // Send pose and scan pair
+  core_msgs::PoseAndScan poseScanMsg;
 
-  ros::Time stamp; 
-  stamp.fromNSec(msg->header.stamp*1e3); 
-  //todo get header from original ros msg
-  // poseMsg.header = msg->header; 
-  poseMsg.pose = geometry_utils::ros::ToRosPose(currPose); 
-  // poseMsg.header.stamp = stamp; 
-  poseMsg.header.stamp = last_pcld_stamp_; 
-  //todo: convert to quaternion orientation and add
-  pose_pub_.publish(poseMsg); 
+
+  sensor_msgs::PointCloud2 scan_msg;
+
+  pcl::toROSMsg(*msg.get(), scan_msg);
+
+  // fromPCL()
+  // toPCL()
+
+  poseScanMsg.header.stamp = scan_msg.header.stamp;
+  poseScanMsg.scan = scan_msg;
+  poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(currPose); 
+  poseScanMsg.pose.header = scan_msg.header; 
+
+  pose_scan_pub_.publish(poseScanMsg);
+
+
 
 }
 
@@ -277,4 +285,5 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 //   mapper_.Reset();
 //   return true;
 // }
+
 

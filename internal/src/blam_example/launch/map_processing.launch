@@ -1,8 +1,8 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
   <arg name="map_update_freq" default="1.0"/><!-- Hz -->
-  <arg name="map_topic_input" default="blam_slam/octree_map"/>
-  <arg name="map_topic_output" default="blam_slam/octree_map_downsampled"/>
+  <arg name="map_topic_input" default="lo_frontend/octree_map"/>
+  <arg name="map_topic_output" default="lo_frontend/octree_map_downsampled"/>
 
   <!-- Trotthling map -->
   <node name="map_throttler" type="throttle" pkg="topic_tools" args="messages $(arg map_topic_input) $(arg map_update_freq)">
