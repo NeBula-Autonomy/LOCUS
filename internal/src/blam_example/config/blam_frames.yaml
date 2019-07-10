@@ -1,5 +1,5 @@
 frame_id:
-  fixed: $(arg robot_namespace)/blam
-  base: $(arg robot_namespace)/base_link
+  fixed: $(arg robot_namespace)/map
+  base: $(arg robot_namespace)/blam/base_link
   odometry: $(arg robot_namespace)/base_link_blam_odometry
   artifacts_in_global: true

@@ -203,12 +203,14 @@ gtsam::Pose3 BlamSlam::ToGtsam(const geometry_utils::Transform3& pose) const {
 }
 
 void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
+  
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
 
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
+    ROS_INFO("First update");
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_filtered, unused.get());
@@ -257,9 +259,9 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
+  ROS_INFO("Publishing pose and scan");
   // Send pose and scan pair
   core_msgs::PoseAndScan poseScanMsg;
-
 
   sensor_msgs::PointCloud2 scan_msg;
 
@@ -269,9 +271,11 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // toPCL()
 
   poseScanMsg.header.stamp = scan_msg.header.stamp;
+  poseScanMsg.header.frame_id = base_frame_id_;
   poseScanMsg.scan = scan_msg;
   poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(currPose); 
-  poseScanMsg.pose.header = scan_msg.header; 
+  poseScanMsg.pose.header.stamp = scan_msg.header.stamp; 
+  poseScanMsg.pose.header.frame_id = fixed_frame_id_;
 
   pose_scan_pub_.publish(poseScanMsg);
 
