@@ -47,3 +47,6 @@ internal/.catkin_tools
 
 # pyc filees 
 *.pyc
+
+# IDEs stuff
+*.vscode
