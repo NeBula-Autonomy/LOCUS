@@ -34,7 +34,7 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#include <lo_frontend/LOFrontend.h>
+#include <lo_frontend/LoFrontend.h>
 #include <geometry_utils/Transform3.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl_conversions/pcl_conversions.h>
