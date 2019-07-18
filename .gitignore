@@ -50,3 +50,4 @@ internal/.catkin_tools
 
 # IDEs stuff
 *.vscode
+*.code-workspace
