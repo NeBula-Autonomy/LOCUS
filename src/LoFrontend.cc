@@ -34,12 +34,12 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#include <lo_frontend/LoFrontend.h>
 #include <geometry_utils/Transform3.h>
+#include <lo_frontend/LoFrontend.h>
+#include <math.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <visualization_msgs/Marker.h>
-#include <math.h>
 
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
@@ -53,7 +53,7 @@ BlamSlam::~BlamSlam() {}
 
 bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
   name_ = ros::names::append(n.getNamespace(), "BlamSlam");
-  //TODO: Move this to a better location.
+  // TODO: Move this to a better location.
   map_loaded_ = false;
 
   if (!filter_.Initialize(n)) {
@@ -91,12 +91,16 @@ bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
 
 bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   // Load update rates.
-  if (!pu::Get("rate/estimate", estimate_update_rate_)) return false;
-  if (!pu::Get("rate/visualization", visualization_update_rate_)) return false;
+  if (!pu::Get("rate/estimate", estimate_update_rate_))
+    return false;
+  if (!pu::Get("rate/visualization", visualization_update_rate_))
+    return false;
 
   // Load frame ids.
-  if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
-  if (!pu::Get("frame_id/base", base_frame_id_)) return false;
+  if (!pu::Get("frame_id/fixed", fixed_frame_id_))
+    return false;
+  if (!pu::Get("frame_id/base", base_frame_id_))
+    return false;
 
   return true;
 }
@@ -108,7 +112,8 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   visualization_update_timer_ = nl.createTimer(
       visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
 
-  // restart_srv = n1.advertiseService("restart", &BlamSlam::RestartService, this); 
+  // restart_srv = n1.advertiseService("restart", &BlamSlam::RestartService,
+  // this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -129,7 +134,7 @@ bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
-  
+
   pcld_sub_ = nl.subscribe("pcld", 100000, &BlamSlam::PointCloudCallback, this);
 
   return CreatePublishers(n);
@@ -142,14 +147,17 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
 
-  pose_scan_pub_ = nl.advertise<core_msgs::PoseAndScan>("pose_and_scan", 10, false); 
+  pose_scan_pub_ =
+      nl.advertise<core_msgs::PoseAndScan>("pose_and_scan", 10, false);
 
   return true;
 }
 
 void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
-  // ROS_INFO_STREAM("recieved pointcloud message " << msg->header.stamp); 
-  last_pcld_stamp_.fromNSec(msg->header.stamp*1000); //todo: maybe store these in a buffer, in case we get two pointcloud messages in the queue
+  // ROS_INFO_STREAM("recieved pointcloud message " << msg->header.stamp);
+  last_pcld_stamp_.fromNSec(
+      msg->header.stamp * 1000); // todo: maybe store these in a buffer, in case
+                                 // we get two pointcloud messages in the queue
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
 
@@ -161,23 +169,23 @@ void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
   MeasurementSynchronizer::sensor_type type;
   unsigned int index = 0;
   while (synchronizer_.GetNextMessage(&type, &index)) {
-    switch(type) {
+    switch (type) {
+    // Point cloud messages.
+    case MeasurementSynchronizer::PCL_POINTCLOUD: {
+      const MeasurementSynchronizer::Message<PointCloud>::ConstPtr& m =
+          synchronizer_.GetPCLPointCloudMessage(index);
 
-      // Point cloud messages.
-      case MeasurementSynchronizer::PCL_POINTCLOUD: {
-        const MeasurementSynchronizer::Message<PointCloud>::ConstPtr& m =
-            synchronizer_.GetPCLPointCloudMessage(index);
+      ProcessPointCloudMessage(m->msg);
+      break;
+    }
 
-        ProcessPointCloudMessage(m->msg);
-        break;
-      }
-
-      // Unhandled sensor messages.
-      default: {
-        ROS_WARN("%s: Unhandled measurement type (%s).", name_.c_str(),
-                 MeasurementSynchronizer::GetTypeString(type).c_str());
-        break;
-      }
+    // Unhandled sensor messages.
+    default: {
+      ROS_WARN("%s: Unhandled measurement type (%s).",
+               name_.c_str(),
+               MeasurementSynchronizer::GetTypeString(type).c_str());
+      break;
+    }
     }
   }
 
@@ -195,15 +203,20 @@ gtsam::Pose3 BlamSlam::ToGtsam(const geometry_utils::Transform3& pose) const {
   t(1) = pose.translation(1);
   t(2) = pose.translation(2);
 
-  gtsam::Rot3 r(pose.rotation(0, 0), pose.rotation(0, 1), pose.rotation(0, 2),
-         pose.rotation(1, 0), pose.rotation(1, 1), pose.rotation(1, 2),
-         pose.rotation(2, 0), pose.rotation(2, 1), pose.rotation(2, 2));
+  gtsam::Rot3 r(pose.rotation(0, 0),
+                pose.rotation(0, 1),
+                pose.rotation(0, 2),
+                pose.rotation(1, 0),
+                pose.rotation(1, 1),
+                pose.rotation(1, 2),
+                pose.rotation(2, 0),
+                pose.rotation(2, 1),
+                pose.rotation(2, 2));
 
   return gtsam::Pose3(r, t);
 }
 
 void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
-  
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
@@ -233,24 +246,27 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   mapper_.ApproxNearestNeighbors(*msg_transformed, msg_neighbors.get());
 
   // Transform those nearest neighbors back into sensor frame to perform ICP.
-  localization_.TransformPointsToSensorFrame(*msg_neighbors, msg_neighbors.get());
+  localization_.TransformPointsToSensorFrame(*msg_neighbors,
+                                             msg_neighbors.get());
 
   // Localize to the map. Localization will output a pointcloud aligned in the
   // sensor frame.
   localization_.MeasurementUpdate(msg_filtered, msg_neighbors, msg_base.get());
 
-  geometry_utils::Transform3 currPose = localization_.GetIntegratedEstimate(); 
+  geometry_utils::Transform3 currPose = localization_.GetIntegratedEstimate();
 
-  //todo replace 1 with threshold parameter
-  if (ToGtsam(geometry_utils::PoseDelta(currPose, this->last_keyframe_)).translation().norm() > 1)  {
-      localization_.MotionUpdate(gu::Transform3::Identity());
-      localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
-      PointCloud::Ptr unused(new PointCloud);
-      mapper_.InsertPoints(msg_fixed, unused.get());
+  // todo replace 1 with threshold parameter
+  if (ToGtsam(geometry_utils::PoseDelta(currPose, this->last_keyframe_))
+          .translation()
+          .norm() > 1) {
+    localization_.MotionUpdate(gu::Transform3::Identity());
+    localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
+    PointCloud::Ptr unused(new PointCloud);
+    mapper_.InsertPoints(msg_fixed, unused.get());
 
-      // Also reset the robot's estimated position.
-      // localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
-  }  
+    // Also reset the robot's estimated position.
+    // localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+  }
 
   // Publish the incoming point cloud message from the base frame.
   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
@@ -273,21 +289,16 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   poseScanMsg.header.stamp = scan_msg.header.stamp;
   poseScanMsg.header.frame_id = base_frame_id_;
   poseScanMsg.scan = scan_msg;
-  poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(currPose); 
-  poseScanMsg.pose.header.stamp = scan_msg.header.stamp; 
+  poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(currPose);
+  poseScanMsg.pose.header.stamp = scan_msg.header.stamp;
   poseScanMsg.pose.header.frame_id = fixed_frame_id_;
 
   pose_scan_pub_.publish(poseScanMsg);
-
-
-
 }
 
 // bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
-//                                 blam_slam::RestartResponse &response) {   
+//                                 blam_slam::RestartResponse &response) {
 
 //   mapper_.Reset();
 //   return true;
 // }
-
-

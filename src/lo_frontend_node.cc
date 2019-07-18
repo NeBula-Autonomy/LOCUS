@@ -34,8 +34,8 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#include <ros/ros.h>
 #include <lo_frontend/LoFrontend.h>
+#include <ros/ros.h>
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "blam_slam");
