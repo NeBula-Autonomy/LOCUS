@@ -25,7 +25,6 @@ FIND_PACKAGE(Boost REQUIRED
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  rosbag
   measurement_synchronizer
   point_cloud_filter
   point_cloud_odometry
@@ -37,14 +36,9 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   core_msgs
-  uwb_msgs
-  mesh_msgs
   geometry_msgs
   message_generation
 )
-
-add_service_files(FILES AddFactor.srv RemoveFactor.srv SaveGraph.srv Restart.srv LoadGraph.srv)
-generate_messages()
 
 catkin_package(
   INCLUDE_DIRS include
@@ -52,7 +46,6 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     message_runtime
-    rosbag
     measurement_synchronizer
     point_cloud_filter
     point_cloud_odometry
@@ -64,8 +57,6 @@ catkin_package(
     pcl_ros
     pcl_conversions
     core_msgs
-    uwb_msgs
-    mesh_msgs
     geometry_msgs
   DEPENDS
     Boost
@@ -90,8 +81,6 @@ target_link_libraries(${PROJECT_NAME}
   ${Boost_LIBRARIES}
   gtsam
 )
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS})
-
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
@@ -99,6 +88,3 @@ target_link_libraries(${PROJECT_NAME}_node
   ${Boost_LIBRARIES}
   gtsam
 )
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-
-
