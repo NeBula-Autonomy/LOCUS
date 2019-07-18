@@ -44,15 +44,15 @@
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
-BlamSlam::BlamSlam()
+LoFrontend::LoFrontend()
   : estimate_update_rate_(0.0),
     visualization_update_rate_(0.0),
     marker_id_(0) {}
 
-BlamSlam::~BlamSlam() {}
+LoFrontend::~LoFrontend() {}
 
-bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
-  name_ = ros::names::append(n.getNamespace(), "BlamSlam");
+bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
+  name_ = ros::names::append(n.getNamespace(), "lo_frontend");
   // TODO: Move this to a better location.
   map_loaded_ = false;
 
@@ -89,7 +89,7 @@ bool BlamSlam::Initialize(const ros::NodeHandle& n, bool from_log) {
   return true;
 }
 
-bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
+bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   // Load update rates.
   if (!pu::Get("rate/estimate", estimate_update_rate_))
     return false;
@@ -105,14 +105,14 @@ bool BlamSlam::LoadParameters(const ros::NodeHandle& n) {
   return true;
 }
 
-bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
+bool LoFrontend::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
   visualization_update_timer_ = nl.createTimer(
-      visualization_update_rate_, &BlamSlam::VisualizationTimerCallback, this);
+      visualization_update_rate_, &LoFrontend::VisualizationTimerCallback, this);
 
-  // restart_srv = n1.advertiseService("restart", &BlamSlam::RestartService,
+  // restart_srv = n1.advertiseService("restart", &LoFrontend::RestartService,
   // this);
 
   if (from_log)
@@ -121,26 +121,26 @@ bool BlamSlam::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
     return RegisterOnlineCallbacks(n);
 }
 
-bool BlamSlam::RegisterLogCallbacks(const ros::NodeHandle& n) {
+bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("%s: Registering log callbacks.", name_.c_str());
   return CreatePublishers(n);
 }
 
-bool BlamSlam::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
+bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());
 
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
   estimate_update_timer_ = nl.createTimer(
-      estimate_update_rate_, &BlamSlam::EstimateTimerCallback, this);
+      estimate_update_rate_, &LoFrontend::EstimateTimerCallback, this);
 
-  pcld_sub_ = nl.subscribe("pcld", 100000, &BlamSlam::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
   return CreatePublishers(n);
 }
 
-bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
+bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
@@ -153,7 +153,7 @@ bool BlamSlam::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
-void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
+void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   // ROS_INFO_STREAM("recieved pointcloud message " << msg->header.stamp);
   last_pcld_stamp_.fromNSec(
       msg->header.stamp * 1000); // todo: maybe store these in a buffer, in case
@@ -161,7 +161,7 @@ void BlamSlam::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
 
-void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
+void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   // Sort all messages accumulated since the last estimate update.
   synchronizer_.SortMessages();
 
@@ -193,11 +193,11 @@ void BlamSlam::EstimateTimerCallback(const ros::TimerEvent& ev) {
   synchronizer_.ClearMessages();
 }
 
-void BlamSlam::VisualizationTimerCallback(const ros::TimerEvent& ev) {
+void LoFrontend::VisualizationTimerCallback(const ros::TimerEvent& ev) {
   mapper_.PublishMap();
 }
 
-gtsam::Pose3 BlamSlam::ToGtsam(const geometry_utils::Transform3& pose) const {
+gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
   gtsam::Vector3 t;
   t(0) = pose.translation(0);
   t(1) = pose.translation(1);
@@ -216,7 +216,7 @@ gtsam::Pose3 BlamSlam::ToGtsam(const geometry_utils::Transform3& pose) const {
   return gtsam::Pose3(r, t);
 }
 
-void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
+void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
@@ -296,7 +296,7 @@ void BlamSlam::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   pose_scan_pub_.publish(poseScanMsg);
 }
 
-// bool BlamSlam::RestartService(blam_slam::RestartRequest &request,
+// bool LoFrontend::RestartService(blam_slam::RestartRequest &request,
 //                                 blam_slam::RestartResponse &response) {
 
 //   mapper_.Reset();

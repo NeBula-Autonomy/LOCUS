@@ -41,9 +41,9 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "blam_slam");
   ros::NodeHandle n("~");
 
-  BlamSlam bs;
-  if (!bs.Initialize(n, false /* online processing */)) {
-    ROS_ERROR("%s: Failed to initialize BLAM SLAM.",
+  LoFrontend lo_frontend_node;
+  if (!lo_frontend_node.Initialize(n, false /* online processing */)) {
+    ROS_ERROR("%s: Failed to initialize lo_frontend_node.",
               ros::this_node::getName().c_str());
     return EXIT_FAILURE;
   }
