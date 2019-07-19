@@ -17,8 +17,8 @@
 
       <!-- Initial pose -->
       <rosparam param="init">
-        position: {x: 0.0, y: 0.0, z: 0.0}
-        orientation: {roll: 0.0, pitch: 0.0, yaw: 0.0}
+        position: {x: 0.972545921803, y: 2.03618049622, z: 0.516347706318}
+        orientation: {roll: 0.01, pitch: 0.2, yaw: 2.9798307}
         position_sigma: {x: 0.316, y: 0.316, z: 0.316}
         orientation_sigma: {roll: 0.141, pitch: 0.141, yaw: 0.141}
       </rosparam>
