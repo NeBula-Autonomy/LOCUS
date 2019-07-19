@@ -225,6 +225,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     return;
   }
 
+  /*   
   // Containers.
   PointCloud::Ptr msg_transformed(new PointCloud);
   PointCloud::Ptr msg_neighbors(new PointCloud);
@@ -232,7 +233,6 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   PointCloud::Ptr msg_fixed(new PointCloud);
 
   // Transform the incoming point cloud to the best estimate of the base frame.
-  /*
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg_filtered,
                                             msg_transformed.get());

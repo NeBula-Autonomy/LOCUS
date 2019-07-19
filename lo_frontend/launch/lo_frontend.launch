@@ -4,30 +4,16 @@
   <!-- Velodyne topic throttle params -->
   <arg name="vlp_throttle_freq" default="5.0"/><!-- Hz -->
 
-  <!-- Map processing params -->
-  <arg name="process_map" default="true"/>
-  <arg name="map_update_freq" default="1.0"/><!-- Hz -->
-  <arg name="map_topic_input" default="lo_frontend/octree_map"/>
-  <arg name="map_topic_output" default="lo_frontend/octree_map_downsampled"/>
-
-  <!-- optional filename of the zip archive of a pose graph to be loaded -->
-  <arg name="load_pose_graph_file" default="" /> 
-
   <group ns="$(arg robot_namespace)">
-    <!-- SLAM -->
+    <!-- Laser-Odometry -->
     <node pkg="lo_frontend"
           name="lo_frontend"
           type="lo_frontend_node"
           output="screen">
 
-      <!-- Load graph -->
-      <param name="load_graph" value="$(arg load_pose_graph_file)"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
-      <remap from="~artifact" to="~artifact_global" />
-      <remap from="~artifact_relative" to="artifact_reconciliation/reconciled_artifact" />
-      <remap from="~uwb_signal" to="comm/uwb/anchor" />
 
       <!-- Initial pose -->
       <rosparam param="init">
@@ -55,24 +41,11 @@
       <!-- Point cloud odometry -->
       <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>
 
-      <!-- Point cloud localization -->
-      <rosparam file="$(find point_cloud_localization)/config/parameters.yaml"/>
-
-      <!-- Point cloud mapper -->
-      <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
-
-      <!-- Point cloud visualization -->
-      <rosparam file="$(find point_cloud_visualizer)/config/parameters.yaml"/>
-
-      <!-- Loop closure -->
-      <rosparam file="$(find laser_loop_closure)/config/parameters.yaml"/>
-
-
     </node>
 
     <!-- Trotthling input cloud -->
-    <node name="point_cloud_throttler" type="throttle" pkg="topic_tools" args="messages velodyne_points $(arg vlp_throttle_freq)">
-    </node>
+    <!--node name="point_cloud_throttler" type="throttle" pkg="topic_tools" args="messages velodyne_points $(arg vlp_throttle_freq)">
+    </node-->
  
 
     <!-- Republish node with different frame_id -->
