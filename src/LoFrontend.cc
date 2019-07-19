@@ -34,27 +34,18 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#include <geometry_utils/Transform3.h>
 #include <lo_frontend/LoFrontend.h>
-#include <math.h>
-#include <parameter_utils/ParameterUtils.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <visualization_msgs/Marker.h>
 
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
 LoFrontend::LoFrontend()
-  : estimate_update_rate_(0.0),
-    visualization_update_rate_(0.0),
-    marker_id_(0) {}
+  : estimate_update_rate_(0.0), visualization_update_rate_(0.0) {}
 
 LoFrontend::~LoFrontend() {}
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");
-  // TODO: Move this to a better location.
-  map_loaded_ = false;
 
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
@@ -131,10 +122,11 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
-  // 
+  // Fires the timer to do the heavy work in the node.
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &LoFrontend::EstimateTimerCallback, this);
 
+  // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
   pcld_sub_ =
       nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
@@ -164,9 +156,10 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
 
 void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   // Sort all messages accumulated since the last estimate update.
-  synchronizer_.SortMessages();
+  synchronizer_.SortMessages(); // Andrea: Do we need it?
 
-  // Iterate through sensor messages, passing to update functions.
+  // Iterate through sensor messages, passing to update functions
+  // (ProcessPointCloudMessage).
   MeasurementSynchronizer::sensor_type type;
   unsigned int index = 0;
   while (synchronizer_.GetNextMessage(&type, &index)) {
@@ -224,6 +217,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
+    // Add point cloud in map if it is first we receive.
     ROS_INFO("First update");
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
@@ -256,7 +250,8 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 
   geometry_utils::Transform3 currPose = localization_.GetIntegratedEstimate();
 
-  // todo replace 1 with threshold parameter
+  // If last translation from ICP is larger than 1m, set Identity in motion
+  // update Is it some sort of outlier rejection?
   if (ToGtsam(geometry_utils::PoseDelta(currPose, this->last_keyframe_))
           .translation()
           .norm() > 1) {
@@ -296,10 +291,3 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 
   pose_scan_pub_.publish(poseScanMsg);
 }
-
-// bool LoFrontend::RestartService(blam_slam::RestartRequest &request,
-//                                 blam_slam::RestartResponse &response) {
-
-//   mapper_.Reset();
-//   return true;
-// }

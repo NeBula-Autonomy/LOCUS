@@ -37,25 +37,31 @@
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
+// Std libs.
+#include <math.h>
+
+// ROS.
 #include <ros/ros.h>
-
-#include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <pcl_ros/point_cloud.h>
-#include <point_cloud_filter/PointCloudFilter.h>
-#include <point_cloud_localization/PointCloudLocalization.h>
-#include <point_cloud_mapper/PointCloudMapper.h>
-#include <point_cloud_odometry/PointCloudOdometry.h>
-
-#include <gtsam/geometry/Pose3.h>
-#include <gtsam/geometry/Rot3.h>
-
-#include <geometry_utils/GeometryUtilsROS.h>
-
+#include <pcl_conversions/pcl_conversions.h>
+#include <visualization_msgs/Marker.h>
 #include <core_msgs/PoseAndScan.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/Time.h>
 
-// TODO: Clean up naming to LO front-end
+// BLAM
+#include <geometry_utils/GeometryUtilsROS.h>
+#include <geometry_utils/Transform3.h>
+#include <parameter_utils/ParameterUtils.h>
+#include <measurement_synchronizer/MeasurementSynchronizer.h>
+#include <point_cloud_filter/PointCloudFilter.h>
+#include <point_cloud_odometry/PointCloudOdometry.h>
+#include <point_cloud_localization/PointCloudLocalization.h>
+#include <point_cloud_mapper/PointCloudMapper.h>
+
+// GTSAM
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Rot3.h>
 
 class LoFrontend {
 public:
@@ -72,9 +78,6 @@ public:
   // Sensor message processing.
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
 
-  int marker_id_;
-  bool map_loaded_;
-
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -87,20 +90,16 @@ private:
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
 
   // Timer callbacks.
+  // Will run ICP and add PC on local map.
   void EstimateTimerCallback(const ros::TimerEvent& ev);
+  // TODO: Andrea: ?
   void VisualizationTimerCallback(const ros::TimerEvent& ev);
 
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
 
-  // Generic restart service - for restarting from last saved posegraph
-  // bool RestartService(blam_slam::RestartRequest &request,
-  //                       blam_slam::RestartResponse &response);
-
-  bool use_chordal_factor_;
-
   // position when points were last added to map
-  geometry_utils::Transform3 last_keyframe_;
-  ros::Time last_pcld_stamp_;
+  geometry_utils::Transform3 last_keyframe_; // TODO: Andrea: check if used
+  ros::Time last_pcld_stamp_;                // TODO: Andrea: check if used.
 
   // The node's name.
   std::string name_;
@@ -112,25 +111,22 @@ private:
   ros::Timer visualization_update_timer_;
 
   // Subscribers.
-  ros::Subscriber pcld_sub_;
+  ros::Subscriber pcld_sub_; // pc from lidar
 
   // Publishers
-  ros::Publisher base_frame_pcld_pub_;
-  ros::Publisher pose_scan_pub_;
-
-  // Services
-  ros::ServiceServer restart_srv_;
+  ros::Publisher base_frame_pcld_pub_; // TODO: Andrea: ?
+  ros::Publisher pose_scan_pub_;       // pose and scan ?
 
   // Names of coordinate frames.
-  std::string fixed_frame_id_;
-  std::string base_frame_id_;
+  std::string fixed_frame_id_; // TODO: Andrea: ?
+  std::string base_frame_id_;  // TODO: Andrea: ?
 
   // Class objects (LoFrontend is a composite class).
   MeasurementSynchronizer synchronizer_;
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
-  PointCloudLocalization localization_;
-  PointCloudMapper mapper_;
+  PointCloudLocalization localization_; // TODO: Andrea: needed?
+  PointCloudMapper mapper_;             // TODO: Andrea: needed?
 };
 
 #endif // LO_FRONTEND_LO_FRONTEND_H
