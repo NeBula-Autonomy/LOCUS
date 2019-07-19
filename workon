@@ -1,5 +1,0 @@
-#!/bin/bash
-
-TOP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source ${TOP_DIR}/external/install_isolated/setup.bash
-source ${TOP_DIR}/internal/devel/setup.bash --extend

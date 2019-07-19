@@ -1,7 +1,0 @@
-uint32 key_from
-uint32 key_to
-# whether the user has confirmed this request
-bool confirmed
----
-bool success
-bool confirm
