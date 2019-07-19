@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>point_cloud_filter</name>
+  <version>0.0.0</version>
+  <description>The point_cloud_filter package</description>
+
+  <author email="eanelson@eecs.berkeley.edu">Erik Nelson</author>
+  <maintainer email="eanelson@eecs.berkeley.edu">Erik Nelson</maintainer>
+
+  <license>GPLv2</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>parameter_utils</build_depend>
+  <build_depend>pcl_ros</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>parameter_utils</run_depend>
+  <run_depend>pcl_ros</run_depend>
+</package>
