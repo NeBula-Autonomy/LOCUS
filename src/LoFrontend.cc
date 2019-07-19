@@ -109,11 +109,10 @@ bool LoFrontend::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
-  visualization_update_timer_ = nl.createTimer(
-      visualization_update_rate_, &LoFrontend::VisualizationTimerCallback, this);
-
-  // restart_srv = n1.advertiseService("restart", &LoFrontend::RestartService,
-  // this);
+  visualization_update_timer_ =
+      nl.createTimer(visualization_update_rate_,
+                     &LoFrontend::VisualizationTimerCallback,
+                     this);
 
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -132,10 +131,12 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
+  // 
   estimate_update_timer_ = nl.createTimer(
       estimate_update_rate_, &LoFrontend::EstimateTimerCallback, this);
 
-  pcld_sub_ = nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
+  pcld_sub_ =
+      nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
   return CreatePublishers(n);
 }

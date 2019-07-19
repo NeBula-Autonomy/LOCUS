@@ -29,9 +29,6 @@
       <remap from="~artifact_relative" to="artifact_reconciliation/reconciled_artifact" />
       <remap from="~uwb_signal" to="comm/uwb/anchor" />
 
-      <!-- Serives -->
-      <remap from="~drop_uwb_anchor" to="drop_uwb_anchor"/>
-
       <!-- Initial pose -->
       <rosparam param="init">
         position: {x: 0.0, y: 0.0, z: 0.0}
@@ -47,10 +44,10 @@
       </rosparam>      
 
       <!-- Rates -->
-      <rosparam file="$(find blam_example)/config/blam_rates.yaml"/>
+      <rosparam file="$(find lo_frontend)/config/blam_rates.yaml"/>
 
       <!-- Frames -->
-      <rosparam file="$(find blam_example)/config/blam_frames.yaml" subst_value="true"/>
+      <rosparam file="$(find lo_frontend)/config/blam_frames.yaml" subst_value="true"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
@@ -91,8 +88,5 @@
         output_frame: $(arg robot_namespace)/base_link
       </rosparam>
     </node>
-
-
   </group>
-
 </launch>

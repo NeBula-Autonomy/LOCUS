@@ -34,11 +34,11 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#include <lo_frontend/LoFrontend.h>
 #include <ros/ros.h>
+#include <lo_frontend/LoFrontend.h>
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "blam_slam");
+  ros::init(argc, argv, "lo_frontend_node");
   ros::NodeHandle n("~");
 
   LoFrontend lo_frontend_node;

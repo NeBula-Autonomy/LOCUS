@@ -34,36 +34,35 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#ifndef BLAM_SLAM_H
-#define BLAM_SLAM_H
+#ifndef LO_FRONTEND_LO_FRONTEND_H
+#define LO_FRONTEND_LO_FRONTEND_H
 
 #include <ros/ros.h>
 
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
-#include <point_cloud_filter/PointCloudFilter.h>
-#include <point_cloud_odometry/PointCloudOdometry.h>
 #include <pcl_ros/point_cloud.h>
+#include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
+#include <point_cloud_odometry/PointCloudOdometry.h>
 
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 
 #include <geometry_utils/GeometryUtilsROS.h>
 
-
-#include <geometry_msgs/PoseStamped.h>
-#include <std_msgs/Time.h> 
 #include <core_msgs/PoseAndScan.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/Time.h>
 
 // TODO: Clean up naming to LO front-end
 
-class BlamSlam {
- public:
+class LoFrontend {
+public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-  BlamSlam();
-  ~BlamSlam();
+  LoFrontend();
+  ~LoFrontend();
 
   // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
   // The from_log argument specifies whether to run SLAM online (subscribe to
@@ -76,7 +75,7 @@ class BlamSlam {
   int marker_id_;
   bool map_loaded_;
 
- private:
+private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n, bool from_log);
@@ -97,12 +96,11 @@ class BlamSlam {
   // bool RestartService(blam_slam::RestartRequest &request,
   //                       blam_slam::RestartResponse &response);
 
-  bool use_chordal_factor_;                    
+  bool use_chordal_factor_;
 
-
-  //position when points were last added to map
-  geometry_utils::Transform3 last_keyframe_; 
-  ros::Time last_pcld_stamp_; 
+  // position when points were last added to map
+  geometry_utils::Transform3 last_keyframe_;
+  ros::Time last_pcld_stamp_;
 
   // The node's name.
   std::string name_;
@@ -118,8 +116,8 @@ class BlamSlam {
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_;
-  ros::Publisher pose_scan_pub_; 
-  
+  ros::Publisher pose_scan_pub_;
+
   // Services
   ros::ServiceServer restart_srv_;
 
@@ -127,7 +125,7 @@ class BlamSlam {
   std::string fixed_frame_id_;
   std::string base_frame_id_;
 
-  // Class objects (BlamSlam is a composite class).
+  // Class objects (LoFrontend is a composite class).
   MeasurementSynchronizer synchronizer_;
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
@@ -135,4 +133,4 @@ class BlamSlam {
   PointCloudMapper mapper_;
 };
 
-#endif
+#endif // LO_FRONTEND_LO_FRONTEND_H

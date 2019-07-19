@@ -75,13 +75,13 @@ endif()
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
-add_library(${PROJECT_NAME} src/LOFrontend.cc)
+add_library(${PROJECT_NAME} src/LoFrontend.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
   gtsam
 )
-add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
+add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}_node.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
