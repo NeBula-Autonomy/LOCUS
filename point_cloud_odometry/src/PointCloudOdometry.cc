@@ -34,11 +34,11 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#include <point_cloud_odometry/PointCloudOdometry.h>
-#include <geometry_utils/GeometryUtilsROS.h>
-#include <parameter_utils/ParameterUtils.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_utils/GeometryUtilsROS.h>
+#include <parameter_utils/ParameterUtils.h>
+#include <point_cloud_odometry/PointCloudOdometry.h>
 #include <sensor_msgs/PointCloud2.h>
 
 #include <pcl/registration/gicp.h>
@@ -78,18 +78,26 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
 
 bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   // Load frame ids.
-  if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
-  if (!pu::Get("frame_id/odometry", odometry_frame_id_)) return false;
+  if (!pu::Get("frame_id/fixed", fixed_frame_id_))
+    return false;
+  if (!pu::Get("frame_id/odometry", odometry_frame_id_))
+    return false;
 
   // Load initial position.
   double init_x = 0.0, init_y = 0.0, init_z = 0.0;
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
-  if (!pu::Get("init/position/x", init_x)) return false;
-  if (!pu::Get("init/position/y", init_y)) return false;
-  if (!pu::Get("init/position/z", init_z)) return false;
-  if (!pu::Get("init/orientation/roll", init_roll)) return false;
-  if (!pu::Get("init/orientation/pitch", init_pitch)) return false;
-  if (!pu::Get("init/orientation/yaw", init_yaw)) return false;
+  if (!pu::Get("init/position/x", init_x))
+    return false;
+  if (!pu::Get("init/position/y", init_y))
+    return false;
+  if (!pu::Get("init/position/z", init_z))
+    return false;
+  if (!pu::Get("init/orientation/roll", init_roll))
+    return false;
+  if (!pu::Get("init/orientation/pitch", init_pitch))
+    return false;
+  if (!pu::Get("init/orientation/yaw", init_yaw))
+    return false;
 
   gu::Transform3 init;
   init.translation = gu::Vec3(init_x, init_y, init_z);
@@ -97,13 +105,19 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   integrated_estimate_ = init;
 
   // Load algorithm parameters.
-  if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon)) return false;
-  if (!pu::Get("icp/corr_dist", params_.icp_corr_dist)) return false;
-  if (!pu::Get("icp/iterations", params_.icp_iterations)) return false;
+  if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon))
+    return false;
+  if (!pu::Get("icp/corr_dist", params_.icp_corr_dist))
+    return false;
+  if (!pu::Get("icp/iterations", params_.icp_iterations))
+    return false;
 
-  if (!pu::Get("icp/transform_thresholding", transform_thresholding_)) return false;
-  if (!pu::Get("icp/max_translation", max_translation_)) return false;
-  if (!pu::Get("icp/max_rotation", max_rotation_)) return false;
+  if (!pu::Get("icp/transform_thresholding", transform_thresholding_))
+    return false;
+  if (!pu::Get("icp/max_translation", max_translation_))
+    return false;
+  if (!pu::Get("icp/max_rotation", max_rotation_))
+    return false;
 
   return true;
 }
@@ -111,6 +125,13 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
 bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
+
+  state_estimator_sub_ =
+      nl.subscribe("hero/lion/odom",
+                   10,
+                   &PointCloudOdometry::StateEstimateOdometryCallback,
+                   this,
+                   ros::TransportHints().tcpNoDelay());
 
   query_pub_ = nl.advertise<PointCloud>("odometry_query_points", 10, false);
   reference_pub_ =
@@ -123,9 +144,15 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   return true;
 }
 
+void PointCloudOdometry::StateEstimateOdometryCallback(
+    const nav_msgs::Odometry& msg) {
+// TODO: Andrea: add odometry callback.
+
+}
+
 bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   // Store input point cloud's time stamp for publishing.
-  stamp_.fromNSec(points.header.stamp*1e3);
+  stamp_.fromNSec(points.header.stamp * 1e3);
 
   // If this is the first point cloud, store it and wait for another.
   if (!initialized_) {
@@ -180,9 +207,15 @@ bool PointCloudOdometry::UpdateICP() {
 
   // Update pose estimates.
   incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-  incremental_estimate_.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
-                                            T(1, 0), T(1, 1), T(1, 2),
-                                            T(2, 0), T(2, 1), T(2, 2));
+  incremental_estimate_.rotation = gu::Rot3(T(0, 0),
+                                            T(0, 1),
+                                            T(0, 2),
+                                            T(1, 0),
+                                            T(1, 1),
+                                            T(1, 2),
+                                            T(2, 0),
+                                            T(2, 1),
+                                            T(2, 2));
 
   // Only update if the incremental transform is small enough.
   if (!transform_thresholding_ ||
@@ -193,7 +226,8 @@ bool PointCloudOdometry::UpdateICP() {
   } else {
     ROS_WARN(
         "%s: Discarding incremental transformation with norm (t: %lf, r: %lf)",
-        name_.c_str(), incremental_estimate_.translation.Norm(),
+        name_.c_str(),
+        incremental_estimate_.translation.Norm(),
         incremental_estimate_.rotation.ToEulerZYX().Norm());
   }
 
