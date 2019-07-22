@@ -12,8 +12,8 @@ cd catkin_ws
 catkin config --extend /opt/ros/kinetic
 ```
 
-## Run some tests.
-Download test bags with from [here](https://drive.google.com/drive/folders/1dPy667dAnJy9wgXmlnRgQZxQF_ESuve3) (credits to LIO-mapping).
+## Run a tests with ground truth
+Download test bags from [here](https://drive.google.com/drive/folders/1dPy667dAnJy9wgXmlnRgQZxQF_ESuve3) (credits to LIO-mapping).
 Create a new directory in your user folder: 
 ```bash
 mkdir -p ~/bags/lo_frontend
