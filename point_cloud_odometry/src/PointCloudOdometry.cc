@@ -146,8 +146,7 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
 
 void PointCloudOdometry::StateEstimateOdometryCallback(
     const nav_msgs::Odometry& msg) {
-// TODO: Andrea: add odometry callback.
-
+  // TODO: Andrea: add odometry callback.
 }
 
 bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
@@ -207,15 +206,11 @@ bool PointCloudOdometry::UpdateICP() {
 
   // Update pose estimates.
   incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-  incremental_estimate_.rotation = gu::Rot3(T(0, 0),
-                                            T(0, 1),
-                                            T(0, 2),
-                                            T(1, 0),
-                                            T(1, 1),
-                                            T(1, 2),
-                                            T(2, 0),
-                                            T(2, 1),
-                                            T(2, 2));
+  // clang-format off
+  incremental_estimate_.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                            T(1, 0), T(1, 1), T(1, 2),
+                                            T(2, 0), T(2, 1), T(2, 2));
+  // clang-format on
 
   // Only update if the incremental transform is small enough.
   if (!transform_thresholding_ ||
