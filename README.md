@@ -25,5 +25,4 @@ sh $(rospack find lo_frontend)/testing/run_test.sh
 ```
 
 ## Run the simulation to test integration with lamp
-- install simulation following instructions in [core_workspace](https://gitlab.robotics.caltech.edu/rollocopter/core/core_workspace)
-- from core_workspace package, checkout branch $feature/lo_split_architecture$
+- install simulation following instructions in [core_workspace](https://gitlab.robotics.caltech.edu/rollocopter/core/core_workspace), but from core_workspace package, checkout branch `feature/lo_split_architecture` instead of the master branch.
