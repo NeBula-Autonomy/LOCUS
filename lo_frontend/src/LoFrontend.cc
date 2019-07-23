@@ -191,6 +191,7 @@ void LoFrontend::VisualizationTimerCallback(const ros::TimerEvent& ev) {
   //mapper_.PublishMap();
 }
 
+/*
 gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
   gtsam::Vector3 t;
   t(0) = pose.translation(0);
@@ -209,6 +210,7 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 
   return gtsam::Pose3(r, t);
 }
+*/
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.

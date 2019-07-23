@@ -37,14 +37,15 @@
 #ifndef POINT_CLOUD_ODOMETRY_H
 #define POINT_CLOUD_ODOMETRY_H
 
-#include <ros/ros.h>
 #include <geometry_utils/Transform3.h>
+#include <nav_msgs/Odometry.h>
+#include <ros/ros.h>
 
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
 
 class PointCloudOdometry {
- public:
+public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
   PointCloudOdometry();
@@ -67,8 +68,8 @@ class PointCloudOdometry {
   // Pose estimates.
   geometry_utils::Transform3 integrated_estimate_;
   geometry_utils::Transform3 incremental_estimate_;
-  
- private:
+
+private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
@@ -77,12 +78,14 @@ class PointCloudOdometry {
   bool UpdateICP();
 
   // Publish reference and query point clouds.
-  void PublishPoints(const PointCloud::Ptr& points,
-                     const ros::Publisher& pub);
+  void PublishPoints(const PointCloud::Ptr& points, const ros::Publisher& pub);
 
   // Publish incremental and integrated pose estimates.
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
+
+  // Subscribe to odometry from external estimator too be used as prior.
+  void StateEstimateOdometryCallback(const nav_msgs::Odometry& msg);
 
   // The node's name.
   std::string name_;
@@ -92,6 +95,11 @@ class PointCloudOdometry {
   ros::Publisher query_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
+
+  // Subscribers
+  ros::Subscriber
+      state_estimator_sub_; // State estimate from an external estimator (such
+                            // as LION) used as prior.
 
   // Most recent point cloud time stamp for publishers.
   ros::Time stamp_;
