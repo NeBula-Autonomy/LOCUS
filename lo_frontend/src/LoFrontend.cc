@@ -56,7 +56,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     ROS_ERROR("%s: Failed to initialize point cloud odometry.", name_.c_str());
     return false;
   }
-  /* 
+
   if (!localization_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize localization.", name_.c_str());
     return false;
@@ -65,7 +65,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (!mapper_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize mapper.", name_.c_str());
     return false;
-  }*/
+  }
 
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
@@ -188,10 +188,9 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
 }
 
 void LoFrontend::VisualizationTimerCallback(const ros::TimerEvent& ev) {
-  //mapper_.PublishMap();
+  mapper_.PublishMap();
 }
 
-/*
 gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
   gtsam::Vector3 t;
   t(0) = pose.translation(0);
@@ -210,7 +209,6 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 
   return gtsam::Pose3(r, t);
 }
-*/
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.
@@ -226,8 +224,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     //mapper_.InsertPoints(msg_filtered, unused.get());
     return;
   }
-
-  /*   
+   
   // Containers.
   PointCloud::Ptr msg_transformed(new PointCloud);
   PointCloud::Ptr msg_neighbors(new PointCloud);
@@ -292,5 +289,5 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   poseScanMsg.pose.header.frame_id = fixed_frame_id_;
 
   pose_scan_pub_.publish(poseScanMsg);
-  */
+  
 }
