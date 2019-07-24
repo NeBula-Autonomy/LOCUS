@@ -41,11 +41,6 @@
       <!-- Point cloud odometry -->
       <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>
 
-      <!-- Point cloud localization -->
-      <rosparam file="$(find point_cloud_localization)/config/parameters.yaml"/>
-
-      <!-- Point cloud mapper -->
-      <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
     </node>
 
     <!-- Trotthling input cloud -->
