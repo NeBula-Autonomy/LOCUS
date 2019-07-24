@@ -61,6 +61,14 @@ void MeasurementSynchronizer::SortMessages() {
     sensor_ordering_.push_back(p);
   }
 
+  ii = 0;
+  for (imu_queue::const_iterator it = pending_imus_.begin();
+       it != pending_imus_.end(); ++it, ++ii) {
+    TimestampedType::Ptr p = TimestampedType::Ptr(
+        new TimestampedType((*it)->msg->header.stamp.toSec(), IMU, ii));
+    sensor_ordering_.push_back(p);
+  }  
+
   // Sort the list by time.
   std::sort(sensor_ordering_.begin(), sensor_ordering_.end(),
             MeasurementSynchronizer::CompareTimestamps);
@@ -93,6 +101,7 @@ bool MeasurementSynchronizer::NextMessageExists() {
 void MeasurementSynchronizer::ClearMessages() {
   pending_pclds_.clear();
   pending_pcl_pclds_.clear();
+  pending_imus_.clear(); 
 }
 
 const MeasurementSynchronizer::pcld_queue&
@@ -105,6 +114,11 @@ MeasurementSynchronizer::GetPCLPointCloudMessages() {
   return pending_pcl_pclds_;
 }
 
+const MeasurementSynchronizer::imu_queue&
+MeasurementSynchronizer::GetImuMessages() {
+  return pending_imus_;
+}
+
 const MeasurementSynchronizer::Message<sensor_msgs::PointCloud2>::ConstPtr&
 MeasurementSynchronizer::GetPointCloudMessage(unsigned int index) {
   return pending_pclds_[index];
@@ -114,6 +128,11 @@ const MeasurementSynchronizer::Message<
     pcl::PointCloud<pcl::PointXYZ>>::ConstPtr&
 MeasurementSynchronizer::GetPCLPointCloudMessage(unsigned int index) {
   return pending_pcl_pclds_[index];
+}
+
+const MeasurementSynchronizer::Message<sensor_msgs::Imu>::ConstPtr&
+MeasurementSynchronizer::GetImuMessage(unsigned int index) {
+  return pending_imus_[index];
 }
 
 void MeasurementSynchronizer::AddPointCloudMessage(
@@ -129,4 +148,12 @@ void MeasurementSynchronizer::AddPCLPointCloudMessage(
   Message<pcl::PointCloud<pcl::PointXYZ>>::Ptr p(
       new Message<pcl::PointCloud<pcl::PointXYZ>>(msg, tag));
   pending_pcl_pclds_.push_back(p);
+}
+
+// TODO: Implementing this without a tag, is it needed? 
+// It is needed in the stage of Message creation as in MeasurementSynchronizer.h 
+void MeasurementSynchronizer::AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg){
+    std::string dummy_tag = "dummy_tag";
+    Message<sensor_msgs::Imu>::Ptr p( new Message<sensor_msgs::Imu>(msg, dummy_tag));
+    pending_imus_.push_back(p); 
 }

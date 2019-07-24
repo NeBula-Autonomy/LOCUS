@@ -73,6 +73,8 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
     return false;
   }
 
+  imu_data_has_been_received_ = false;
+
   return true;
 }
 
@@ -135,6 +137,13 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
 
+  if (!pu::Get("imu/use_imu_data", use_imu_data_)) 
+    return false;
+  if (!pu::Get("imu/check_imu_data", check_imu_data_)) 
+    return false;
+  if (!pu::Get("imu/imu_threshold", imu_threshold_)) 
+    return false;
+
   return true;
 }
 
@@ -157,6 +166,11 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
       "odometry_integrated_estimate", 10, false);
 
+  rpy_imu_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_imu", 1, false);
+  rpy_computed_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_computed", 1, false);
+  timestamp_difference_pub_ = nl.advertise<std_msgs::Float64>("imu_lidar_ts_diff", 1, false); 
+
+
   return true;
 }
 
@@ -165,22 +179,106 @@ void PointCloudOdometry::StateEstimateOdometryCallback(
   // TODO: Andrea: add odometry callback.
 }
 
+void PointCloudOdometry::SetImuData(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
+  
+  std::cout << "Receiving IMU data in PointCloudOdometry!" << std::endl;
+  Eigen::Matrix3f mat3 = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z)).toRotationMatrix();  
+  Eigen::Matrix4f mat4 = Eigen::Matrix4f::Identity();
+  mat4.block(0,0,3,3) = mat3; 
+
+  // Buffering IMU Data in FIFO Structure
+  if (imu_deque_.size()==100){ 
+    imu_deque_.pop_front();
+    imu_deque_.push_back(imu_data{mat4, timestamp});
+  }
+  else{
+    imu_deque_.push_back(imu_data{mat4, timestamp});
+  }
+
+  if (imu_data_has_been_received_==false){
+    imu_first_attitude_ = mat4; // First time receiving the IMU Data  
+    std::cout << "Receiving IMU Data for the first time ---> imu_first_attitude_ now exists!";
+    imu_data_has_been_received_ = true;
+  }
+}
+
 bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
+
+  // As soon as UpdateEstimate is called, a copy of the deque of interest is taken 
+  // in order to not pick the wrong i-th element when external producer threads are pushing element into the deque
+  std::deque<imu_data> imu_deque_copy_ = imu_deque_; 
+  
   // Store input point cloud's time stamp for publishing.
   stamp_.fromNSec(points.header.stamp * 1e3);
 
   // If this is the first point cloud, store it and wait for another.
-  if (!initialized_) {
-    copyPointCloud(points, *query_);
-    initialized_ = true;
-    return false;
+    if (!initialized_) {
+    if (use_imu_data_==true){
+      copyPointCloud(points, *query_); 
+      if (imu_data_has_been_received_ == true){
+        imu_previous_attitude_ = imu_first_attitude_; // TODO: Check this very first assumption
+        initialized_ = true;
+        return false;
+      }
+      else{
+        return false;
+      }      
+    }
+    else{
+      copyPointCloud(points, *query_);
+      initialized_ = true;
+      return false;      
+    }
   }
 
+  // Initialize imu_current_attitude_ to whatever the attitude of the 0-th element of the deque is
+  imu_current_attitude_ = imu_deque_copy_[0].internal_imu_attitude_; 
+  // Search for the closest timestamp and get from that particular element the attitude
+  float min_ts_diff = 1000;   
+  for (int i=0; i<imu_deque_copy_.size(); ++i) {
+        float cur_ts_diff = (imu_deque_copy_[i].internal_imu_attitude_timestamp_ - stamp_).toSec();
+        // We can accept negative differences (IMU coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
+        if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
+            imu_current_attitude_ = imu_deque_copy_[i].internal_imu_attitude_; 
+            min_ts_diff = cur_ts_diff; 
+        }
+  }
+  // At this point we've picked the correct imu_current_attitude_ representing the orientation 
+  // of the IMU element with the closest Timestamp to the LIDAR Scan
+  std_msgs::Float64 imu_lidar_ts_diff; 
+  imu_lidar_ts_diff.data = min_ts_diff; 
+  PublishTimestampDifference(imu_lidar_ts_diff, timestamp_difference_pub_); 
+
+  // Here we have the correct change in orientation computed by IMU between two LIDAR scans
+  imu_change_in_attitude_ = imu_current_attitude_*imu_previous_attitude_.inverse();
+  Eigen::Matrix4f imu_change_in_attitude_copy_ = imu_change_in_attitude_; 
+  
+  // We now memorize this computed value in the deque 
+  imu_attitude_deque_.push_back(imu_change_in_attitude_copy_);  
+
+  // Do the check ONLY if check_imu_data_ flag is set to true
+  if (check_imu_data_==true){
+     float max_ts_diff = 0.05; 
+     // Set use_imu_data_ to true only if timestamp difference IMU - LIDAR is below threshold && rpy IMU are below IMU threshold
+     if (fabs(min_ts_diff)<fabs(max_ts_diff)){
+       use_imu_data_ = true; 
+     }
+     else{
+         use_imu_data_ = false; // Check correctness of this approach
+         // We could try to weight the IMU Data fusage process basing on the current IMU-LIDAR timestamp difference
+         // Or should we go with IMU preintegration and interpolation approach? 
+         std::cout << "BAD! ---> " << min_ts_diff << std::endl; 
+     }  
+   }
+ 
   // Move current query points (acquired last iteration) to reference points.
   copyPointCloud(*query_, *reference_);
 
   // Set the incoming point cloud as the query point cloud.
   copyPointCloud(points, *query_);
+
+  // Update IMU
+  imu_previous_attitude_ = imu_current_attitude_; 
 
   // Update pose estimate via ICP.
   return UpdateICP();
@@ -205,20 +303,84 @@ bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
 }
 
 bool PointCloudOdometry::UpdateICP() {
+
   // Compute the incremental transformation.
   GeneralizedIterativeClosestPoint<PointXYZ, PointXYZ> icp;
   icp.setTransformationEpsilon(params_.icp_tf_epsilon);
   icp.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp.setMaximumIterations(params_.icp_iterations);
   icp.setRANSACIterations(0);
-
   icp.setInputSource(query_);
   icp.setInputTarget(reference_);
-
   PointCloud unused_result;
   icp.align(unused_result);
 
-  const Eigen::Matrix4f T = icp.getFinalTransformation();
+  Eigen::Matrix4f T; 
+
+    if (use_imu_data_==true){
+
+        T = icp.getFinalTransformation();
+
+        // Compute pure ICP LIDAR rotation 
+        Eigen::Matrix3f COMPUTED_ROTATION = T.block(0,0,3,3);
+        Eigen::Quaternionf COMPUTED_quaternion(COMPUTED_ROTATION);
+        geometry_msgs::Quaternion myComputedOrientation;
+        myComputedOrientation.w = COMPUTED_quaternion.w();
+        myComputedOrientation.x = COMPUTED_quaternion.x();
+        myComputedOrientation.y = COMPUTED_quaternion.y();
+        myComputedOrientation.z = COMPUTED_quaternion.z();
+        tf::Quaternion myComputedOrientationTf;
+        tf::quaternionMsgToTF(myComputedOrientation, myComputedOrientationTf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_imu_quaternion_double, cur_imu_quaternion_tf);
+        double roll_computed, pitch_computed, yaw_computed;
+        tf::Matrix3x3(myComputedOrientationTf).getRPY(roll_computed, pitch_computed, yaw_computed);    
+        geometry_msgs::Vector3 rpy_lidar;
+        rpy_lidar.x = roll_computed; 
+        rpy_lidar.y = pitch_computed; 
+        rpy_lidar.z = yaw_computed; 
+        PublishRpyComputed(rpy_lidar, rpy_computed_pub_); 
+
+        // Compute pure IMU rotation
+        Eigen::Matrix4f imu_attitude_local_copy_ = imu_attitude_deque_.front();  
+        imu_attitude_deque_.pop_front();
+        Eigen::Matrix3f cur_imu_rot = imu_attitude_local_copy_.block(0,0,3,3);  // Matrix of floats
+        Eigen::Matrix3d cur_imu_rot_double = cur_imu_rot.cast <double> ();     // Matrix of doubles
+        Eigen::Quaterniond cur_imu_quaternion_double(cur_imu_rot_double);
+        tf::Quaternion cur_imu_quaternion_tf;
+        geometry_msgs::Quaternion cur_imu_quaternion_msg;
+        cur_imu_quaternion_msg.w = cur_imu_quaternion_double.w();
+        cur_imu_quaternion_msg.x = cur_imu_quaternion_double.x();
+        cur_imu_quaternion_msg.y = cur_imu_quaternion_double.y();
+        cur_imu_quaternion_msg.z = cur_imu_quaternion_double.z();
+        tf::quaternionMsgToTF(cur_imu_quaternion_msg, cur_imu_quaternion_tf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_imu_quaternion_double, cur_imu_quaternion_tf);
+        double roll_imu, pitch_imu, yaw_imu;
+        tf::Matrix3x3(cur_imu_quaternion_tf).getRPY(roll_imu, pitch_imu, yaw_imu);
+        geometry_msgs::Vector3 rpy_imu;
+        rpy_imu.x = roll_imu; 
+        rpy_imu.y = pitch_imu; 
+        rpy_imu.z = yaw_imu; 
+        PublishRpyImu(rpy_imu, rpy_imu_pub_); 
+
+        // Roll and Pitch from IMU, Yaw from ICP LIDAR 
+        float out_roll = float(roll_imu);
+        float out_pitch = float(pitch_imu);
+        float out_yaw = float(yaw_computed);
+
+        Eigen::Matrix3f OUTPUT_ROTATION; 
+        OUTPUT_ROTATION = Eigen::AngleAxisf(out_roll, Eigen::Vector3f::UnitX())
+          * Eigen::AngleAxisf(out_pitch, Eigen::Vector3f::UnitY())
+          * Eigen::AngleAxisf(out_yaw, Eigen::Vector3f::UnitZ()); 
+
+        T.block(0,0,3,3) = OUTPUT_ROTATION;
+      
+        std::cout << "IMU ON" << std::endl;  
+  }
+  else{
+        T = icp.getFinalTransformation();
+        std::cout << "IMU OFF" << std::endl;  
+  }
+
+  // TODO: Integrate IMU fusion logic 
+
 
   // Update pose estimates.
   incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
@@ -284,4 +446,16 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
   ros_pose.header.frame_id = fixed_frame_id_;
   ros_pose.header.stamp = stamp_;
   pub.publish(ros_pose);
+}
+
+void PointCloudOdometry::PublishRpyImu(const geometry_msgs::Vector3& rpy, const ros::Publisher& pub) {
+  pub.publish(rpy);    
+}
+
+void PointCloudOdometry::PublishRpyComputed(const geometry_msgs::Vector3& rpy, const ros::Publisher& pub) {
+  pub.publish(rpy);    
+}
+                                                 
+void PointCloudOdometry::PublishTimestampDifference(const std_msgs::Float64& timediff, const ros::Publisher& pub) {
+  pub.publish(timediff);    
 }

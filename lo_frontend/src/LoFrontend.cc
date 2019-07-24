@@ -45,6 +45,10 @@ LoFrontend::LoFrontend()
 LoFrontend::~LoFrontend() {}
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
+
+  // Avoid randomness
+  srand(0); 
+
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");
 
   if (!filter_.Initialize(n)) {
@@ -130,6 +134,11 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   pcld_sub_ =
       nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
+  // IMU Subscriber
+  imu_sub_ = 
+      nl.subscribe("/husky/imu/filtered", 10000, &LoFrontend::ImuCallback, this);
+
+
   return CreatePublishers(n);
 }
 
@@ -146,6 +155,8 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
+// ------------Trying to synchronize LIDAR and IMU readings-----------
+
 void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   // ROS_INFO_STREAM("recieved pointcloud message " << msg->header.stamp);
   last_pcld_stamp_.fromNSec(
@@ -153,6 +164,13 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
                                  // we get two pointcloud messages in the queue
   synchronizer_.AddPCLPointCloudMessage(msg);
 }
+
+void LoFrontend::ImuCallback(const sensor_msgs::Imu::ConstPtr& msg) {
+  // TODO: Should we collect last_imu_stamp as well?
+  synchronizer_.AddImuMessage(msg); 
+}
+
+// -------------------------------------------------------------------
 
 void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   // Sort all messages accumulated since the last estimate update.
@@ -163,23 +181,33 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   MeasurementSynchronizer::sensor_type type;
   unsigned int index = 0;
   while (synchronizer_.GetNextMessage(&type, &index)) {
+
     switch (type) {
-    // Point cloud messages.
-    case MeasurementSynchronizer::PCL_POINTCLOUD: {
-      const MeasurementSynchronizer::Message<PointCloud>::ConstPtr& m =
-          synchronizer_.GetPCLPointCloudMessage(index);
 
-      ProcessPointCloudMessage(m->msg);
-      break;
-    }
+      // Point cloud messages.
+      case MeasurementSynchronizer::PCL_POINTCLOUD: {
+        const MeasurementSynchronizer::Message<PointCloud>::ConstPtr& m =
+            synchronizer_.GetPCLPointCloudMessage(index);
+        ProcessPointCloudMessage(m->msg);
+        break;
+      }
 
-    // Unhandled sensor messages.
-    default: {
-      ROS_WARN("%s: Unhandled measurement type (%s).",
-               name_.c_str(),
-               MeasurementSynchronizer::GetTypeString(type).c_str());
-      break;
-    }
+      // IMU messages.
+      case MeasurementSynchronizer::IMU: {
+          const MeasurementSynchronizer::Message<Imu>::ConstPtr& m =
+              synchronizer_.GetImuMessage(index);
+          ProcessImuMessage(m->msg);
+          break;
+      }
+
+      // Unhandled sensor messages.
+      default: {
+        ROS_WARN("%s: Unhandled measurement type (%s).",
+                name_.c_str(),
+                MeasurementSynchronizer::GetTypeString(type).c_str());
+        break;
+      }
+
     }
   }
 
@@ -211,6 +239,10 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
   return gtsam::Pose3(r, t);
 }
 */
+
+void LoFrontend::ProcessImuMessage(const Imu::ConstPtr& msg){
+  odometry_.SetImuData(msg->orientation, msg->header.stamp);   
+}
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // Filter the incoming point cloud message.

@@ -13,3 +13,8 @@ icp:
   transform_thresholding: false
   max_translation: 0.09
   max_rotation: 0.1
+
+imu: 
+  use_imu_data: true
+  check_imu_data: true
+  imu_threshold: 1 # Radians 

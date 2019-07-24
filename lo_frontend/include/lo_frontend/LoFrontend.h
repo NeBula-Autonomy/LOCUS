@@ -63,9 +63,14 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 
+// IMU 
+#include <sensor_msgs/Imu.h>
+
+
 class LoFrontend {
 public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef sensor_msgs::Imu Imu;
 
   LoFrontend();
   ~LoFrontend();
@@ -78,6 +83,9 @@ public:
   // Sensor message processing.
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
 
+  // IMU message processing 
+  void ProcessImuMessage(const Imu::ConstPtr& msg);
+
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -88,6 +96,7 @@ private:
 
   // Sensor callbacks.
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
+  void ImuCallback(const sensor_msgs::Imu::ConstPtr& msg);
 
   // Timer callbacks.
   // Will run ICP and add PC on local map.
@@ -112,6 +121,7 @@ private:
 
   // Subscribers.
   ros::Subscriber pcld_sub_; // pc from lidar
+  ros::Subscriber imu_sub_;  // IMU subscriber
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_; // TODO: Andrea: ?

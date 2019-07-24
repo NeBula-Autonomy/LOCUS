@@ -43,6 +43,9 @@
 
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf/transform_broadcaster.h>
+
+#include <std_msgs/Float64.h>
 
 class PointCloudOdometry {
 public:
@@ -69,6 +72,9 @@ public:
   geometry_utils::Transform3 integrated_estimate_;
   geometry_utils::Transform3 incremental_estimate_;
 
+  void SetImuData(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp); 
+
+
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -84,17 +90,42 @@ private:
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
+  // IMU Debug section 
+
+  void PublishRpyImu(const geometry_msgs::Vector3& rpy,
+                     const ros::Publisher& pub);
+
+  void PublishRpyComputed(const geometry_msgs::Vector3& rpy,
+                       const ros::Publisher& pub); 
+
+  void PublishTimestampDifference(const std_msgs::Float64& timediff,
+                                  const ros::Publisher& pub);
+
   // Subscribe to odometry from external estimator too be used as prior.
   void StateEstimateOdometryCallback(const nav_msgs::Odometry& msg);
 
   // The node's name.
   std::string name_;
 
+  // IMU Data
+  Eigen::Matrix4f imu_first_attitude_, imu_current_attitude_, imu_previous_attitude_, imu_change_in_attitude_; 
+  bool use_imu_data_, imu_data_has_been_received_, check_imu_data_ ; 
+  float imu_threshold_;
+  struct imu_data {
+    Eigen::Matrix4f internal_imu_attitude_;
+    ros::Time internal_imu_attitude_timestamp_;
+  };
+  std::deque<imu_data> imu_deque_;
+  std::deque<Eigen::Matrix4f> imu_attitude_deque_;
+
   // Publishers.
   ros::Publisher reference_pub_;
   ros::Publisher query_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
+  ros::Publisher rpy_imu_pub_;
+  ros::Publisher rpy_computed_pub_;
+  ros::Publisher timestamp_difference_pub_;
 
   // Subscribers
   ros::Subscriber
