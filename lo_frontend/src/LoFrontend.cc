@@ -253,7 +253,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     ROS_INFO("First update");
     // First update ever.
     PointCloud::Ptr unused(new PointCloud);
-    //mapper_.InsertPoints(msg_filtered, unused.get());
+    mapper_.InsertPoints(msg_filtered, unused.get());
     return;
   }
    
