@@ -15,6 +15,6 @@ icp:
   max_rotation: 0.1
 
 imu: 
-  use_imu_data: true
-  check_imu_data: true
+  use_imu_data: false
+  check_imu_data: false
   imu_threshold: 1 # Radians 
