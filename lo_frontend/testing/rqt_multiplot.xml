@@ -86,7 +86,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose</topic>
+                                    <topic>/Robot_7/pose/no_offset</topic>
                                     <type>geometry_msgs/PoseStamped</type>
                                 </x_axis>
                                 <y_axis>
@@ -99,7 +99,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose</topic>
+                                    <topic>/Robot_7/pose/no_offset</topic>
                                     <type>geometry_msgs/PoseStamped</type>
                                 </y_axis>
                             </axes>
@@ -211,7 +211,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose</topic>
+                                    <topic>/Robot_7/pose/no_offset</topic>
                                     <type>geometry_msgs/PoseStamped</type>
                                 </x_axis>
                                 <y_axis>
@@ -224,7 +224,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose</topic>
+                                    <topic>/Robot_7/pose/no_offset</topic>
                                     <type>geometry_msgs/PoseStamped</type>
                                 </y_axis>
                             </axes>
@@ -336,7 +336,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose</topic>
+                                    <topic>/Robot_7/pose/no_offset</topic>
                                     <type>geometry_msgs/PoseStamped</type>
                                 </x_axis>
                                 <y_axis>
@@ -349,7 +349,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose</topic>
+                                    <topic>/Robot_7/pose/no_offset</topic>
                                     <type>geometry_msgs/PoseStamped</type>
                                 </y_axis>
                             </axes>
@@ -463,7 +463,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose/rpy</topic>
+                                    <topic>/Robot_7/pose/rpy/no_offset</topic>
                                     <type>geometry_msgs/Vector3</type>
                                 </x_axis>
                                 <y_axis>
@@ -476,7 +476,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose/rpy</topic>
+                                    <topic>/Robot_7/pose/rpy/no_offset</topic>
                                     <type>geometry_msgs/Vector3</type>
                                 </y_axis>
                             </axes>
@@ -588,7 +588,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose/rpy</topic>
+                                    <topic>/Robot_7/pose/rpy/no_offset</topic>
                                     <type>geometry_msgs/Vector3</type>
                                 </x_axis>
                                 <y_axis>
@@ -601,7 +601,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose/rpy</topic>
+                                    <topic>/Robot_7/pose/rpy/no_offset</topic>
                                     <type>geometry_msgs/Vector3</type>
                                 </y_axis>
                             </axes>
@@ -713,7 +713,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose/rpy</topic>
+                                    <topic>/Robot_7/pose/rpy/no_offset</topic>
                                     <type>geometry_msgs/Vector3</type>
                                 </x_axis>
                                 <y_axis>
@@ -726,7 +726,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/Robot_7/pose/rpy</topic>
+                                    <topic>/Robot_7/pose/rpy/no_offset</topic>
                                     <type>geometry_msgs/Vector3</type>
                                 </y_axis>
                             </axes>

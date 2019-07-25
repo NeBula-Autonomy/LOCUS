@@ -56,8 +56,8 @@
 #include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
-//#include <point_cloud_localization/PointCloudLocalization.h>
-//#include <point_cloud_mapper/PointCloudMapper.h>
+#include <point_cloud_localization/PointCloudLocalization.h>
+#include <point_cloud_mapper/PointCloudMapper.h>
 
 // GTSAM
 #include <gtsam/geometry/Pose3.h>
@@ -135,8 +135,8 @@ private:
   MeasurementSynchronizer synchronizer_;
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
-  //PointCloudLocalization localization_; // TODO: Andrea: needed?
-  //PointCloudMapper mapper_;             // TODO: Andrea: needed?
+  PointCloudLocalization localization_; // TODO: Andrea: needed?
+  PointCloudMapper mapper_;             // TODO: Andrea: needed?
 };
 
 #endif // LO_FRONTEND_LO_FRONTEND_H
