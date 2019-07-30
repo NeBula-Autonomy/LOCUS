@@ -153,7 +153,7 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
-// ------------Trying to synchronize LIDAR and IMU readings-----------
+// ------------Trying to synchronize LIDAR and extatt readings-----------
 
 void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   // ROS_INFO_STREAM("recieved pointcloud message " << msg->header.stamp);

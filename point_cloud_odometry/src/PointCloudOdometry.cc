@@ -186,7 +186,7 @@ void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<st
   Eigen::Matrix4f mat4 = Eigen::Matrix4f::Identity();
   mat4.block(0,0,3,3) = mat3; 
 
-  // Buffering IMU Data in FIFO Structure
+  // Buffering extatt Data in FIFO Structure
   if (extatt_deque_.size()==100){ 
     extatt_deque_.pop_front();
     extatt_deque_.push_back(extatt_data{mat4, timestamp});
@@ -196,7 +196,7 @@ void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<st
   }
 
   if (extatt_data_has_been_received_==false){
-    extatt_first_attitude_ = mat4; // First time receiving the IMU Data  
+    extatt_first_attitude_ = mat4; // First time receiving the extatt Data  
     std::cout << "Receiving extatt data for the first time ---> extatt_first_attitude_ now exists!";
     extatt_data_has_been_received_ = true;
   }
@@ -238,20 +238,20 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   }
 
   if(use_extatt_data_==true){
-    // Initialize imu_current_attitude_ to whatever the attitude of the 0-th element of the deque is
+    // Initialize extatt_current_attitude_ to whatever the attitude of the 0-th element of the deque is
     extatt_current_attitude_ = extatt_deque_copy_[0].internal_extatt_attitude_; 
     // Search for the closest timestamp and get from that particular element the attitude
     float min_ts_diff = 1000;   
     for (int i=0; i<extatt_deque_copy_.size(); ++i) {
           float cur_ts_diff = (extatt_deque_copy_[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
-          // We can accept negative differences (IMU coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
+          // We can accept negative differences (extatt coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
           if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
               extatt_current_attitude_ = extatt_deque_copy_[i].internal_extatt_attitude_; 
               min_ts_diff = cur_ts_diff; 
           }
     }
-    // At this point we've picked the correct imu_current_attitude_ representing the orientation 
-    // of the IMU element with the closest Timestamp to the LIDAR Scan
+    // At this point we've picked the correct extatt_current_attitude_ representing the orientation 
+    // of the extatt element with the closest Timestamp to the LIDAR Scan
     std_msgs::Float64 extatt_lidar_ts_diff; 
     extatt_lidar_ts_diff.data = min_ts_diff; 
     PublishTimestampDifference(extatt_lidar_ts_diff, timestamp_difference_pub_); 
@@ -263,17 +263,17 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // We now memorize this computed value in the deque 
     extatt_attitude_deque_.push_back(extatt_change_in_attitude_copy_);  
 
-    // Do the check ONLY if check_imu_data_ flag is set to true
+    // Do the check ONLY if check_extatt_data_ flag is set to true
     if (check_extatt_data_==true){
       float max_ts_diff = 0.05; 
-      // Set use_imu_data_ to true only if timestamp difference IMU - LIDAR is below threshold && rpy IMU are below IMU threshold
+      // Set use_extatt_data_ to true only if timestamp difference extatt - LIDAR is below threshold && rpy extatt are below extatt threshold
       if (fabs(min_ts_diff)<fabs(max_ts_diff)){
         use_extatt_data_ = true; 
       }
       else{
           use_extatt_data_ = false; // Check correctness of this approach
-          // We could try to weight the IMU Data fusage process basing on the current IMU-LIDAR timestamp difference
-          // Or should we go with IMU preintegration and interpolation approach? 
+          // We could try to weight the extatt Data fusage process basing on the current extatt-LIDAR timestamp difference
+          // Or should we go with extatt preintegration and interpolation approach? 
           std::cout << "BAD! ---> " << min_ts_diff << std::endl; 
       }  
     }
@@ -284,7 +284,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Set the incoming point cloud as the query point cloud.
     copyPointCloud(points, *query_);
 
-    // Update IMU
+    // Update extatt
     extatt_previous_attitude_ = extatt_current_attitude_; 
 
     extatt_deque_.pop_front();
@@ -300,7 +300,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Set the incoming point cloud as the query point cloud.
     copyPointCloud(points, *query_);
 
-    // Update IMU
+    // Update extatt
     extatt_previous_attitude_ = extatt_current_attitude_; 
 
     // Update pose estimate via ICP.
@@ -356,7 +356,7 @@ bool PointCloudOdometry::UpdateICP() {
         myComputedOrientation.y = COMPUTED_quaternion.y();
         myComputedOrientation.z = COMPUTED_quaternion.z();
         tf::Quaternion myComputedOrientationTf;
-        tf::quaternionMsgToTF(myComputedOrientation, myComputedOrientationTf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_imu_quaternion_double, cur_imu_quaternion_tf);
+        tf::quaternionMsgToTF(myComputedOrientation, myComputedOrientationTf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_extatt_quaternion_double, cur_extatt_quaternion_tf);
         double roll_computed, pitch_computed, yaw_computed;
         tf::Matrix3x3(myComputedOrientationTf).getRPY(roll_computed, pitch_computed, yaw_computed);    
         geometry_msgs::Vector3 rpy_lidar;
@@ -365,7 +365,7 @@ bool PointCloudOdometry::UpdateICP() {
         rpy_lidar.z = yaw_computed; 
         PublishRpyComputed(rpy_lidar, rpy_computed_pub_); 
 
-        // Compute pure IMU rotation
+        // Compute pure extatt rotation
         Eigen::Matrix4f extatt_attitude_local_copy_ = extatt_attitude_deque_.front();  
         extatt_attitude_deque_.pop_front();
         std::cout<<"External data queue size: " << extatt_deque_.size()<<std::endl;
@@ -378,7 +378,7 @@ bool PointCloudOdometry::UpdateICP() {
         cur_extatt_quaternion_msg.x = cur_extatt_quaternion_double.x();
         cur_extatt_quaternion_msg.y = cur_extatt_quaternion_double.y();
         cur_extatt_quaternion_msg.z = cur_extatt_quaternion_double.z();
-        tf::quaternionMsgToTF(cur_extatt_quaternion_msg, cur_extatt_quaternion_tf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_imu_quaternion_double, cur_imu_quaternion_tf);
+        tf::quaternionMsgToTF(cur_extatt_quaternion_msg, cur_extatt_quaternion_tf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_extatt_quaternion_double, cur_extatt_quaternion_tf);
         double roll_extatt, pitch_extatt, yaw_extatt;
         tf::Matrix3x3(cur_extatt_quaternion_tf).getRPY(roll_extatt, pitch_extatt, yaw_extatt);
         geometry_msgs::Vector3 rpy_extatt;
