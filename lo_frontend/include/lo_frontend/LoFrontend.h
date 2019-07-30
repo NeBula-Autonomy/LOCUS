@@ -66,11 +66,19 @@
 // IMU 
 #include <sensor_msgs/Imu.h>
 
+// LION 
+#include <nav_msgs/Odometry.h>
+
+// GROUNDTRUTH 
+#include <geometry_msgs/PoseStamped.h>
+
 
 class LoFrontend {
 public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
   typedef sensor_msgs::Imu Imu;
+  typedef nav_msgs::Odometry Odometry;
+  typedef geometry_msgs::PoseStamped PoseStamped; 
 
   LoFrontend();
   ~LoFrontend();
@@ -86,6 +94,12 @@ public:
   // IMU message processing 
   void ProcessImuMessage(const Imu::ConstPtr& msg);
 
+  // ODOM message processing 
+  void ProcessOdomMessage(const Odometry::ConstPtr& msg);
+
+  // GroundTruth message processing 
+  void ProcessGtMessage(const PoseStamped::ConstPtr& msg);
+
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -97,6 +111,8 @@ private:
   // Sensor callbacks.
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
   void ImuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+  void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg);
+  void GtCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
   // Timer callbacks.
   // Will run ICP and add PC on local map.
@@ -120,8 +136,10 @@ private:
   ros::Timer visualization_update_timer_;
 
   // Subscribers.
-  ros::Subscriber pcld_sub_; // pc from lidar
-  ros::Subscriber imu_sub_;  // IMU subscriber
+  ros::Subscriber pcld_sub_;  // pc from lidar
+  ros::Subscriber imu_sub_;   // IMU subscriber
+  ros::Subscriber odom_sub_;  // LION subscriber
+  ros::Subscriber gt_sub_;    // GroundTruth subscriber
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_; // TODO: Andrea: ?

@@ -2,14 +2,22 @@
 import rospy
 import math 
 import numpy as np 
-from geometry_msgs.msg import PoseStamped, Vector3
+from geometry_msgs.msg import PoseStamped, Vector3, Vector3Stamped
 from scipy.spatial.transform import Rotation as R
+
+# TODO: Publish also the very first message !
 
 firstMessageReceived = False 
 v_R_l0, v_t_l0 = None, None 
 
+firstCfMessageReceived = False 
+v_R_l0Cf = None
+initial_rpy_x, initial_rpy_y, initial_rpy_z = 0, 0, 0 
+
 pub = rospy.Publisher("/Robot_7/pose/no_offset", PoseStamped)
 pub_rpy = rospy.Publisher("/Robot_7/pose/rpy/no_offset", Vector3)
+
+pub_rpyCf = rospy.Publisher("/imu/rpy/filtered/no_offset", Vector3)
 
 def isRotationMatrix(R) :
     Rt = np.transpose(R)
@@ -79,9 +87,33 @@ def GroundTruthCallback(data):
         new_message.z = output_rpy[2]
         pub_rpy.publish(new_message)
 
+# imu/rpy/filtered is the output topic of IMU Complementary Filter 
+# geometry_msgs/Vector3Stamped are the type of messages transported on this topic 
+# Here we already have roll pitch yaw
+def ComplementaryFilterCallback(data):
+
+    global firstCfMessageReceived, initial_rpy_x, initial_rpy_y, initial_rpy_z
+
+    if (firstCfMessageReceived==False):
+
+        initial_rpy_x = data.vector.x
+        initial_rpy_y = data.vector.y
+        initial_rpy_z = data.vector.z
+        firstCfMessageReceived = True
+    
+    else: 
+        new_message = Vector3()
+        print("data.vector.y" + str(data.vector.y))
+        print("initial_rpy_y" + str(initial_rpy_y))
+        new_message.x = data.vector.x - initial_rpy_x
+        new_message.y = data.vector.y - initial_rpy_y
+        new_message.z = data.vector.z - initial_rpy_z
+        pub_rpyCf.publish(new_message)
+
 def subtract_offset_to_gt():
     rospy.init_node('subtract_offset_from_gt', anonymous=True)
     rospy.Subscriber("/Robot_7/pose", PoseStamped, GroundTruthCallback)
+    rospy.Subscriber("/imu/rpy/filtered", Vector3Stamped, ComplementaryFilterCallback)
     rospy.spin()
 
 if __name__ == '__main__':

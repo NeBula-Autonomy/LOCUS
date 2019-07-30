@@ -58,7 +58,9 @@ tmux send-keys -t 3 "sleep 2; python $(rospack find lo_frontend)/testing/subtrac
 
 ##### Launch lo_frontend
 tmux send-keys -t 4 "sleep 2; source $WORKSPACE/devel/setup.bash;  roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME" C-m
-tmux send-keys -t 5 "sleep 2; rostopic hz -w 3 /$ROBOT_NAMESPACE/lo_frontend/odometry_integrated_estimate" C-m # front-end output odom rate
+# tmux send-keys -t 5 "sleep 2; rostopic hz -w 3 /$ROBOT_NAMESPACE/lo_frontend/odometry_integrated_estimate" C-m # front-end output odom rate
+tmux send-keys -t 5 "sleep 5; rosrun topic_tools transform /Robot_7/pose /Robot_7/pose/rpy  geometry_msgs/Vector3 'tf.transformations.euler_from_quaternion([m.pose.orientation.x, m.pose.orientation.y, m.pose.orientation.z, m.pose.orientation.w])' --import tf" C-m
+
 
 ##### rqt_multiplot and conversion tools for visualization
 tmux send-keys -t 7 "sleep 2; source $WORKSPACE/devel/setup.bash;  rosrun rqt_multiplot rqt_multiplot --multiplot-run-all --clear-config --multiplot-config $(rospack find lo_frontend)/testing/rqt_multiplot.xml" C-m

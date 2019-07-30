@@ -69,6 +69,22 @@ void MeasurementSynchronizer::SortMessages() {
     sensor_ordering_.push_back(p);
   }  
 
+  ii = 0;
+  for (odom_queue::const_iterator it = pending_odoms_.begin();
+       it != pending_odoms_.end(); ++it, ++ii) {
+    TimestampedType::Ptr p = TimestampedType::Ptr(
+        new TimestampedType((*it)->msg->header.stamp.toSec(), ODOM, ii));
+    sensor_ordering_.push_back(p);
+  }  
+
+  ii = 0;
+  for (gt_queue::const_iterator it = pending_gts_.begin();
+       it != pending_gts_.end(); ++it, ++ii) {
+    TimestampedType::Ptr p = TimestampedType::Ptr(
+        new TimestampedType((*it)->msg->header.stamp.toSec(), GT, ii));
+    sensor_ordering_.push_back(p);
+  }  
+
   // Sort the list by time.
   std::sort(sensor_ordering_.begin(), sensor_ordering_.end(),
             MeasurementSynchronizer::CompareTimestamps);
@@ -102,6 +118,8 @@ void MeasurementSynchronizer::ClearMessages() {
   pending_pclds_.clear();
   pending_pcl_pclds_.clear();
   pending_imus_.clear(); 
+  pending_odoms_.clear(); 
+  pending_gts_.clear(); 
 }
 
 const MeasurementSynchronizer::pcld_queue&
@@ -119,6 +137,16 @@ MeasurementSynchronizer::GetImuMessages() {
   return pending_imus_;
 }
 
+const MeasurementSynchronizer::odom_queue&
+MeasurementSynchronizer::GetOdomMessages() {
+  return pending_odoms_;
+}
+
+const MeasurementSynchronizer::gt_queue&
+MeasurementSynchronizer::GetGtMessages() {
+  return pending_gts_;
+}
+
 const MeasurementSynchronizer::Message<sensor_msgs::PointCloud2>::ConstPtr&
 MeasurementSynchronizer::GetPointCloudMessage(unsigned int index) {
   return pending_pclds_[index];
@@ -133,6 +161,16 @@ MeasurementSynchronizer::GetPCLPointCloudMessage(unsigned int index) {
 const MeasurementSynchronizer::Message<sensor_msgs::Imu>::ConstPtr&
 MeasurementSynchronizer::GetImuMessage(unsigned int index) {
   return pending_imus_[index];
+}
+
+const MeasurementSynchronizer::Message<nav_msgs::Odometry>::ConstPtr&
+MeasurementSynchronizer::GetOdomMessage(unsigned int index) {
+  return pending_odoms_[index];
+}
+
+const MeasurementSynchronizer::Message<geometry_msgs::PoseStamped>::ConstPtr&
+MeasurementSynchronizer::GetGtMessage(unsigned int index) {
+  return pending_gts_[index];
 }
 
 void MeasurementSynchronizer::AddPointCloudMessage(
@@ -156,4 +194,16 @@ void MeasurementSynchronizer::AddImuMessage(const sensor_msgs::Imu::ConstPtr& ms
     std::string dummy_tag = "dummy_tag";
     Message<sensor_msgs::Imu>::Ptr p( new Message<sensor_msgs::Imu>(msg, dummy_tag));
     pending_imus_.push_back(p); 
+}
+
+void MeasurementSynchronizer::AddOdomMessage(const nav_msgs::Odometry::ConstPtr& msg){
+    std::string odom_tag = "odom_tag";
+    Message<nav_msgs::Odometry>::Ptr p( new Message<nav_msgs::Odometry>(msg, odom_tag));
+    pending_odoms_.push_back(p); 
+}
+
+void MeasurementSynchronizer::AddGtMessage(const geometry_msgs::PoseStamped::ConstPtr& msg){
+    std::string gt_tag = "gt_tag"; // IS THIS IMPORTANT? 
+    Message<geometry_msgs::PoseStamped>::Ptr p( new Message<geometry_msgs::PoseStamped>(msg, gt_tag));
+    pending_gts_.push_back(p); 
 }

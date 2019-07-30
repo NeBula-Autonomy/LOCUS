@@ -74,6 +74,8 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   }
 
   imu_data_has_been_received_ = false;
+  integrated_roll_, integrated_pitch_, integrated_yaw_ = 0, 0, 0;  
+
 
   return true;
 }
@@ -169,7 +171,7 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   rpy_imu_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_imu", 1, false);
   rpy_computed_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_computed", 1, false);
   timestamp_difference_pub_ = nl.advertise<std_msgs::Float64>("imu_lidar_ts_diff", 1, false); 
-
+  rpy_integrated_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_integrated", 1, false);
 
   return true;
 }
@@ -211,7 +213,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   // Store input point cloud's time stamp for publishing.
   stamp_.fromNSec(points.header.stamp * 1e3);
 
-  // If this is the first point cloud, store it and wait for another.
+  // If this is the first point cloud, store it and wait for anotherinverse.
     if (!initialized_) {
     if (use_imu_data_==true){
       copyPointCloud(points, *query_); 
@@ -249,8 +251,8 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   imu_lidar_ts_diff.data = min_ts_diff; 
   PublishTimestampDifference(imu_lidar_ts_diff, timestamp_difference_pub_); 
 
-  // Here we have the correct change in orientation computed by IMU between two LIDAR scans
-  imu_change_in_attitude_ = imu_current_attitude_*imu_previous_attitude_.inverse();
+  // Here we have the correct chan  // TODO: I  // TODO: I  // TODO: I  // TODO: I  // TODO: Integrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ge in orientation computed by IMU between two LIDAR scans
+  imu_change_in_attitude_ = imu_current_attitude_.inverse()*imu_previous_attitude_;
   Eigen::Matrix4f imu_change_in_attitude_copy_ = imu_change_in_attitude_; 
   
   // We now memorize this computed value in the deque 
@@ -360,10 +362,16 @@ bool PointCloudOdometry::UpdateICP() {
         rpy_imu.z = yaw_imu; 
         PublishRpyImu(rpy_imu, rpy_imu_pub_); 
 
-        // Roll and Pitch from IMU, Yaw from ICP LIDAR 
-        float out_roll = float(roll_imu);
-        float out_pitch = float(pitch_imu);
-        float out_yaw = float(yaw_computed);
+        // Get RPY from external data source 
+        float out_roll = -float(roll_imu);
+        float out_pitch = -float(pitch_imu);
+        float out_yaw = -float(yaw_imu);
+
+        geometry_msgs::Vector3 rpy_integrated;
+        rpy_integrated.x = out_roll; 
+        rpy_integrated.y = out_pitch; 
+        rpy_integrated.z = out_yaw; 
+        PublishRpyIntegrated(rpy_integrated, rpy_integrated_pub_); 
 
         Eigen::Matrix3f OUTPUT_ROTATION; 
         OUTPUT_ROTATION = Eigen::AngleAxisf(out_roll, Eigen::Vector3f::UnitX())
@@ -378,9 +386,6 @@ bool PointCloudOdometry::UpdateICP() {
         T = icp.getFinalTransformation();
         std::cout << "IMU OFF" << std::endl;  
   }
-
-  // TODO: Integrate IMU fusion logic 
-
 
   // Update pose estimates.
   incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
@@ -458,4 +463,8 @@ void PointCloudOdometry::PublishRpyComputed(const geometry_msgs::Vector3& rpy, c
                                                  
 void PointCloudOdometry::PublishTimestampDifference(const std_msgs::Float64& timediff, const ros::Publisher& pub) {
   pub.publish(timediff);    
+}
+
+void PointCloudOdometry::PublishRpyIntegrated(const geometry_msgs::Vector3& rpy, const ros::Publisher& pub) {
+  pub.publish(rpy);    
 }

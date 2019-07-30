@@ -127,17 +127,15 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
 
   // Fires the timer to do the heavy work in the node.
-  estimate_update_timer_ = nl.createTimer(
-      estimate_update_rate_, &LoFrontend::EstimateTimerCallback, this);
+  estimate_update_timer_ = nl.createTimer(estimate_update_rate_, &LoFrontend::EstimateTimerCallback, this);
 
   // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
-  pcld_sub_ =
-      nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
-  // IMU Subscriber
-  imu_sub_ = 
-      nl.subscribe("/husky/imu/filtered", 10000, &LoFrontend::ImuCallback, this);
-
+  // External data fusion 
+  imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
+  odom_sub_ = nl.subscribe("ODOM_TOPIC", 1000, &LoFrontend::OdomCallback, this); 
+  gt_sub_ = nl.subscribe("/Robot_7/pose", 1000, &LoFrontend::GtCallback, this); 
 
   return CreatePublishers(n);
 }
@@ -170,6 +168,16 @@ void LoFrontend::ImuCallback(const sensor_msgs::Imu::ConstPtr& msg) {
   synchronizer_.AddImuMessage(msg); 
 }
 
+void LoFrontend::OdomCallback(const nav_msgs::Odometry::ConstPtr& msg) {
+  // TODO: Should we collect last_lion_stamp as well? 
+  synchronizer_.AddOdomMessage(msg); 
+}
+
+void LoFrontend::GtCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
+  // TODO: Should we collect last_lion_stamp as well? 
+  synchronizer_.AddGtMessage(msg); 
+}
+
 // -------------------------------------------------------------------
 
 void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
@@ -197,6 +205,22 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
           const MeasurementSynchronizer::Message<Imu>::ConstPtr& m =
               synchronizer_.GetImuMessage(index);
           ProcessImuMessage(m->msg);
+          break;
+      }
+
+      // ODOM messages.
+      case MeasurementSynchronizer::ODOM: {
+          const MeasurementSynchronizer::Message<Odometry>::ConstPtr& m =
+              synchronizer_.GetOdomMessage(index);
+          ProcessOdomMessage(m->msg);
+          break;
+      }
+
+      // GT messages.
+      case MeasurementSynchronizer::GT: {
+          const MeasurementSynchronizer::Message<PoseStamped>::ConstPtr& m =
+              synchronizer_.GetGtMessage(index);
+          ProcessGtMessage(m->msg);
           break;
       }
 
@@ -240,6 +264,14 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 
 void LoFrontend::ProcessImuMessage(const Imu::ConstPtr& msg){
   odometry_.SetImuData(msg->orientation, msg->header.stamp);   
+}
+
+void LoFrontend::ProcessOdomMessage(const Odometry::ConstPtr& msg){
+  odometry_.SetImuData(msg->pose.pose.orientation, msg->header.stamp);   
+}
+
+void LoFrontend::ProcessGtMessage(const PoseStamped::ConstPtr& msg){
+  odometry_.SetImuData(msg->pose.orientation, msg->header.stamp);   
 }
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {

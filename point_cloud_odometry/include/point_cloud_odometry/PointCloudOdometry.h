@@ -100,6 +100,9 @@ private:
 
   void PublishTimestampDifference(const std_msgs::Float64& timediff,
                                   const ros::Publisher& pub);
+  
+  void PublishRpyIntegrated(const geometry_msgs::Vector3& rpy,
+                       const ros::Publisher& pub); 
 
   // Subscribe to odometry from external estimator too be used as prior.
   void StateEstimateOdometryCallback(const nav_msgs::Odometry& msg);
@@ -118,6 +121,9 @@ private:
   std::deque<imu_data> imu_deque_;
   std::deque<Eigen::Matrix4f> imu_attitude_deque_;
 
+  // Account for integrateded estimate
+  double integrated_roll_, integrated_pitch_, integrated_yaw_; 
+
   // Publishers.
   ros::Publisher reference_pub_;
   ros::Publisher query_pub_;
@@ -126,6 +132,8 @@ private:
   ros::Publisher rpy_imu_pub_;
   ros::Publisher rpy_computed_pub_;
   ros::Publisher timestamp_difference_pub_;
+  ros::Publisher rpy_integrated_pub_;
+
 
   // Subscribers
   ros::Subscriber

@@ -51,16 +51,20 @@ tmux send-keys -t 0 "roscore" C-m
 ##### Play rosbag
 tmux send-keys -t 1 "sleep 2; rosparam set /use_sim_time true && rosbag play -r 1.0 ~/bags/lo_frontend/slow1.bag --clock --pause /velodyne_points:=/$ROBOT_NAME/velodyne_points" C-m
 # tmux send-keys -t 2 "sleep 2; rostopic hz -w 3 /$ROBOT_NAME/velodyne_points" C-m # LIDAR RATE
-tmux send-keys -t 2 "sleep 2; roslaunch imu_complementary_filter complementary_filter.launch" C-m 
-tmux send-keys -t 3 "sleep 2; python $(rospack find lo_frontend)/testing/subtract_offset_from_groundtruth.py" C-m 
+tmux send-keys -t 2 "sleep 2; source $WORKSPACE/devel/setup.bash; roslaunch imu_complementary_filter complementary_filter.launch" C-m 
+tmux send-keys -t 3 "sleep 5; python /home/matteo/andrea_ws/src/localizer_lo_frontend/lo_frontend/testing/subtract_offset_from_groundtruth.py" C-m 
 
 
 ##### Launch lo_frontend
 tmux send-keys -t 4 "sleep 2; roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME" C-m
-tmux send-keys -t 5 "sleep 2; rostopic hz -w 3 /$ROBOT_NAMESPACE/lo_frontend/odometry_integrated_estimate" C-m # front-end output odom rate
+# Launch LION 
+tmux send-keys -t 5 "sleep 2; roslaunch /home/matteo/andrea_ws/src/localizer_lion/launch/localizer_lion.launch imu_topic:=/imu/data pose_topic:=/Robot_7/pose" C-m 
+#tmux send-keys -t 5 "sleep 2; rostopic hz -w 3 /$ROBOT_NAMESPACE/lo_frontend/odometry_integrated_estimate" C-m # front-end output odom rate
+
+
 
 ##### rqt_multiplot and conversion tools for visualization
-tmux send-keys -t 7 "sleep 2; rosrun rqt_multiplot rqt_multiplot --multiplot-run-all --clear-config --multiplot-config $(rospack find lo_frontend)/testing/rqt_multiplot.xml" C-m
+tmux send-keys -t 7 "sleep 2; rosrun rqt_multiplot rqt_multiplot --multiplot-run-all --clear-config --multiplot-config /home/matteo/andrea_ws/src/localizer_lo_frontend/lo_frontend/testing/rqt_multiplot.xml" C-m
 tmux send-keys -t 8 "sleep 2; rosrun tf2_ros static_transform_publisher 0 0 -0.08 0 0 0 1 /velodyne $ROBOT_NAME/base_link" C-m
 tmux send-keys -t 9 "sleep 5; rosrun topic_tools transform /Robot_7/pose /Robot_7/pose/rpy  geometry_msgs/Vector3 'tf.transformations.euler_from_quaternion([m.pose.orientation.x, m.pose.orientation.y, m.pose.orientation.z, m.pose.orientation.w])' --import tf" C-m
 tmux send-keys -t 6 "sleep 5; rosrun topic_tools transform /$ROBOT_NAME/lo_frontend/odometry_integrated_estimate /$ROBOT_NAME/lo_frontend/odometry_integrated_estimate/rpy geometry_msgs/Vector3 'tf.transformations.euler_from_quaternion([m.pose.orientation.x, m.pose.orientation.y, m.pose.orientation.z, m.pose.orientation.w])' --import tf" C-m
@@ -70,6 +74,7 @@ tmux send-keys -t 6 "sleep 5; rosrun topic_tools transform /$ROBOT_NAME/lo_front
 # Imu gyro 
 
 tmux -2 attach-session -t $SESSION
+
 
 
 
