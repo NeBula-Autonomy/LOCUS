@@ -135,7 +135,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   // External data fusion 
   imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
   odom_sub_ = nl.subscribe("/husky/lion/odom", 1000, &LoFrontend::OdomCallback, this); 
-  gt_sub_ = nl.subscribe("DONTDOTHIS/Robot_7/pose", 1000, &LoFrontend::GtCallback, this); 
+  gt_sub_ = nl.subscribe("GT_TOPIC", 1000, &LoFrontend::GtCallback, this); 
 
   return CreatePublishers(n);
 }
@@ -263,15 +263,15 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 }
 
 void LoFrontend::ProcessImuMessage(const Imu::ConstPtr& msg){
-  odometry_.SetImuData(msg->orientation, msg->header.stamp);   
+  odometry_.SetExternalAttitude(msg->orientation, msg->header.stamp);   
 }
 
 void LoFrontend::ProcessOdomMessage(const Odometry::ConstPtr& msg){
-  odometry_.SetImuData(msg->pose.pose.orientation, msg->header.stamp);   
+  odometry_.SetExternalAttitude(msg->pose.pose.orientation, msg->header.stamp);   
 }
 
 void LoFrontend::ProcessGtMessage(const PoseStamped::ConstPtr& msg){
-  odometry_.SetImuData(msg->pose.orientation, msg->header.stamp);   
+  odometry_.SetExternalAttitude(msg->pose.orientation, msg->header.stamp);   
 }
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {

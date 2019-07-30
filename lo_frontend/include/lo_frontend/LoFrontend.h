@@ -63,13 +63,8 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 
-// IMU 
 #include <sensor_msgs/Imu.h>
-
-// LION 
 #include <nav_msgs/Odometry.h>
-
-// GROUNDTRUTH 
 #include <geometry_msgs/PoseStamped.h>
 
 
@@ -137,9 +132,9 @@ private:
 
   // Subscribers.
   ros::Subscriber pcld_sub_;  // pc from lidar
-  ros::Subscriber imu_sub_;   // IMU subscriber
-  ros::Subscriber odom_sub_;  // LION subscriber
-  ros::Subscriber gt_sub_;    // GroundTruth subscriber
+  ros::Subscriber imu_sub_;   
+  ros::Subscriber odom_sub_;  
+  ros::Subscriber gt_sub_;    
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_; // TODO: Andrea: ?

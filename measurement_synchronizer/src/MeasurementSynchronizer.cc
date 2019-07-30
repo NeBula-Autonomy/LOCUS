@@ -188,11 +188,10 @@ void MeasurementSynchronizer::AddPCLPointCloudMessage(
   pending_pcl_pclds_.push_back(p);
 }
 
-// TODO: Implementing this without a tag, is it needed? 
-// It is needed in the stage of Message creation as in MeasurementSynchronizer.h 
+// TODO: Implementing this without a tag, is it needed? ---> It is needed in the stage of Message creation as in MeasurementSynchronizer.h 
 void MeasurementSynchronizer::AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg){
-    std::string dummy_tag = "dummy_tag";
-    Message<sensor_msgs::Imu>::Ptr p( new Message<sensor_msgs::Imu>(msg, dummy_tag));
+    std::string imu_tag = "imu_tag";
+    Message<sensor_msgs::Imu>::Ptr p( new Message<sensor_msgs::Imu>(msg, imu_tag));
     pending_imus_.push_back(p); 
 }
 
@@ -203,7 +202,7 @@ void MeasurementSynchronizer::AddOdomMessage(const nav_msgs::Odometry::ConstPtr&
 }
 
 void MeasurementSynchronizer::AddGtMessage(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    std::string gt_tag = "gt_tag"; // IS THIS IMPORTANT? 
+    std::string gt_tag = "gt_tag"; 
     Message<geometry_msgs::PoseStamped>::Ptr p( new Message<geometry_msgs::PoseStamped>(msg, gt_tag));
     pending_gts_.push_back(p); 
 }

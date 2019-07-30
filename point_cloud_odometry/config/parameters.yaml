@@ -14,7 +14,7 @@ icp:
   max_translation: 0.09
   max_rotation: 0.1
 
-imu: 
-  use_imu_data: true
-  check_imu_data: false
-  imu_threshold: 1 # Radians 
+extatt: 
+  use_extatt_data: true
+  check_extatt_data: false
+  extatt_threshold: 1 # Radians 
