@@ -183,7 +183,6 @@ void PointCloudOdometry::StateEstimateOdometryCallback(
 
 void PointCloudOdometry::SetImuData(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
   
-  std::cout << "Receiving IMU data in PointCloudOdometry!" << std::endl;
   Eigen::Matrix3f mat3 = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z)).toRotationMatrix();  
   Eigen::Matrix4f mat4 = Eigen::Matrix4f::Identity();
   mat4.block(0,0,3,3) = mat3; 
@@ -233,57 +232,84 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     }
   }
 
-  // Initialize imu_current_attitude_ to whatever the attitude of the 0-th element of the deque is
-  imu_current_attitude_ = imu_deque_copy_[0].internal_imu_attitude_; 
-  // Search for the closest timestamp and get from that particular element the attitude
-  float min_ts_diff = 1000;   
-  for (int i=0; i<imu_deque_copy_.size(); ++i) {
-        float cur_ts_diff = (imu_deque_copy_[i].internal_imu_attitude_timestamp_ - stamp_).toSec();
-        // We can accept negative differences (IMU coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
-        if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
-            imu_current_attitude_ = imu_deque_copy_[i].internal_imu_attitude_; 
-            min_ts_diff = cur_ts_diff; 
-        }
+  // Deactivate external data fusion if external publisher crashed 
+  if(imu_deque_copy_.size()==98){
+    use_imu_data_ = false; 
+    std::cout<<"External data provider crashed!"<< std::endl; 
+    std::cout<<"Deactivating external data usage and relying only on pure ICP" << std::endl;
   }
-  // At this point we've picked the correct imu_current_attitude_ representing the orientation 
-  // of the IMU element with the closest Timestamp to the LIDAR Scan
-  std_msgs::Float64 imu_lidar_ts_diff; 
-  imu_lidar_ts_diff.data = min_ts_diff; 
-  PublishTimestampDifference(imu_lidar_ts_diff, timestamp_difference_pub_); 
 
-  // Here we have the correct chan  // TODO: I  // TODO: I  // TODO: I  // TODO: I  // TODO: Integrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ge in orientation computed by IMU between two LIDAR scans
-  imu_change_in_attitude_ = imu_current_attitude_.inverse()*imu_previous_attitude_;
-  Eigen::Matrix4f imu_change_in_attitude_copy_ = imu_change_in_attitude_; 
+  if(use_imu_data_==true){
+    // Initialize imu_current_attitude_ to whatever the attitude of the 0-th element of the deque is
+    imu_current_attitude_ = imu_deque_copy_[0].internal_imu_attitude_; 
+    // Search for the closest timestamp and get from that particular element the attitude
+    float min_ts_diff = 1000;   
+    for (int i=0; i<imu_deque_copy_.size(); ++i) {
+          float cur_ts_diff = (imu_deque_copy_[i].internal_imu_attitude_timestamp_ - stamp_).toSec();
+          // We can accept negative differences (IMU coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
+          if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
+              imu_current_attitude_ = imu_deque_copy_[i].internal_imu_attitude_; 
+              min_ts_diff = cur_ts_diff; 
+          }
+    }
+    // At this point we've picked the correct imu_current_attitude_ representing the orientation 
+    // of the IMU element with the closest Timestamp to the LIDAR Scan
+    std_msgs::Float64 imu_lidar_ts_diff; 
+    imu_lidar_ts_diff.data = min_ts_diff; 
+    PublishTimestampDifference(imu_lidar_ts_diff, timestamp_difference_pub_); 
+
+    // Here we have the correct chan  // TODO: I  // TODO: I  // TODO: I  // TODO: I  // TODO: Integrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ntegrate IMU fusion logic ge in orientation computed by IMU between two LIDAR scans
+    imu_change_in_attitude_ = imu_current_attitude_.inverse()*imu_previous_attitude_;
+    Eigen::Matrix4f imu_change_in_attitude_copy_ = imu_change_in_attitude_; 
+    
+    // We now memorize this computed value in the deque 
+    imu_attitude_deque_.push_back(imu_change_in_attitude_copy_);  
+
+    // Do the check ONLY if check_imu_data_ flag is set to true
+    if (check_imu_data_==true){
+      float max_ts_diff = 0.05; 
+      // Set use_imu_data_ to true only if timestamp difference IMU - LIDAR is below threshold && rpy IMU are below IMU threshold
+      if (fabs(min_ts_diff)<fabs(max_ts_diff)){
+        use_imu_data_ = true; 
+      }
+      else{
+          use_imu_data_ = false; // Check correctness of this approach
+          // We could try to weight the IMU Data fusage process basing on the current IMU-LIDAR timestamp difference
+          // Or should we go with IMU preintegration and interpolation approach? 
+          std::cout << "BAD! ---> " << min_ts_diff << std::endl; 
+      }  
+    }
   
-  // We now memorize this computed value in the deque 
-  imu_attitude_deque_.push_back(imu_change_in_attitude_copy_);  
+    // Move current query points (acquired last iteration) to reference points.
+    copyPointCloud(*query_, *reference_);
 
-  // Do the check ONLY if check_imu_data_ flag is set to true
-  if (check_imu_data_==true){
-     float max_ts_diff = 0.05; 
-     // Set use_imu_data_ to true only if timestamp difference IMU - LIDAR is below threshold && rpy IMU are below IMU threshold
-     if (fabs(min_ts_diff)<fabs(max_ts_diff)){
-       use_imu_data_ = true; 
-     }
-     else{
-         use_imu_data_ = false; // Check correctness of this approach
-         // We could try to weight the IMU Data fusage process basing on the current IMU-LIDAR timestamp difference
-         // Or should we go with IMU preintegration and interpolation approach? 
-         std::cout << "BAD! ---> " << min_ts_diff << std::endl; 
-     }  
-   }
- 
-  // Move current query points (acquired last iteration) to reference points.
-  copyPointCloud(*query_, *reference_);
+    // Set the incoming point cloud as the query point cloud.
+    copyPointCloud(points, *query_);
 
-  // Set the incoming point cloud as the query point cloud.
-  copyPointCloud(points, *query_);
+    // Update IMU
+    imu_previous_attitude_ = imu_current_attitude_; 
 
-  // Update IMU
-  imu_previous_attitude_ = imu_current_attitude_; 
+    imu_deque_.pop_front();
 
-  // Update pose estimate via ICP.
-  return UpdateICP();
+    // Update pose estimate via ICP.
+    return UpdateICP();
+  }
+
+  else{
+    // Move current query points (acquired last iteration) to reference points.
+    copyPointCloud(*query_, *reference_);
+
+    // Set the incoming point cloud as the query point cloud.
+    copyPointCloud(points, *query_);
+
+    // Update IMU
+    imu_previous_attitude_ = imu_current_attitude_; 
+
+    // Update pose estimate via ICP.
+    return UpdateICP();
+  }
+
+  
 }
 
 const gu::Transform3& PointCloudOdometry::GetIncrementalEstimate() const {
@@ -344,6 +370,7 @@ bool PointCloudOdometry::UpdateICP() {
         // Compute pure IMU rotation
         Eigen::Matrix4f imu_attitude_local_copy_ = imu_attitude_deque_.front();  
         imu_attitude_deque_.pop_front();
+        std::cout<<"External data queue size: " << imu_deque_.size()<<std::endl;
         Eigen::Matrix3f cur_imu_rot = imu_attitude_local_copy_.block(0,0,3,3);  // Matrix of floats
         Eigen::Matrix3d cur_imu_rot_double = cur_imu_rot.cast <double> ();     // Matrix of doubles
         Eigen::Quaterniond cur_imu_quaternion_double(cur_imu_rot_double);

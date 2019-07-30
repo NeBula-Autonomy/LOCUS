@@ -134,8 +134,8 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   // External data fusion 
   imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
-  odom_sub_ = nl.subscribe("ODOM_TOPIC", 1000, &LoFrontend::OdomCallback, this); 
-  gt_sub_ = nl.subscribe("/Robot_7/pose", 1000, &LoFrontend::GtCallback, this); 
+  odom_sub_ = nl.subscribe("/husky/lion/odom", 1000, &LoFrontend::OdomCallback, this); 
+  gt_sub_ = nl.subscribe("DONTDOTHIS/Robot_7/pose", 1000, &LoFrontend::GtCallback, this); 
 
   return CreatePublishers(n);
 }
@@ -334,7 +334,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
-  ROS_INFO("Publishing pose and scan");
+  // ROS_INFO("Publishing pose and scan");
   // Send pose and scan pair
   core_msgs::PoseAndScan poseScanMsg;
 
