@@ -241,9 +241,9 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Initialize extatt_current_attitude_ to whatever the attitude of the 0-th element of the deque is
     extatt_current_attitude_ = extatt_deque_copy_[0].internal_extatt_attitude_; 
     // Search for the closest timestamp and get from that particular element the attitude
-    float min_ts_diff = 1000;   
+    double min_ts_diff = 1000;   
     for (int i=0; i<extatt_deque_copy_.size(); ++i) {
-          float cur_ts_diff = (extatt_deque_copy_[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
+          double cur_ts_diff = (extatt_deque_copy_[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
           // We can accept negative differences (extatt coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
           if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
               extatt_current_attitude_ = extatt_deque_copy_[i].internal_extatt_attitude_; 
@@ -265,7 +265,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
 
     // Do the check ONLY if check_extatt_data_ flag is set to true
     if (check_extatt_data_==true){
-      float max_ts_diff = 0.05; 
+      double max_ts_diff = 0.05; 
       // Set use_extatt_data_ to true only if timestamp difference extatt - LIDAR is below threshold && rpy extatt are below extatt threshold
       if (fabs(min_ts_diff)<fabs(max_ts_diff)){
         use_extatt_data_ = true; 
