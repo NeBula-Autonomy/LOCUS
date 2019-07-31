@@ -92,7 +92,7 @@ public:
   // ODOM message processing 
   void ProcessOdomMessage(const Odometry::ConstPtr& msg);
 
-  // GroundTruth message processing 
+  // POSE message processing 
   void ProcessPoseMessage(const PoseStamped::ConstPtr& msg);
 
 private:

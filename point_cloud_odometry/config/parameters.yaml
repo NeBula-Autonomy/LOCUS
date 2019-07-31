@@ -18,4 +18,3 @@ icp:
 extatt: 
   use_extatt_data: true # Use external attitude in the fusion process
   check_extatt_data: false # Optional control on the external attitude received - should be false at this stage 
-  extatt_threshold: 1.0 # Optional amplitude control on the external attitude received - if signal is too large discard it - this kind of check should not be executed at this stage 

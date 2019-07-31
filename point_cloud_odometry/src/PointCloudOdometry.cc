@@ -74,7 +74,6 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   }
 
   extatt_data_has_been_received_ = false;
-  integrated_roll_, integrated_pitch_, integrated_yaw_ = 0, 0, 0;  
 
   return true;
 }
@@ -142,8 +141,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("extatt/check_extatt_data", check_extatt_data_)) 
     return false;
-  if (!pu::Get("extatt/extatt_threshold", extatt_threshold_)) 
-    return false;
 
   return true;
 }
@@ -152,31 +149,13 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
 
-  state_estimator_sub_ =
-      nl.subscribe("hero/lion/odom",
-                   10,
-                   &PointCloudOdometry::StateEstimateOdometryCallback,
-                   this,
-                   ros::TransportHints().tcpNoDelay());
-
   query_pub_ = nl.advertise<PointCloud>("odometry_query_points", 10, false);
-  reference_pub_ =
-      nl.advertise<PointCloud>("odometry_reference_points", 10, false);
-  incremental_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
-      "odometry_incremental_estimate", 10, false);
-  integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
-      "odometry_integrated_estimate", 10, false);
-
-  rpy_extatt_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_extatt", 1, false);
-  rpy_computed_pub_ = nl.advertise<geometry_msgs::Vector3>("rpy_computed", 1, false);
+  reference_pub_ = nl.advertise<PointCloud>("odometry_reference_points", 10, false);
+  incremental_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>("odometry_incremental_estimate", 10, false);
+  integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>("odometry_integrated_estimate", 10, false);
   timestamp_difference_pub_ = nl.advertise<std_msgs::Float64>("extatt_lidar_ts_diff", 1, false); 
 
   return true;
-}
-
-void PointCloudOdometry::StateEstimateOdometryCallback(
-    const nav_msgs::Odometry& msg) {
-  // TODO: Andrea: add odometry callback.
 }
 
 void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
@@ -201,8 +180,7 @@ void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<st
 
 bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
 
-  // As soon as UpdateEstimate is called, a copy of the deque of interest is taken 
-  // in order to not pick the wrong i-th element when external producer threads are pushing element into the deque
+  // As soon as UpdateEstimate is called, a copy of the deque of interest is taken in order to not pick the wrong i-th element when external producer threads are pushing element into the deque
   std::deque<extatt_data> extatt_deque_copy_ = extatt_deque_; 
   
   // Store input point cloud's time stamp for publishing.
@@ -213,7 +191,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     if (use_extatt_data_==true){
       copyPointCloud(points, *query_); 
       if (extatt_data_has_been_received_ == true){
-        extatt_previous_attitude_ = extatt_first_attitude_; // TODO: Check this very first assumption
+        extatt_previous_attitude_ = extatt_first_attitude_; 
         initialized_ = true;
         return false;
       }
@@ -233,46 +211,36 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     use_extatt_data_ = false; 
     std::cout<<"External Attitude data provider crashed! Relying on pure ICP now"<< std::endl; 
   }
-
+  
+  // Choose the closest extatt signal in respect to the timestamp of the current received LIDAR scan 
   if(use_extatt_data_==true){
-    // Initialize extatt_current_attitude_ to whatever the attitude of the 0-th element of the deque is
     extatt_current_attitude_ = extatt_deque_copy_[0].internal_extatt_attitude_; 
-    // Search for the closest timestamp and get from that particular element the attitude
     double min_ts_diff = 1000;   
     for (int i=0; i<extatt_deque_copy_.size(); ++i) {
           double cur_ts_diff = (extatt_deque_copy_[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
-          // We can accept negative differences (extatt coming from the past in respect to LIDAR) and they've to be as close to zero as possible  
           if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
               extatt_current_attitude_ = extatt_deque_copy_[i].internal_extatt_attitude_; 
               min_ts_diff = cur_ts_diff; 
           }
     }
-    // At this point we've picked the correct extatt_current_attitude_ representing the orientation 
-    // of the extatt element with the closest Timestamp to the LIDAR Scan
     std_msgs::Float64 extatt_lidar_ts_diff; 
     extatt_lidar_ts_diff.data = min_ts_diff; 
     PublishTimestampDifference(extatt_lidar_ts_diff, timestamp_difference_pub_); 
-
-    // Here we have the correct change in attitude   
-    extatt_change_in_attitude_ = extatt_previous_attitude_.inverse()*extatt_current_attitude_;
-
-    Eigen::Quaternionf extatt_change_in_attitude_copy_ = extatt_change_in_attitude_; 
     
-    // We now memorize this computed value in the deque 
+    // Compute the change in attitude 
+    extatt_change_in_attitude_ = extatt_previous_attitude_.inverse()*extatt_current_attitude_;  
+    // Copy and store the value in the deque 
+    Eigen::Quaternionf extatt_change_in_attitude_copy_ = extatt_change_in_attitude_;     
     extatt_attitude_deque_.push_back(extatt_change_in_attitude_copy_);  
 
-    // Do the check ONLY if check_extatt_data_ flag is set to true
     if (check_extatt_data_==true){
       double max_ts_diff = 0.05; 
-      // Set use_extatt_data_ to true only if timestamp difference extatt - LIDAR is below threshold && rpy extatt are below extatt threshold
       if (fabs(min_ts_diff)<fabs(max_ts_diff)){
         use_extatt_data_ = true; 
       }
       else{
-          use_extatt_data_ = false; // Check correctness of this approach
-          // We could try to weight the extatt Data fusage process basing on the current extatt-LIDAR timestamp difference
-          // Or should we go with extatt preintegration and interpolation approach? 
-          std::cout << "BAD! ---> " << min_ts_diff << std::endl; 
+          use_extatt_data_ = false; 
+          std::cout << "WARNING: extatt too old - deactivating extatt usage" << min_ts_diff << std::endl; 
       }  
     }
   
@@ -304,7 +272,6 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Update pose estimate via ICP.
     return UpdateICP();
   }
-
   
 }
 
@@ -342,6 +309,7 @@ bool PointCloudOdometry::UpdateICP() {
   Eigen::Matrix4f T; 
 
   if (use_extatt_data_==true){
+        // Perform the fusion
         T = icp.getFinalTransformation(); 
         Eigen::Quaternionf extatt_attitude_local_copy_ = extatt_attitude_deque_.front();  
         extatt_attitude_deque_.pop_front();
@@ -418,15 +386,7 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
   ros_pose.header.stamp = stamp_;
   pub.publish(ros_pose);
 }
-
-void PointCloudOdometry::PublishRpyExtatt(const geometry_msgs::Vector3& rpy, const ros::Publisher& pub) {
-  pub.publish(rpy);    
-}
-
-void PointCloudOdometry::PublishRpyComputed(const geometry_msgs::Vector3& rpy, const ros::Publisher& pub) {
-  pub.publish(rpy);    
-}
-                                                 
+                                             
 void PointCloudOdometry::PublishTimestampDifference(const std_msgs::Float64& timediff, const ros::Publisher& pub) {
   pub.publish(timediff);    
 }

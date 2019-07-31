@@ -44,7 +44,6 @@
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf/transform_broadcaster.h>
-
 #include <std_msgs/Float64.h>
 
 class PointCloudOdometry {
@@ -75,7 +74,6 @@ public:
   // Enables external attitude data fusion
   void SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp); 
 
-
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -91,19 +89,9 @@ private:
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
-  // IMU Debug section 
-
-  void PublishRpyExtatt(const geometry_msgs::Vector3& rpy,
-                     const ros::Publisher& pub);
-
-  void PublishRpyComputed(const geometry_msgs::Vector3& rpy,
-                       const ros::Publisher& pub); 
-
+  // Publish timestamp difference between external attitude and LIDAR signal 
   void PublishTimestampDifference(const std_msgs::Float64& timediff,
                                   const ros::Publisher& pub);
-
-  // Subscribe to odometry from external estimator too be used as prior.
-  void StateEstimateOdometryCallback(const nav_msgs::Odometry& msg);
 
   // The node's name.
   std::string name_;
@@ -111,35 +99,21 @@ private:
   // External Attitude Data
   Eigen::Quaternionf extatt_first_attitude_, extatt_current_attitude_, extatt_previous_attitude_, extatt_change_in_attitude_; 
   bool use_extatt_data_, extatt_data_has_been_received_, check_extatt_data_ ; 
-  float extatt_threshold_;
   struct extatt_data {
-    Eigen::Quaternionf internal_extatt_attitude_; // Quaternionf
+    Eigen::Quaternionf internal_extatt_attitude_;
     ros::Time internal_extatt_attitude_timestamp_;
   };
   std::deque<extatt_data> extatt_deque_;
   std::deque<Eigen::Quaternionf> extatt_attitude_deque_;
-
-  // External Attitude Data queue sizes 
   static constexpr size_t max_extatt_deque_size_ = 100; 
   static constexpr size_t min_extatt_deque_size_ = 98; 
-
-
-  // Account for integrateded estimate
-  double integrated_roll_, integrated_pitch_, integrated_yaw_; 
 
   // Publishers.
   ros::Publisher reference_pub_;
   ros::Publisher query_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
-  ros::Publisher rpy_extatt_pub_;
-  ros::Publisher rpy_computed_pub_;
   ros::Publisher timestamp_difference_pub_;
-
-  // Subscribers
-  ros::Subscriber
-      state_estimator_sub_; // State estimate from an external estimator (such
-                            // as LION) used as prior.
 
   // Most recent point cloud time stamp for publishers.
   ros::Time stamp_;

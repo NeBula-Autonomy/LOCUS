@@ -188,7 +188,6 @@ void MeasurementSynchronizer::AddPCLPointCloudMessage(
   pending_pcl_pclds_.push_back(p);
 }
 
-// TODO: Implementing this without a tag, is it needed? ---> It is needed in the stage of Message creation as in MeasurementSynchronizer.h 
 void MeasurementSynchronizer::AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg){
     std::string imu_tag = "imu_tag";
     Message<sensor_msgs::Imu>::Ptr p( new Message<sensor_msgs::Imu>(msg, imu_tag));

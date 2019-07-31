@@ -129,10 +129,10 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
   pcld_sub_ = nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
-  // External data fusion 
+  // External attitude data providers
   imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
-  odom_sub_ = nl.subscribe("DONTDOTHIS/husky/lion/odom", 1000, &LoFrontend::OdomCallback, this); 
-  pose_sub_ = nl.subscribe("/Robot_7/pose", 1000, &LoFrontend::PoseCallback, this); 
+  odom_sub_ = nl.subscribe("/husky/lion/odom", 1000, &LoFrontend::OdomCallback, this); 
+  pose_sub_ = nl.subscribe("POSE_TOPIC", 1000, &LoFrontend::PoseCallback, this); 
 
   return CreatePublishers(n);
 }
@@ -161,17 +161,14 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
 }
 
 void LoFrontend::ImuCallback(const sensor_msgs::Imu::ConstPtr& msg) {
-  // TODO: Should we collect last_imu_stamp as well?
   synchronizer_.AddImuMessage(msg); 
 }
 
 void LoFrontend::OdomCallback(const nav_msgs::Odometry::ConstPtr& msg) {
-  // TODO: Should we collect last_lion_stamp as well? 
   synchronizer_.AddOdomMessage(msg); 
 }
 
 void LoFrontend::PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
-  // TODO: Should we collect last_lion_stamp as well? 
   synchronizer_.AddPoseMessage(msg); 
 }
 
@@ -182,7 +179,6 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   synchronizer_.SortMessages(); // Andrea: Do we need it?
 
   // Iterate through sensor messages, passing to update functions
-  // (ProcessPointCloudMessage).
   MeasurementSynchronizer::sensor_type type;
   unsigned int index = 0;
   while (synchronizer_.GetNextMessage(&type, &index)) {
