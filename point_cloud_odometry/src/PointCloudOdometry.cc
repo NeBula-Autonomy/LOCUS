@@ -180,23 +180,20 @@ void PointCloudOdometry::StateEstimateOdometryCallback(
 }
 
 void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
-  
-  Eigen::Matrix3f mat3 = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z)).toRotationMatrix();  
-  Eigen::Matrix4f mat4 = Eigen::Matrix4f::Identity();
-  mat4.block(0,0,3,3) = mat3; 
 
-  // Buffering extatt Data in FIFO Structure
-  // An optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
+  Eigen::Quaternionf extatt = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z));
+
+  // Buffering extatt Data in FIFO Structure - An optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
   if (extatt_deque_.size()==max_extatt_deque_size_){ 
     extatt_deque_.pop_front();
-    extatt_deque_.push_back(extatt_data{mat4, timestamp});
+    extatt_deque_.push_back(extatt_data{extatt, timestamp});
   }
   else{
-    extatt_deque_.push_back(extatt_data{mat4, timestamp});
+    extatt_deque_.push_back(extatt_data{extatt, timestamp});
   }
 
   if (extatt_data_has_been_received_==false){
-    extatt_first_attitude_ = mat4; // First time receiving the extatt Data  
+    extatt_first_attitude_ = extatt; // First time receiving the extatt Data  
     std::cout << "Receiving extatt data for the first time ---> extatt_first_attitude_ now exists!";
     extatt_data_has_been_received_ = true;
   }
@@ -257,8 +254,9 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     PublishTimestampDifference(extatt_lidar_ts_diff, timestamp_difference_pub_); 
 
     // Here we have the correct change in attitude   
-    extatt_change_in_attitude_ = extatt_current_attitude_.inverse()*extatt_previous_attitude_;
-    Eigen::Matrix4f extatt_change_in_attitude_copy_ = extatt_change_in_attitude_; 
+    extatt_change_in_attitude_ = extatt_previous_attitude_.inverse()*extatt_current_attitude_;
+
+    Eigen::Quaternionf extatt_change_in_attitude_copy_ = extatt_change_in_attitude_; 
     
     // We now memorize this computed value in the deque 
     extatt_attitude_deque_.push_back(extatt_change_in_attitude_copy_);  
@@ -343,62 +341,11 @@ bool PointCloudOdometry::UpdateICP() {
 
   Eigen::Matrix4f T; 
 
-    if (use_extatt_data_==true){
-
-        T = icp.getFinalTransformation();
-
-        // Compute pure ICP LIDAR rotation 
-        Eigen::Matrix3f COMPUTED_ROTATION = T.block(0,0,3,3);
-        Eigen::Quaternionf COMPUTED_quaternion(COMPUTED_ROTATION);
-        geometry_msgs::Quaternion myComputedOrientation;
-        myComputedOrientation.w = COMPUTED_quaternion.w();
-        myComputedOrientation.x = COMPUTED_quaternion.x();
-        myComputedOrientation.y = COMPUTED_quaternion.y();
-        myComputedOrientation.z = COMPUTED_quaternion.z();
-        tf::Quaternion myComputedOrientationTf;
-        tf::quaternionMsgToTF(myComputedOrientation, myComputedOrientationTf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_extatt_quaternion_double, cur_extatt_quaternion_tf);
-        double roll_computed, pitch_computed, yaw_computed;
-        tf::Matrix3x3(myComputedOrientationTf).getRPY(roll_computed, pitch_computed, yaw_computed);    
-        geometry_msgs::Vector3 rpy_lidar;
-        rpy_lidar.x = roll_computed; 
-        rpy_lidar.y = pitch_computed; 
-        rpy_lidar.z = yaw_computed; 
-        PublishRpyComputed(rpy_lidar, rpy_computed_pub_); 
-
-        // Compute pure extatt rotation
-        Eigen::Matrix4f extatt_attitude_local_copy_ = extatt_attitude_deque_.front();  
+  if (use_extatt_data_==true){
+        T = icp.getFinalTransformation(); 
+        Eigen::Quaternionf extatt_attitude_local_copy_ = extatt_attitude_deque_.front();  
         extatt_attitude_deque_.pop_front();
-        std::cout<<"External data queue size: " << extatt_deque_.size()<<std::endl;
-        Eigen::Matrix3f cur_extatt_rot = extatt_attitude_local_copy_.block(0,0,3,3);  // Matrix of floats
-        Eigen::Matrix3d cur_extatt_rot_double = cur_extatt_rot.cast <double> ();     // Matrix of doubles
-        Eigen::Quaterniond cur_extatt_quaternion_double(cur_extatt_rot_double);
-        tf::Quaternion cur_extatt_quaternion_tf;
-        geometry_msgs::Quaternion cur_extatt_quaternion_msg;
-        cur_extatt_quaternion_msg.w = cur_extatt_quaternion_double.w();
-        cur_extatt_quaternion_msg.x = cur_extatt_quaternion_double.x();
-        cur_extatt_quaternion_msg.y = cur_extatt_quaternion_double.y();
-        cur_extatt_quaternion_msg.z = cur_extatt_quaternion_double.z();
-        tf::quaternionMsgToTF(cur_extatt_quaternion_msg, cur_extatt_quaternion_tf);   // TODO: Do this with tf_conversions::quaternionEigenToTF(cur_extatt_quaternion_double, cur_extatt_quaternion_tf);
-        double roll_extatt, pitch_extatt, yaw_extatt;
-        tf::Matrix3x3(cur_extatt_quaternion_tf).getRPY(roll_extatt, pitch_extatt, yaw_extatt);
-        geometry_msgs::Vector3 rpy_extatt;
-        rpy_extatt.x = roll_extatt; 
-        rpy_extatt.y = pitch_extatt; 
-        rpy_extatt.z = yaw_extatt; 
-        PublishRpyExtatt(rpy_extatt, rpy_extatt_pub_); 
-
-        // Get RPY from external data source 
-        float out_roll = -float(roll_extatt);
-        float out_pitch = -float(pitch_extatt);
-        float out_yaw = -float(yaw_extatt);
-
-        Eigen::Matrix3f OUTPUT_ROTATION; 
-        OUTPUT_ROTATION = Eigen::AngleAxisf(out_roll, Eigen::Vector3f::UnitX())
-          * Eigen::AngleAxisf(out_pitch, Eigen::Vector3f::UnitY())
-          * Eigen::AngleAxisf(out_yaw, Eigen::Vector3f::UnitZ()); 
-
-        T.block(0,0,3,3) = OUTPUT_ROTATION;
-      
+        T.block(0,0,3,3) = extatt_attitude_local_copy_.toRotationMatrix();       
         std::cout << "extatt ON" << std::endl;  
   }
   else{
