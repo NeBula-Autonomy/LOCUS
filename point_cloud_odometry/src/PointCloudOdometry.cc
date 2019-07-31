@@ -76,7 +76,6 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   extatt_data_has_been_received_ = false;
   integrated_roll_, integrated_pitch_, integrated_yaw_ = 0, 0, 0;  
 
-
   return true;
 }
 
@@ -187,7 +186,8 @@ void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<st
   mat4.block(0,0,3,3) = mat3; 
 
   // Buffering extatt Data in FIFO Structure
-  if (extatt_deque_.size()==100){ 
+  // An optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
+  if (extatt_deque_.size()==max_extatt_deque_size_){ 
     extatt_deque_.pop_front();
     extatt_deque_.push_back(extatt_data{mat4, timestamp});
   }
@@ -232,7 +232,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   }
 
   // Deactivate external data fusion if external publisher crashed 
-  if(extatt_deque_copy_.size()==98){
+  if(extatt_deque_copy_.size()==min_extatt_deque_size_){
     use_extatt_data_ = false; 
     std::cout<<"External Attitude data provider crashed! Relying on pure ICP now"<< std::endl; 
   }

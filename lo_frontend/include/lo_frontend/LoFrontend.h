@@ -93,7 +93,7 @@ public:
   void ProcessOdomMessage(const Odometry::ConstPtr& msg);
 
   // GroundTruth message processing 
-  void ProcessGtMessage(const PoseStamped::ConstPtr& msg);
+  void ProcessPoseMessage(const PoseStamped::ConstPtr& msg);
 
 private:
   // Node initialization.
@@ -107,7 +107,7 @@ private:
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
   void ImuCallback(const sensor_msgs::Imu::ConstPtr& msg);
   void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-  void GtCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+  void PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
   // Timer callbacks.
   // Will run ICP and add PC on local map.
@@ -134,7 +134,7 @@ private:
   ros::Subscriber pcld_sub_;  // pc from lidar
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
-  ros::Subscriber gt_sub_;    
+  ros::Subscriber pose_sub_;    
 
   // Publishers
   ros::Publisher base_frame_pcld_pub_; // TODO: Andrea: ?

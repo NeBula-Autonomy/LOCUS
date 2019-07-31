@@ -72,6 +72,7 @@ public:
   geometry_utils::Transform3 integrated_estimate_;
   geometry_utils::Transform3 incremental_estimate_;
 
+  // Enables external attitude data fusion
   void SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp); 
 
 
@@ -107,7 +108,7 @@ private:
   // The node's name.
   std::string name_;
 
-  // IMU Data
+  // External Attitude Data
   Eigen::Matrix4f extatt_first_attitude_, extatt_current_attitude_, extatt_previous_attitude_, extatt_change_in_attitude_; 
   bool use_extatt_data_, extatt_data_has_been_received_, check_extatt_data_ ; 
   float extatt_threshold_;
@@ -117,6 +118,11 @@ private:
   };
   std::deque<extatt_data> extatt_deque_;
   std::deque<Eigen::Matrix4f> extatt_attitude_deque_;
+
+  // External Attitude Data queue sizes 
+  static constexpr size_t max_extatt_deque_size_ = 100; 
+  static constexpr size_t min_extatt_deque_size_ = 98; 
+
 
   // Account for integrateded estimate
   double integrated_roll_, integrated_pitch_, integrated_yaw_; 

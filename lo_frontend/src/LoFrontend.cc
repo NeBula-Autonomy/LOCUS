@@ -46,9 +46,6 @@ LoFrontend::~LoFrontend() {}
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
 
-  // Avoid randomness
-  srand(0); 
-
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");
 
   if (!filter_.Initialize(n)) {
@@ -135,7 +132,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   // External data fusion 
   imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
   odom_sub_ = nl.subscribe("/husky/lion/odom", 1000, &LoFrontend::OdomCallback, this); 
-  gt_sub_ = nl.subscribe("GT_TOPIC", 1000, &LoFrontend::GtCallback, this); 
+  pose_sub_ = nl.subscribe("POSE_TOPIC", 1000, &LoFrontend::PoseCallback, this); 
 
   return CreatePublishers(n);
 }
@@ -173,9 +170,9 @@ void LoFrontend::OdomCallback(const nav_msgs::Odometry::ConstPtr& msg) {
   synchronizer_.AddOdomMessage(msg); 
 }
 
-void LoFrontend::GtCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
+void LoFrontend::PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
   // TODO: Should we collect last_lion_stamp as well? 
-  synchronizer_.AddGtMessage(msg); 
+  synchronizer_.AddPoseMessage(msg); 
 }
 
 // -------------------------------------------------------------------
@@ -216,11 +213,11 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
           break;
       }
 
-      // GT messages.
-      case MeasurementSynchronizer::GT: {
+      // POSE messages.
+      case MeasurementSynchronizer::POSE: {
           const MeasurementSynchronizer::Message<PoseStamped>::ConstPtr& m =
-              synchronizer_.GetGtMessage(index);
-          ProcessGtMessage(m->msg);
+              synchronizer_.GetPoseMessage(index);
+          ProcessPoseMessage(m->msg);
           break;
       }
 
@@ -270,7 +267,7 @@ void LoFrontend::ProcessOdomMessage(const Odometry::ConstPtr& msg){
   odometry_.SetExternalAttitude(msg->pose.pose.orientation, msg->header.stamp);   
 }
 
-void LoFrontend::ProcessGtMessage(const PoseStamped::ConstPtr& msg){
+void LoFrontend::ProcessPoseMessage(const PoseStamped::ConstPtr& msg){
   odometry_.SetExternalAttitude(msg->pose.orientation, msg->header.stamp);   
 }
 

@@ -78,10 +78,10 @@ void MeasurementSynchronizer::SortMessages() {
   }  
 
   ii = 0;
-  for (gt_queue::const_iterator it = pending_gts_.begin();
-       it != pending_gts_.end(); ++it, ++ii) {
+  for (pose_queue::const_iterator it = pending_poses_.begin();
+       it != pending_poses_.end(); ++it, ++ii) {
     TimestampedType::Ptr p = TimestampedType::Ptr(
-        new TimestampedType((*it)->msg->header.stamp.toSec(), GT, ii));
+        new TimestampedType((*it)->msg->header.stamp.toSec(), POSE, ii));
     sensor_ordering_.push_back(p);
   }  
 
@@ -119,7 +119,7 @@ void MeasurementSynchronizer::ClearMessages() {
   pending_pcl_pclds_.clear();
   pending_imus_.clear(); 
   pending_odoms_.clear(); 
-  pending_gts_.clear(); 
+  pending_poses_.clear(); 
 }
 
 const MeasurementSynchronizer::pcld_queue&
@@ -142,9 +142,9 @@ MeasurementSynchronizer::GetOdomMessages() {
   return pending_odoms_;
 }
 
-const MeasurementSynchronizer::gt_queue&
-MeasurementSynchronizer::GetGtMessages() {
-  return pending_gts_;
+const MeasurementSynchronizer::pose_queue&
+MeasurementSynchronizer::GetPoseMessages() {
+  return pending_poses_;
 }
 
 const MeasurementSynchronizer::Message<sensor_msgs::PointCloud2>::ConstPtr&
@@ -169,8 +169,8 @@ MeasurementSynchronizer::GetOdomMessage(unsigned int index) {
 }
 
 const MeasurementSynchronizer::Message<geometry_msgs::PoseStamped>::ConstPtr&
-MeasurementSynchronizer::GetGtMessage(unsigned int index) {
-  return pending_gts_[index];
+MeasurementSynchronizer::GetPoseMessage(unsigned int index) {
+  return pending_poses_[index];
 }
 
 void MeasurementSynchronizer::AddPointCloudMessage(
@@ -201,8 +201,8 @@ void MeasurementSynchronizer::AddOdomMessage(const nav_msgs::Odometry::ConstPtr&
     pending_odoms_.push_back(p); 
 }
 
-void MeasurementSynchronizer::AddGtMessage(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    std::string gt_tag = "gt_tag"; 
-    Message<geometry_msgs::PoseStamped>::Ptr p( new Message<geometry_msgs::PoseStamped>(msg, gt_tag));
-    pending_gts_.push_back(p); 
+void MeasurementSynchronizer::AddPoseMessage(const geometry_msgs::PoseStamped::ConstPtr& msg){
+    std::string pose_tag = "pose_tag"; 
+    Message<geometry_msgs::PoseStamped>::Ptr p( new Message<geometry_msgs::PoseStamped>(msg, pose_tag));
+    pending_poses_.push_back(p); 
 }

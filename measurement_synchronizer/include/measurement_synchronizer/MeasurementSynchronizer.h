@@ -59,7 +59,7 @@ class MeasurementSynchronizer {
     PCL_POINTCLOUD,
     IMU,
     ODOM, 
-    GT 
+    POSE 
   } sensor_type;
 
   // Basic sorting, querying, clearing.
@@ -84,14 +84,14 @@ class MeasurementSynchronizer {
   typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr> pcl_pcld_queue;
   typedef std::vector<Message<sensor_msgs::Imu>::ConstPtr> imu_queue;
   typedef std::vector<Message<nav_msgs::Odometry>::ConstPtr> odom_queue;
-  typedef std::vector<Message<geometry_msgs::PoseStamped>::ConstPtr> gt_queue;
+  typedef std::vector<Message<geometry_msgs::PoseStamped>::ConstPtr> pose_queue;
 
   // Methods for accessing entire queues of accumulated measurements.
   const pcld_queue& GetPointCloudMessages();
   const pcl_pcld_queue& GetPCLPointCloudMessages();
   const imu_queue& GetImuMessages();
   const odom_queue& GetOdomMessages();
-  const gt_queue& GetGtMessages();
+  const pose_queue& GetPoseMessages();
 
   // Methods for accessing a single measurement by index.
   const Message<sensor_msgs::PointCloud2>::ConstPtr& GetPointCloudMessage(
@@ -102,7 +102,7 @@ class MeasurementSynchronizer {
       unsigned int index);
   const Message<nav_msgs::Odometry>::ConstPtr& GetOdomMessage(
       unsigned int index);
-  const Message<geometry_msgs::PoseStamped>::ConstPtr& GetGtMessage(
+  const Message<geometry_msgs::PoseStamped>::ConstPtr& GetPoseMessage(
       unsigned int index);
 
   // Methods for adding sensor measurements of specific types.
@@ -113,7 +113,7 @@ class MeasurementSynchronizer {
       const std::string& tag = std::string());
   void AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg);
   void AddOdomMessage(const nav_msgs::Odometry::ConstPtr& msg);
-  void AddGtMessage(const geometry_msgs::PoseStamped::ConstPtr& msg);
+  void AddPoseMessage(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 
   // Static enum to string conversion.
@@ -127,8 +127,8 @@ class MeasurementSynchronizer {
         return std::string("IMU");
       case ODOM: 
         return std::string("ODOM");
-      case GT: 
-        return std::string("GT");
+      case POSE: 
+        return std::string("POSE");
       // No default to force compile-time error.
     }
   }
@@ -157,7 +157,7 @@ class MeasurementSynchronizer {
   pcl_pcld_queue pending_pcl_pclds_;
   imu_queue pending_imus_;
   odom_queue pending_odoms_;
-  gt_queue pending_gts_;
+  pose_queue pending_poses_;
 
   unsigned int pending_index_;
   std::vector<TimestampedType::ConstPtr> sensor_ordering_;
