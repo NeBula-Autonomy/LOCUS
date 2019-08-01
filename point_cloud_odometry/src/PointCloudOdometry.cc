@@ -181,7 +181,7 @@ void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<st
 bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
 
   // As soon as UpdateEstimate is called, a copy of the deque of interest is taken in order to not pick the wrong i-th element when external producer threads are pushing element into the deque
-  std::deque<extatt_data> extatt_deque_copy_ = extatt_deque_; 
+  std::deque<extatt_data> extatt_deque_copy = extatt_deque_; 
   
   // Store input point cloud's time stamp for publishing.
   stamp_.fromNSec(points.header.stamp * 1e3);
@@ -207,19 +207,19 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   }
 
   // Deactivate external data fusion if external publisher crashed 
-  if(extatt_deque_copy_.size()==min_extatt_deque_size_){
+  if(extatt_deque_copy.size()==min_extatt_deque_size_){
     use_extatt_data_ = false; 
     std::cout<<"External Attitude data provider crashed! Relying on pure ICP now"<< std::endl; 
   }
   
   // Choose the closest extatt signal in respect to the timestamp of the current received LIDAR scan 
   if(use_extatt_data_==true){
-    extatt_current_attitude_ = extatt_deque_copy_[0].internal_extatt_attitude_; 
+    extatt_current_attitude_ = extatt_deque_copy[0].internal_extatt_attitude_; 
     double min_ts_diff = 1000;   
-    for (int i=0; i<extatt_deque_copy_.size(); ++i) {
-          double cur_ts_diff = (extatt_deque_copy_[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
+    for (int i=0; i<extatt_deque_copy.size(); ++i) {
+          double cur_ts_diff = (extatt_deque_copy[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
           if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
-              extatt_current_attitude_ = extatt_deque_copy_[i].internal_extatt_attitude_; 
+              extatt_current_attitude_ = extatt_deque_copy[i].internal_extatt_attitude_; 
               min_ts_diff = cur_ts_diff; 
           }
     }
@@ -230,8 +230,8 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Compute the change in attitude 
     extatt_change_in_attitude_ = extatt_previous_attitude_.inverse()*extatt_current_attitude_;  
     // Copy and store the value in the deque 
-    Eigen::Quaternionf extatt_change_in_attitude_copy_ = extatt_change_in_attitude_;     
-    extatt_attitude_deque_.push_back(extatt_change_in_attitude_copy_);  
+    Eigen::Quaternionf extatt_change_in_attitude_copy = extatt_change_in_attitude_;     
+    extatt_attitude_deque_.push_back(extatt_change_in_attitude_copy);  
 
     if (check_extatt_data_==true){
       double max_ts_diff = 0.05; 
@@ -311,9 +311,9 @@ bool PointCloudOdometry::UpdateICP() {
   if (use_extatt_data_==true){
         // Perform the fusion
         T = icp.getFinalTransformation(); 
-        Eigen::Quaternionf extatt_attitude_local_copy_ = extatt_attitude_deque_.front();  
+        Eigen::Quaternionf extatt_attitude_local_copy = extatt_attitude_deque_.front();  
         extatt_attitude_deque_.pop_front();
-        T.block(0,0,3,3) = extatt_attitude_local_copy_.toRotationMatrix();       
+        T.block(0,0,3,3) = extatt_attitude_local_copy.toRotationMatrix();       
         std::cout << "extatt ON" << std::endl;  
   }
   else{
