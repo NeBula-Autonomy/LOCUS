@@ -218,7 +218,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     double min_ts_diff = 1000;   
     for (int i=0; i<extatt_deque_copy.size(); ++i) {
           double cur_ts_diff = (extatt_deque_copy[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
-          if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
+          if (cur_ts_diff<0 && fabs(cur_ts_diff)<min_ts_diff){
               extatt_current_attitude_ = extatt_deque_copy[i].internal_extatt_attitude_; 
               min_ts_diff = cur_ts_diff; 
           }
