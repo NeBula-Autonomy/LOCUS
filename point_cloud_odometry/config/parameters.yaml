@@ -14,7 +14,6 @@ icp:
   max_translation: 0.09
   max_rotation: 0.1
 
-# External attitude parameters 
-extatt: 
-  use_extatt_data: true # Use external attitude in the fusion process
-  check_extatt_data: false # Optional control on the external attitude received - should be false at this stage 
+# Replace rotational part of the transformation computed by pure ICP Lidar with attitude received by external provider
+external_attitude: 
+  use_external_attitude: true 

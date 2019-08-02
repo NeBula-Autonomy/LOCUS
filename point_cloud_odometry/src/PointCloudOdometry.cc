@@ -73,7 +73,7 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
     return false;
   }
 
-  extatt_data_has_been_received_ = false;
+  external_attitude_has_been_received_ = false;
 
   return true;
 }
@@ -137,9 +137,7 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
 
-  if (!pu::Get("extatt/use_extatt_data", use_extatt_data_)) 
-    return false;
-  if (!pu::Get("extatt/check_extatt_data", check_extatt_data_)) 
+  if (!pu::Get("external_attitude/use_external_attitude", use_external_attitude_)) 
     return false;
 
   return true;
@@ -153,45 +151,45 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   reference_pub_ = nl.advertise<PointCloud>("odometry_reference_points", 10, false);
   incremental_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>("odometry_incremental_estimate", 10, false);
   integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>("odometry_integrated_estimate", 10, false);
-  timestamp_difference_pub_ = nl.advertise<std_msgs::Float64>("extatt_lidar_ts_diff", 1, false); 
+  timestamp_difference_pub_ = nl.advertise<std_msgs::Float64>("external_attitude_lidar_ts_diff", 1, false); 
 
   return true;
 }
 
 void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
 
-  Eigen::Quaternionf extatt = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z));
+  Eigen::Quaternionf q = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z));
 
-  // Buffering extatt Data in FIFO Structure - An optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
-  if (extatt_deque_.size()==max_extatt_deque_size_){ 
-    extatt_deque_.pop_front();
-    extatt_deque_.push_back(extatt_data{extatt, timestamp});
+  // Buffering external attitude in FIFO Structure - an optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
+  if (external_attitude_deque_.size()==max_external_attitude_deque_size_){ 
+    external_attitude_deque_.pop_front();
+    external_attitude_deque_.push_back(external_attitude{q, timestamp});
   }
   else{
-    extatt_deque_.push_back(extatt_data{extatt, timestamp});
+    external_attitude_deque_.push_back(external_attitude{q, timestamp});
   }
 
-  if (extatt_data_has_been_received_==false){
-    extatt_first_attitude_ = extatt; // First time receiving the extatt Data  
-    std::cout << "Receiving extatt data for the first time ---> extatt_first_attitude_ now exists!";
-    extatt_data_has_been_received_ = true;
+  if (external_attitude_has_been_received_==false){
+    external_attitude_first_ = q; // First time receiving the external attitude  
+    std::cout << "Receiving external attitude for the first time ---> external_first_attitude_ now exists!";
+    external_attitude_has_been_received_ = true;
   }
 }
 
 bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
 
   // As soon as UpdateEstimate is called, a copy of the deque of interest is taken in order to not pick the wrong i-th element when external producer threads are pushing element into the deque
-  std::deque<extatt_data> extatt_deque_copy = extatt_deque_; 
+  std::deque<external_attitude> external_attitude_deque_copy = external_attitude_deque_; 
   
   // Store input point cloud's time stamp for publishing.
   stamp_.fromNSec(points.header.stamp * 1e3);
 
   // If this is the first point cloud, store it and wait for anotherinverse.
     if (!initialized_) {
-    if (use_extatt_data_==true){
+    if (use_external_attitude_==true){
       copyPointCloud(points, *query_); 
-      if (extatt_data_has_been_received_ == true){
-        extatt_previous_attitude_ = extatt_first_attitude_; 
+      if (external_attitude_has_been_received_ == true){
+        external_attitude_previous_ = external_attitude_first_; 
         initialized_ = true;
         return false;
       }
@@ -207,53 +205,41 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   }
 
   // Deactivate external data fusion if external publisher crashed 
-  if(extatt_deque_copy.size()==min_extatt_deque_size_){
-    use_extatt_data_ = false; 
-    std::cout<<"External Attitude data provider crashed! Relying on pure ICP now"<< std::endl; 
+  if(external_attitude_deque_copy.size()==min_external_attitude_deque_size_){
+    use_external_attitude_ = false; 
+    std::cout<<"External attitude data provider crashed - Relying now on pure ICP"<< std::endl; 
   }
   
-  // Choose the closest extatt signal in respect to the timestamp of the current received LIDAR scan 
-  if(use_extatt_data_==true){
-    extatt_current_attitude_ = extatt_deque_copy[0].internal_extatt_attitude_; 
+  // Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan 
+  if(use_external_attitude_==true){
+
+    external_attitude_current_ = external_attitude_deque_copy[0].internal_external_attitude_; 
     double min_ts_diff = 1000;   
-    for (int i=0; i<extatt_deque_copy.size(); ++i) {
-          double cur_ts_diff = (extatt_deque_copy[i].internal_extatt_attitude_timestamp_ - stamp_).toSec();
-          if (cur_ts_diff<0 && fabs(cur_ts_diff)<min_ts_diff){
-              extatt_current_attitude_ = extatt_deque_copy[i].internal_extatt_attitude_; 
+    for (int i=0; i<external_attitude_deque_copy.size(); ++i) {
+          double cur_ts_diff = (external_attitude_deque_copy[i].internal_external_attitude_timestamp_ - stamp_).toSec();
+          if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
+              external_attitude_current_ = external_attitude_deque_copy[i].internal_external_attitude_; 
               min_ts_diff = cur_ts_diff; 
           }
     }
-    std_msgs::Float64 extatt_lidar_ts_diff; 
-    extatt_lidar_ts_diff.data = min_ts_diff; 
-    PublishTimestampDifference(extatt_lidar_ts_diff, timestamp_difference_pub_); 
+    std_msgs::Float64 external_attitude_lidar_ts_diff; 
+    external_attitude_lidar_ts_diff.data = min_ts_diff; 
+    PublishTimestampDifference(external_attitude_lidar_ts_diff, timestamp_difference_pub_); 
     
     // Compute the change in attitude 
-    extatt_change_in_attitude_ = extatt_previous_attitude_.inverse()*extatt_current_attitude_;  
+    external_attitude_change_ = external_attitude_previous_.inverse()*external_attitude_current_;  
     // Copy and store the value in the deque 
-    Eigen::Quaternionf extatt_change_in_attitude_copy = extatt_change_in_attitude_;     
-    extatt_attitude_deque_.push_back(extatt_change_in_attitude_copy);  
+    Eigen::Quaternionf external_change_in_attitude_copy = external_attitude_change_;     
+    external_attitude_change_deque_.push_back(external_change_in_attitude_copy);  
 
-    if (check_extatt_data_==true){
-      double max_ts_diff = 0.05; 
-      if (fabs(min_ts_diff)<fabs(max_ts_diff)){
-        use_extatt_data_ = true; 
-      }
-      else{
-          use_extatt_data_ = false; 
-          std::cout << "WARNING: extatt too old - deactivating extatt usage" << min_ts_diff << std::endl; 
-      }  
-    }
-  
     // Move current query points (acquired last iteration) to reference points.
     copyPointCloud(*query_, *reference_);
 
     // Set the incoming point cloud as the query point cloud.
     copyPointCloud(points, *query_);
 
-    // Update extatt
-    extatt_previous_attitude_ = extatt_current_attitude_; 
-
-    extatt_deque_.pop_front();
+    // Update external attitude previous
+    external_attitude_previous_ = external_attitude_current_; 
 
     // Update pose estimate via ICP.
     return UpdateICP();
@@ -266,8 +252,8 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Set the incoming point cloud as the query point cloud.
     copyPointCloud(points, *query_);
 
-    // Update extatt
-    extatt_previous_attitude_ = extatt_current_attitude_; 
+    // Update previous attitude
+    external_attitude_previous_ = external_attitude_current_; 
 
     // Update pose estimate via ICP.
     return UpdateICP();
@@ -308,17 +294,16 @@ bool PointCloudOdometry::UpdateICP() {
 
   Eigen::Matrix4f T; 
 
-  if (use_extatt_data_==true){
-        // Perform the fusion
+  if (use_external_attitude_==true){
         T = icp.getFinalTransformation(); 
-        Eigen::Quaternionf extatt_attitude_local_copy = extatt_attitude_deque_.front();  
-        extatt_attitude_deque_.pop_front();
-        T.block(0,0,3,3) = extatt_attitude_local_copy.toRotationMatrix();       
-        std::cout << "extatt ON" << std::endl;  
+        Eigen::Quaternionf external_attitude_local_copy = external_attitude_change_deque_.front();  
+        external_attitude_change_deque_.pop_front();
+        T.block(0,0,3,3) = external_attitude_local_copy.toRotationMatrix();       
+        std::cout << "external attitude usage ON" << std::endl;  
   }
   else{
         T = icp.getFinalTransformation();
-        std::cout << "extatt OFF" << std::endl;  
+        std::cout << "external attitude usage OFF" << std::endl;  
   }
 
   // Update pose estimates.

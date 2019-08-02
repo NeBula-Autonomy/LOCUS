@@ -97,16 +97,16 @@ private:
   std::string name_;
 
   // External Attitude Data
-  Eigen::Quaternionf extatt_first_attitude_, extatt_current_attitude_, extatt_previous_attitude_, extatt_change_in_attitude_; 
-  bool use_extatt_data_, extatt_data_has_been_received_, check_extatt_data_ ; 
-  struct extatt_data {
-    Eigen::Quaternionf internal_extatt_attitude_;
-    ros::Time internal_extatt_attitude_timestamp_;
+  Eigen::Quaternionf external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
+  bool use_external_attitude_, external_attitude_has_been_received_; 
+  struct external_attitude {
+    Eigen::Quaternionf internal_external_attitude_;
+    ros::Time internal_external_attitude_timestamp_;
   };
-  std::deque<extatt_data> extatt_deque_;
-  std::deque<Eigen::Quaternionf> extatt_attitude_deque_;
-  static constexpr size_t max_extatt_deque_size_ = 100; 
-  static constexpr size_t min_extatt_deque_size_ = 98; 
+  std::deque<external_attitude> external_attitude_deque_;
+  std::deque<Eigen::Quaternionf> external_attitude_change_deque_;
+  static constexpr size_t max_external_attitude_deque_size_ = 100; 
+  static constexpr size_t min_external_attitude_deque_size_ = 99; 
 
   // Publishers.
   ros::Publisher reference_pub_;
