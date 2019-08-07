@@ -378,5 +378,7 @@ void PointCloudOdometry::PublishTimestampDifference(const std_msgs::Float64& tim
 
 bool PointCloudOdometry::LoadCalibrationFromTfTree(){
   // Method implementation
+
+  bool loaded = false;
   return true; 
 }
