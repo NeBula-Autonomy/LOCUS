@@ -130,9 +130,9 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   pcld_sub_ = nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
 
   // External attitude data providers
-  imu_sub_ = nl.subscribe("/blam_slam/vn100/imu", 10000, &LoFrontend::ImuCallback, this);
-  odom_sub_ = nl.subscribe("ODOM_TOPIC/husky/lion/odom", 1000, &LoFrontend::OdomCallback, this); 
-  pose_sub_ = nl.subscribe("POSE_TOPIC/Robot_7/pose", 1000, &LoFrontend::PoseCallback, this); 
+  imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
+  odom_sub_ = nl.subscribe("ODOM_TOPIC", 1000, &LoFrontend::OdomCallback, this); 
+  pose_sub_ = nl.subscribe("POSE_TOPIC", 1000, &LoFrontend::PoseCallback, this); 
 
   return CreatePublishers(n);
 }
