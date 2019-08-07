@@ -375,3 +375,8 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
 void PointCloudOdometry::PublishTimestampDifference(const std_msgs::Float64& timediff, const ros::Publisher& pub) {
   pub.publish(timediff);    
 }
+
+bool PointCloudOdometry::LoadCalibrationFromTfTree(){
+  // Method implementation
+  return true; 
+}

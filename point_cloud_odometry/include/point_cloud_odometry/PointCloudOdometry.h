@@ -93,6 +93,8 @@ private:
   void PublishTimestampDifference(const std_msgs::Float64& timediff,
                                   const ros::Publisher& pub);
 
+  bool LoadCalibrationFromTfTree();
+
   // The node's name.
   std::string name_;
 
