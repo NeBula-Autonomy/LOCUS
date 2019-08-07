@@ -45,6 +45,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
+#include <eigen_conversions/eigen_msg.h>
 #include <std_msgs/Float64.h>
 
 class PointCloudOdometry {
@@ -155,8 +156,16 @@ private:
   double max_translation_;
   double max_rotation_;
 
-  // Adding support for IMU Lidar calibration 
-  const std::string tf_prefix_;
+  /*
+  --------- Adding support for IMU Lidar calibration ------- 
+  */
+  tf::TransformListener imu_T_laser_listener_;
+  std::string tf_prefix_;
+  std::string imu_frame_; 
+  std::string pose_sensor_frame_;
+  Eigen::Affine3d B_T_L_;    
+  Eigen::Affine3d L_T_B_;      
+
 };
 
 #endif

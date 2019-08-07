@@ -19,6 +19,7 @@
   <build_depend>pcl_ros</build_depend>
   <build_depend>tf2_ros</build_depend>
   <build_depend>tf</build_depend>
+  <build_depend>eigen_conversions</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>geometry_utils</run_depend>
@@ -28,5 +29,6 @@
   <run_depend>pcl_ros</run_depend>
   <run_depend>tf2_ros</run_depend>
   <run_depend>tf</run_depend>
+  <run_depend>eigen_conversions</run_depend>
 
 </package>

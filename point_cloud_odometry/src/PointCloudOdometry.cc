@@ -63,6 +63,11 @@ PointCloudOdometry::~PointCloudOdometry() {}
 bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   name_ = ros::names::append(n.getNamespace(), "PointCloudOdometry");
 
+  // Adding support for IMU Lidar calibration 
+  tf_prefix_ = "tf::getPrefixParam(nh_)";
+  imu_frame_ = "imu_frame";
+  pose_sensor_frame_ = "pose_sensor_frame";
+
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
@@ -377,8 +382,55 @@ void PointCloudOdometry::PublishTimestampDifference(const std_msgs::Float64& tim
 }
 
 bool PointCloudOdometry::LoadCalibrationFromTfTree(){
-  // Method implementation
 
-  bool loaded = false;
-  return true; 
+  ROS_WARN_DELAYED_THROTTLE(2.0, 
+                            "Waiting for \'%s\' and \'%s\' to appear in tf_tree...",
+                            tf::resolve(tf_prefix_, imu_frame_).c_str(),
+                            tf::resolve(tf_prefix_, pose_sensor_frame_).c_str());
+
+  tf::StampedTransform imu_T_laser_transform;
+
+  try {
+    
+    imu_T_laser_listener_.waitForTransform(
+      tf::resolve(tf_prefix_, imu_frame_),
+      tf::resolve(tf_prefix_, pose_sensor_frame_),
+      ros::Time(0),
+      ros::Duration(2.0));
+      
+    imu_T_laser_listener_.lookupTransform(
+      tf::resolve(tf_prefix_, imu_frame_),
+      tf::resolve(tf_prefix_, pose_sensor_frame_),
+      ros::Time(0),
+      imu_T_laser_transform);
+
+    geometry_msgs::TransformStamped imu_T_laser_tmp_msg;
+
+    tf::transformStampedTFToMsg(imu_T_laser_transform, imu_T_laser_tmp_msg);
+    
+    tf::transformMsgToEigen(imu_T_laser_tmp_msg.transform, B_T_L_);
+
+    L_T_B_ = B_T_L_.inverse();
+
+    ROS_INFO_STREAM("Loaded pose_sensor to imu calibration B_T_L:");
+
+    std::cout << B_T_L_.translation() << std::endl;
+    std::cout << B_T_L_.rotation() << std::endl;
+    
+    Eigen::Quaterniond q = Eigen::Quaterniond(B_T_L_.rotation());
+    ROS_INFO("q: x: %.3f, y: %.3f, z: %.3f, w: %.3f", q.x(), q.y(), q.z(), q.w());
+
+    return true; 
+
+  } 
+  
+  catch (tf::TransformException ex) {
+
+    ROS_ERROR("%s", ex.what());
+    B_T_L_ = Eigen::Affine3d::Identity();
+    L_T_B_ = Eigen::Affine3d::Identity();
+    return false; 
+
+  }
+  
 }
