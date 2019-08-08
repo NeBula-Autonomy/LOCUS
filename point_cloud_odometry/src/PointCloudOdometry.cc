@@ -104,9 +104,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
 
-  if (!b_have_fiducial) {
-    ROS_WARN("Can't find fiducials, using origin");
-  }
 
   // convert initial quaternion to Roll/Pitch/Yaw
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
@@ -122,6 +119,11 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   init.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
   integrated_estimate_ = init;
 
+  if (!b_have_fiducial) {
+    ROS_WARN("Can't find fiducials, using origin");
+  } else {
+    ROS_INFO_STREAM("Have loaded fiducial pose, using:\n" << init);
+  }
   // Load algorithm parameters.
   if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon))
     return false;
@@ -346,11 +348,11 @@ bool PointCloudOdometry::UpdateICP() {
 
     external_attitude_change_deque_.pop_front();
     T.block(0,0,3,3) = q_out.toRotationMatrix();       
-    std::cout << "external attitude usage ON" << std::endl;  
+    // std::cout << "external attitude usage ON" << std::endl;  
   }
   else{
     T = icp.getFinalTransformation().cast<double>();
-    std::cout << "external attitude usage OFF" << std::endl;  
+    // std::cout << "external attitude usage OFF" << std::endl;  
   }
 
   // Update pose estimates.
