@@ -144,6 +144,9 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("frame_id/imu", imu_frame_id_)) return false;
 
+  // Load the tf calibration
+  LoadCalibrationFromTfTree();
+
   return true;
 }
 
@@ -162,7 +165,10 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
 
 void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
 
-  Eigen::Quaternionf q = Eigen::Quaternionf(float(quaternion.w), float(quaternion.x), float(quaternion.y), float(quaternion.z));
+  Eigen::Quaterniond q = Eigen::Quaterniond(double(quaternion.w), double(quaternion.x), double(quaternion.y), double(quaternion.z));
+
+  // Transform incoming quaternion from imu to base_link frames
+  q = I_T_B_q_*q*I_T_B_q_.inverse();
 
   // Buffering external attitude in FIFO Structure - an optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
   if (external_attitude_deque_.size()==max_external_attitude_deque_size_){ 
@@ -233,7 +239,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     // Compute the change in attitude 
     external_attitude_change_ = external_attitude_previous_.inverse()*external_attitude_current_;  
     // Copy and store the value in the deque 
-    Eigen::Quaternionf external_change_in_attitude_copy = external_attitude_change_;     
+    Eigen::Quaterniond external_change_in_attitude_copy = external_attitude_change_;     
     external_attitude_change_deque_.push_back(external_change_in_attitude_copy);  
 
     // Move current query points (acquired last iteration) to reference points.
@@ -296,18 +302,55 @@ bool PointCloudOdometry::UpdateICP() {
   PointCloud unused_result;
   icp.align(unused_result);
 
-  Eigen::Matrix4f T; 
+  Eigen::Matrix4d T; 
 
   if (use_external_attitude_==true){
-        T = icp.getFinalTransformation(); 
-        Eigen::Quaternionf external_attitude_local_copy = external_attitude_change_deque_.front();  
-        external_attitude_change_deque_.pop_front();
-        T.block(0,0,3,3) = external_attitude_local_copy.toRotationMatrix();       
-        std::cout << "external attitude usage ON" << std::endl;  
+    // ------------------- //
+    // Process the ICP
+    T = icp.getFinalTransformation().cast<double>(); 
+
+    // Get the yaw from the 
+    tf::Matrix3x3 m_icp(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    double roll, pitch, yaw;
+    m_icp.getRPY(roll, pitch, yaw);
+    /* remove pitch and roll, just want yaw */
+    Eigen::Matrix3d rot_yaw_mat;
+    rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
+
+    // Yaw only 
+    Eigen::Quaterniond q_yaw_icp(rot_yaw_mat);
+
+    // ------------------- //
+    // Process IMU attitude
+    Eigen::Quaterniond external_attitude_local_copy = external_attitude_change_deque_.front();  
+
+    tf::Quaternion q0(external_attitude_local_copy.x(),
+                        external_attitude_local_copy.y(),
+                        external_attitude_local_copy.z(),
+                        external_attitude_local_copy.w());
+    tf::Matrix3x3 m(q0);
+    m.getRPY(roll, pitch, yaw);
+    /* remove pitch and roll, just want yaw */
+    rot_yaw_mat = Eigen::Matrix3d();
+    rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
+
+    // Yaw only 
+    Eigen::Quaterniond q_yaw(rot_yaw_mat);
+
+    // Take away the yaw
+    Eigen::Quaterniond q_imu_roll_pitch = q_yaw.inverse()*external_attitude_local_copy;
+
+    // ------------------- //
+    // Compute attitude - yaw from ICP, roll and pitch from IMU
+    Eigen::Quaterniond q_out = q_yaw_icp*q_imu_roll_pitch;
+
+    external_attitude_change_deque_.pop_front();
+    T.block(0,0,3,3) = q_out.toRotationMatrix();       
+    std::cout << "external attitude usage ON" << std::endl;  
   }
   else{
-        T = icp.getFinalTransformation();
-        std::cout << "external attitude usage OFF" << std::endl;  
+    T = icp.getFinalTransformation().cast<double>();
+    std::cout << "external attitude usage OFF" << std::endl;  
   }
 
   // Update pose estimates.
@@ -407,17 +450,17 @@ bool PointCloudOdometry::LoadCalibrationFromTfTree(){
 
     tf::transformStampedTFToMsg(imu_T_laser_transform, imu_T_laser_tmp_msg);
     
-    tf::transformMsgToEigen(imu_T_laser_tmp_msg.transform, B_T_L_);
+    tf::transformMsgToEigen(imu_T_laser_tmp_msg.transform, I_T_B_);
 
-    L_T_B_ = B_T_L_.inverse();
+    B_T_I_ = I_T_B_.inverse();
 
     ROS_INFO_STREAM("Loaded pose_sensor to imu calibration B_T_L:");
 
-    std::cout << B_T_L_.translation() << std::endl;
-    std::cout << B_T_L_.rotation() << std::endl;
+    std::cout << I_T_B_.translation() << std::endl;
+    std::cout << I_T_B_.rotation() << std::endl;
     
-    Eigen::Quaterniond q = Eigen::Quaterniond(B_T_L_.rotation());
-    ROS_INFO("q: x: %.3f, y: %.3f, z: %.3f, w: %.3f", q.x(), q.y(), q.z(), q.w());
+    I_T_B_q_ = Eigen::Quaterniond(I_T_B_.rotation());
+    ROS_INFO("q: x: %.3f, y: %.3f, z: %.3f, w: %.3f", I_T_B_q_.x(), I_T_B_q_.y(), I_T_B_q_.z(), I_T_B_q_.w());
 
     return true; 
 
@@ -426,8 +469,8 @@ bool PointCloudOdometry::LoadCalibrationFromTfTree(){
   catch (tf::TransformException ex) {
 
     ROS_ERROR("%s", ex.what());
-    B_T_L_ = Eigen::Affine3d::Identity();
-    L_T_B_ = Eigen::Affine3d::Identity();
+    I_T_B_ = Eigen::Affine3d::Identity();
+    B_T_I_ = Eigen::Affine3d::Identity();
     return false; 
 
   }

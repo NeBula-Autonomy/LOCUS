@@ -101,14 +101,14 @@ private:
   std::string name_;
 
   // External Attitude Data
-  Eigen::Quaternionf external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
+  Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
   bool use_external_attitude_, external_attitude_has_been_received_; 
   struct external_attitude {
-    Eigen::Quaternionf internal_external_attitude_;
+    Eigen::Quaterniond internal_external_attitude_;
     ros::Time internal_external_attitude_timestamp_;
   };
   std::deque<external_attitude> external_attitude_deque_;
-  std::deque<Eigen::Quaternionf> external_attitude_change_deque_;
+  std::deque<Eigen::Quaterniond> external_attitude_change_deque_;
   static constexpr size_t max_external_attitude_deque_size_ = 100; 
   static constexpr size_t min_external_attitude_deque_size_ = 99; 
 
@@ -163,8 +163,9 @@ private:
   std::string imu_frame_id_;  
 
   tf::TransformListener imu_T_laser_listener_;
-  Eigen::Affine3d B_T_L_;    
-  Eigen::Affine3d L_T_B_;      
+  Eigen::Affine3d I_T_B_;    
+  Eigen::Affine3d B_T_I_; 
+  Eigen::Quaterniond I_T_B_q_;     
 
 };
 
