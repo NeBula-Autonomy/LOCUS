@@ -63,11 +63,6 @@ PointCloudOdometry::~PointCloudOdometry() {}
 bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   name_ = ros::names::append(n.getNamespace(), "PointCloudOdometry");
 
-  // Adding support for IMU Lidar calibration 
-  tf_prefix_ = "tf::getPrefixParam(nh_)";
-  imu_frame_ = "imu_frame";
-  pose_sensor_frame_ = "pose_sensor_frame";
-
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
@@ -144,6 +139,10 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
 
   if (!pu::Get("external_attitude/use_external_attitude", use_external_attitude_)) 
     return false;
+
+  if (!pu::Get("frame_id/base", base_frame_id_))
+    return false;
+  if (!pu::Get("frame_id/imu", imu_frame_id_)) return false;
 
   return true;
 }
@@ -385,22 +384,22 @@ bool PointCloudOdometry::LoadCalibrationFromTfTree(){
 
   ROS_WARN_DELAYED_THROTTLE(2.0, 
                             "Waiting for \'%s\' and \'%s\' to appear in tf_tree...",
-                            tf::resolve(tf_prefix_, imu_frame_).c_str(),
-                            tf::resolve(tf_prefix_, pose_sensor_frame_).c_str());
+                            imu_frame_id_,
+                            base_frame_id_);
 
   tf::StampedTransform imu_T_laser_transform;
 
   try {
     
     imu_T_laser_listener_.waitForTransform(
-      tf::resolve(tf_prefix_, imu_frame_),
-      tf::resolve(tf_prefix_, pose_sensor_frame_),
+      imu_frame_id_,
+      base_frame_id_,
       ros::Time(0),
       ros::Duration(2.0));
       
     imu_T_laser_listener_.lookupTransform(
-      tf::resolve(tf_prefix_, imu_frame_),
-      tf::resolve(tf_prefix_, pose_sensor_frame_),
+      imu_frame_id_,
+      base_frame_id_,
       ros::Time(0),
       imu_T_laser_transform);
 

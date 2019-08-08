@@ -159,10 +159,10 @@ private:
   /*
   --------- Adding support for IMU Lidar calibration ------- 
   */
+  std::string base_frame_id_; 
+  std::string imu_frame_id_;  
+
   tf::TransformListener imu_T_laser_listener_;
-  std::string tf_prefix_;
-  std::string imu_frame_; 
-  std::string pose_sensor_frame_;
   Eigen::Affine3d B_T_L_;    
   Eigen::Affine3d L_T_B_;      
 
