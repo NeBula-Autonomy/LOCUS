@@ -127,7 +127,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   estimate_update_timer_ = nl.createTimer(estimate_update_rate_, &LoFrontend::EstimateTimerCallback, this);
 
   // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
-  pcld_sub_ = nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
+  pcld_sub_ = nl.subscribe("pcld", 10, &LoFrontend::PointCloudCallback, this);
 
   // External attitude data providers
   imu_sub_ = nl.subscribe("IMU_TOPIC", 10000, &LoFrontend::ImuCallback, this);
