@@ -219,7 +219,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   // Deactivate external data fusion if external publisher crashed 
   if(external_attitude_deque_copy.size()==min_external_attitude_deque_size_){
     use_external_attitude_ = false; 
-    std::cout<<"External attitude data provider crashed - Relying now on pure ICP"<< std::endl; 
+    ROS_WARN("External attitude data provider crashed - Relying now on pure ICP"); 
   }
   
   // Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan 
