@@ -250,8 +250,11 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     ROS_WARN("External attitude data provider crashed - Relying now on pure ICP"); 
   }
   
-  // Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan 
   if(use_external_attitude_==true){
+
+    /* ------------- SYNCING STAGE -------------  
+    Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan
+    */ 
 
     external_attitude_current_ = external_attitude_deque_copy[0].internal_external_attitude_; 
     double min_ts_diff = 1000;   
@@ -262,13 +265,22 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
               min_ts_diff = cur_ts_diff; 
           }
     }
+
+    // Warn user if the selected external attitude comes from the future or too far from the past 
+    if (min_ts_diff>0){
+      ROS_WARN("WARNING: External attitude comes from the future");
+    }
+    if (min_ts_diff<0 && fabs(min_ts_diff)>fabs(0.1)){
+      ROS_WARN("WARNING: External attitude comes from the past, but it's too old");
+    }
+    // TODO: At this point, if needed, we can deactivate the external attitude usage 
+
     std_msgs::Float64 external_attitude_lidar_ts_diff; 
     external_attitude_lidar_ts_diff.data = min_ts_diff; 
     PublishTimestampDifference(external_attitude_lidar_ts_diff, timestamp_difference_pub_); 
     
-    // Compute the change in attitude 
+    // Compute the change in attitude, make a copy of it and store it in the deque
     external_attitude_change_ = external_attitude_previous_.inverse()*external_attitude_current_;  
-    // Copy and store the value in the deque 
     Eigen::Quaterniond external_change_in_attitude_copy = external_attitude_change_;     
     external_attitude_change_deque_.push_back(external_change_in_attitude_copy);  
 
