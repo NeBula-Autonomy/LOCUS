@@ -364,12 +364,12 @@ bool PointCloudOdometry::UpdateICP() {
 
     // ------------------- //
     // Process IMU attitude
-    Eigen::Quaterniond external_attitude_local_copy = external_attitude_change_deque_.front();  
+    Eigen::Quaterniond external_attitude_change_local_copy = external_attitude_change_deque_.front();  
 
-    tf::Quaternion q0(external_attitude_local_copy.x(),
-                        external_attitude_local_copy.y(),
-                        external_attitude_local_copy.z(),
-                        external_attitude_local_copy.w());
+    tf::Quaternion q0(external_attitude_change_local_copy.x(),
+                      external_attitude_change_local_copy.y(),
+                      external_attitude_change_local_copy.z(),
+                      external_attitude_change_local_copy.w());
     tf::Matrix3x3 m(q0);
     m.getRPY(roll, pitch, yaw);
     /* remove pitch and roll, just want yaw */
@@ -380,7 +380,7 @@ bool PointCloudOdometry::UpdateICP() {
     Eigen::Quaterniond q_yaw(rot_yaw_mat);
 
     // Take away the yaw
-    Eigen::Quaterniond q_imu_roll_pitch = q_yaw.inverse()*external_attitude_local_copy;
+    Eigen::Quaterniond q_imu_roll_pitch = q_yaw.inverse()*external_attitude_change_local_copy;
 
     // ------------------- //
     // Compute attitude - yaw from ICP, roll and pitch from IMU
