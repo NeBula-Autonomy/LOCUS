@@ -74,6 +74,7 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   }
 
   external_attitude_has_been_received_ = false;
+  number_of_calls_ = 0;
 
   return true;
 }
@@ -206,6 +207,23 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
         return false;
       }
       else{
+        /* ------------- Deactivate external attitude usage when external provider crashes at start ------------- 
+        
+        DOCUMENTATION:  - What about if external attitude provider crashes at start and we never receive a first attitude? 
+                          Odometry would be stuck and no poses would be created.
+
+                        - We could handle this maybe creating a counter that keeps track of how many times 
+                          the UpdateEstimate() method has been called with a new incoming PointCloudand if after 
+                          25 calls has still not been initialized, we deactivate the use_external_attitude_ usage 
+                          and  proceed with pure ICP Lidar. 
+        */
+        number_of_calls_ = number_of_calls_ + 1; 
+        if (number_of_calls_==25){
+          ROS_WARN("UpdateEstimate has been called 25 times, but no external attitude has been received yet.");
+          ROS_WARN("Deactivating external attitude usage and relying on pure ICP Lidar now.");
+          use_external_attitude_ = false; 
+        }
+
         return false;
       }      
     }
@@ -216,7 +234,17 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     }
   }
 
-  // Deactivate external data fusion if external publisher crashed 
+  /* ------------- Deactivate external attitude usage when external provider crashes at any time ------------- 
+
+  DOCUMENTATION:  - We're assuming that the external attitude is provided at a constant velocity
+                  
+                  - If there’s a drop in the received message rate, we would see, for a given constant update rate, a deque_size of 99 rather than the expected 100 
+                    (numerical values setted for min_external_attitude_deque_size_ and max_external_attitude_deque_size_ respectively).
+                  
+                  - Lowering the min_external_attitude_deque_size would be a more flexible condition but would have some effects on the generated odometry. 
+
+                  - Alternative approaches to this could be also elaborated (e.g. timeout on the subscription level). 
+  */
   if(external_attitude_deque_copy.size()==min_external_attitude_deque_size_){
     use_external_attitude_ = false; 
     ROS_WARN("External attitude data provider crashed - Relying now on pure ICP"); 

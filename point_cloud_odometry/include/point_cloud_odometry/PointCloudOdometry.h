@@ -167,6 +167,15 @@ private:
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;     
 
+  /*
+  ------------- Deactivate external attitude usage when external provider crashes at start -------------
+  
+  DOCUMENTATION:  This counter keeps track of how many time UpdateEstimate has been called
+                  and deactivate external attitude usage after a value of 25 is reached
+                  enabling the code to not being stuck in a uninitialized state and continue by relying on pure ICP Lidar 
+  */
+  int number_of_calls_;   
+
 };
 
 #endif
