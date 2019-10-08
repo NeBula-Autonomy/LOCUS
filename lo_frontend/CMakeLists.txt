@@ -28,7 +28,6 @@ find_package(catkin REQUIRED COMPONENTS
   measurement_synchronizer
   point_cloud_filter
   point_cloud_odometry
-  laser_loop_closure
   point_cloud_localization
   point_cloud_mapper
   geometry_utils
@@ -49,7 +48,6 @@ catkin_package(
     measurement_synchronizer
     point_cloud_filter
     point_cloud_odometry
-    laser_loop_closure
     point_cloud_localization
     point_cloud_mapper
     geometry_utils

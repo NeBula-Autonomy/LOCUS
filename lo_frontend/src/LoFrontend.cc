@@ -259,8 +259,6 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_fixed, unused.get());
 
-    // Also reset the robot's estimated position.
-    // localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
   }
 
   // Publish the incoming point cloud message from the base frame.
