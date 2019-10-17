@@ -128,7 +128,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
   pcld_sub_ =
-      nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
+      nl.subscribe("pcld", 10, &LoFrontend::PointCloudCallback, this);
 
   return CreatePublishers(n);
 }
