@@ -2,38 +2,30 @@
   <arg name="robot_namespace" default="robot"/>
 
   <!-- Velodyne topic throttle params -->
-  <arg name="vlp_throttle_freq" default="5.0"/><!-- Hz -->
+  <arg name="vlp_throttle_freq" default="10.0"/><!-- Hz -->
 
   <group ns="$(arg robot_namespace)">
+  
     <!-- Laser-Odometry -->
     <node pkg="lo_frontend"
           name="lo_frontend"
           type="lo_frontend_node"
           output="screen">
 
+      <!-- tf pub -->
+      <param name="b_publish_tfs" value="false"/>
 
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
 
-      <!-- Initial pose -->
-      <rosparam param="init">
-        position: {x: 0.972545921803, y: 2.03618049622, z: 0.516347706318}
-        orientation: {roll: 0.01, pitch: 0.2, yaw: 2.9798307}
-        position_sigma: {x: 0.316, y: 0.316, z: 0.316}
-        orientation_sigma: {roll: 0.141, pitch: 0.141, yaw: 0.141}
-      </rosparam>
-
-      <!-- Noise parameters -->
-      <rosparam param="noise">
-        odom_position_sigma: 0.6324
-        odom_attitude_sigma: 0.316
-      </rosparam>      
+      <!-- Settings -->
+      <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
 
       <!-- Rates -->
-      <rosparam file="$(find lo_frontend)/config/blam_rates.yaml"/>
+      <rosparam file="$(find lo_frontend)/config/lo_rates.yaml"/>
 
       <!-- Frames -->
-      <rosparam file="$(find lo_frontend)/config/blam_frames.yaml" subst_value="true"/>
+      <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
