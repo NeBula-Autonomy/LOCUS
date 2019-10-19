@@ -40,7 +40,8 @@ namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
 LoFrontend::LoFrontend()
-  : estimate_update_rate_(0.0), visualization_update_rate_(0.0) {}
+  : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
+  b_add_first_scan_to_key_(true), translation_threshold_kf_(1.0) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -92,6 +93,11 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("frame_id/base", base_frame_id_))
     return false;
+
+  // Load Settings 
+  if (!pu::Get("translation_threshold_kf", translation_threshold_kf_)){
+    return false;
+  }
 
   return true;
 }
@@ -215,18 +221,35 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
 
+  PointCloud::Ptr msg_transformed(new PointCloud);
+
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
-    // Add point cloud in map if it is first we receive.
-    ROS_INFO("First update");
+    b_add_first_scan_to_key_ = true;
+  }
+
+  if (b_add_first_scan_to_key_) {
     // First update ever.
+    // Transforming msg to fixed frame for non-zero initial position
+    localization_.TransformPointsToFixedFrame(*msg_filtered,
+                                              msg_transformed.get());
     PointCloud::Ptr unused(new PointCloud);
-    mapper_.InsertPoints(msg_filtered, unused.get());
+    mapper_.InsertPoints(msg_transformed, unused.get());
+
+    // Publish localization pose messages
+    ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
+    localization_.UpdateTimestamp(stamp);
+    localization_.PublishPoseNoUpdate();
+
+    // Revert the first scan to map
+    b_add_first_scan_to_key_ = false;
+
+    // update stored pose 
+    last_keyframe_pose_ = localization_.GetIntegratedEstimate();
     return;
   }
    
   // Containers.
-  PointCloud::Ptr msg_transformed(new PointCloud);
   PointCloud::Ptr msg_neighbors(new PointCloud);
   PointCloud::Ptr msg_base(new PointCloud);
   PointCloud::Ptr msg_fixed(new PointCloud);
@@ -247,18 +270,23 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // sensor frame.
   localization_.MeasurementUpdate(msg_filtered, msg_neighbors, msg_base.get());
 
-  geometry_utils::Transform3 currPose = localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
-  // If last translation from ICP is larger than 1m, set Identity in motion
-  // update Is it some sort of outlier rejection?
-  if (ToGtsam(geometry_utils::PoseDelta(currPose, this->last_keyframe_))
+  // If last translation from ICP is larger than 1m
+  if (ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose))
           .translation()
-          .norm() > 1) {
+          .norm() > translation_threshold_kf_) {
+    // Set identity as TransformPointsToFixedFrame adds integrated to incrememntal to transform (normally goes before the update)
     localization_.MotionUpdate(gu::Transform3::Identity());
+
+    // Transform point cloud to update the map
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_fixed, unused.get());
+    ROS_WARN("Updating the map");
 
+    // Update the last keyframe pose
+    last_keyframe_pose_ = current_pose;
   }
 
   // Publish the incoming point cloud message from the base frame.
@@ -268,24 +296,25 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
-  ROS_INFO("Publishing pose and scan");
-  // Send pose and scan pair
-  core_msgs::PoseAndScan poseScanMsg;
+  if (pose_scan_pub_.getNumSubscribers() != 0) {
+    ROS_INFO("Publishing pose and scan");
+    // Send pose and scan pair
+    core_msgs::PoseAndScan poseScanMsg;
 
-  sensor_msgs::PointCloud2 scan_msg;
+    sensor_msgs::PointCloud2 scan_msg;
 
-  pcl::toROSMsg(*msg.get(), scan_msg);
+    pcl::toROSMsg(*msg.get(), scan_msg);
 
-  // fromPCL()
-  // toPCL()
+    // fromPCL()
+    // toPCL()
 
-  poseScanMsg.header.stamp = scan_msg.header.stamp;
-  poseScanMsg.header.frame_id = base_frame_id_;
-  poseScanMsg.scan = scan_msg;
-  poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(currPose);
-  poseScanMsg.pose.header.stamp = scan_msg.header.stamp;
-  poseScanMsg.pose.header.frame_id = fixed_frame_id_;
+    poseScanMsg.header.stamp = scan_msg.header.stamp;
+    poseScanMsg.header.frame_id = base_frame_id_;
+    poseScanMsg.scan = scan_msg;
+    poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(current_pose);
+    poseScanMsg.pose.header.stamp = scan_msg.header.stamp;
+    poseScanMsg.pose.header.frame_id = fixed_frame_id_;
 
-  pose_scan_pub_.publish(poseScanMsg);
-  
+    pose_scan_pub_.publish(poseScanMsg);
+  }
 }
