@@ -283,7 +283,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_fixed, unused.get());
-    ROS_WARN("Updating the map");
+    // ROS_WARN("Updating the map");
 
     // Update the last keyframe pose
     last_keyframe_pose_ = current_pose;
