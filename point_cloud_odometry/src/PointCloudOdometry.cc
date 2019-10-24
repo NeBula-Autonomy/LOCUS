@@ -261,7 +261,7 @@ bool PointCloudOdometry::UpdateICP() {
   return true;
 }
 
-bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, gtsam::SharedNoiseModel covariance){
+bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
@@ -285,7 +285,8 @@ bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXY
   Eigen::MatrixXd H(6,6);
   H = Eigen::MatrixXd::Zero(6, 6);
 
-    // Compute the Jacobian
+  // Compute the entries of Jacobian
+  // Entries of Jacobian matrix are obtained from MATLAB Symbolic Toolbox
   for (size_t i = 0; i < pointCloud.points.size(); ++i){
     double p_x = pointCloud.points[i].x;
     double p_y = pointCloud.points[i].y;
@@ -317,11 +318,10 @@ bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXY
          J21,    J22,	   J23,   J24,  J25,    J26,
          J31,    J32,	   J33,   J34,  J35,    J36;
     // Compute J'XJ (6X6) matrix and keep adding for all the points in the point cloud
-    H = J.transpose() * J;
-    gtsam::Matrix66 cov;
+    H += J.transpose() * J;
+    Eigen::MatrixXd cov(6,6);
+    // gtsam::Matrix66 cov;
     cov = H.inverse() * icpFitnessScore_;
-    gtsam::SharedNoiseModel noise_expected = gtsam::noiseModel::Gaussian::Covariance(cov);
-    covariance = gtsam::noiseModel::Gaussian::Covariance(cov);
   }
   
   return true;
