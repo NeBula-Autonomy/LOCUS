@@ -44,6 +44,8 @@
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+#include <gtsam/linear/NoiseModel.h>
+
 class PointCloudOdometry {
 public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -69,6 +71,12 @@ public:
   geometry_utils::Transform3 integrated_estimate_;
   geometry_utils::Transform3 incremental_estimate_;
 
+  // ICP fitness score
+  double icpFitnessScore_;
+
+  // Aligned point cloud returned by ICP
+  PointCloud icpAlignedPoints_;
+
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -76,6 +84,10 @@ private:
 
   // Use ICP between a query and reference point cloud to estimate pose.
   bool UpdateICP();
+
+  // Compute ICP Covariance Matrix
+  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> PointCloud, const Eigen::Matrix4f T, gtsam::SharedNoiseModel covariance);
+  
 
   // Publish reference and query point clouds.
   void PublishPoints(const PointCloud::Ptr& points, const ros::Publisher& pub);
