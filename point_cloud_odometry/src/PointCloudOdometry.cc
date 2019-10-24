@@ -136,8 +136,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
 
   return true;
-
-  icpFitnessScore_ = 0;
 }
 
 bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
@@ -322,8 +320,8 @@ bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXY
     H = J.transpose() * J;
     gtsam::Matrix66 cov;
     cov = H.inverse() * icpFitnessScore_;
-    // gtsam::SharedNoiseModel noise_expected = gtsam::noiseModel::Gaussian::Covariance(cov);
-    // covariance = gtsam::noiseModel::Gaussian::Covariance(cov);
+    gtsam::SharedNoiseModel noise_expected = gtsam::noiseModel::Gaussian::Covariance(cov);
+    covariance = gtsam::noiseModel::Gaussian::Covariance(cov);
   }
   
   return true;
