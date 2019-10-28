@@ -215,7 +215,7 @@ bool PointCloudOdometry::UpdateICP() {
   icp.setInputSource(query_);
   icp.setInputTarget(reference_);
 
-  icp.align(icpAlignedPoints_);
+  icp.align(icpAlignedPointsOdometry_);
   icpFitnessScore_ = icp.getFitnessScore();
 
   const Eigen::Matrix4f T = icp.getFinalTransformation();
@@ -337,7 +337,7 @@ void PointCloudOdometry::PublishPoints(const PointCloud::Ptr& points,
     pub.publish(out);
   }
 }
-
+ 
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
                                      const ros::Publisher& pub) {
   // Check for subscribers before doing any work.
