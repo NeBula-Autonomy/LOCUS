@@ -1,0 +1,6 @@
+
+# Translation before adding point cloud to the map
+# TODO - see if setting this lower helps
+# TODO - later - remove old parts of the point cloud to only keep a local map...
+translation_threshold_kf: 1.0
+# Tune this to be larger to avoid delays - map update and publishis expensive 
