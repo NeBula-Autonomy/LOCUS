@@ -39,6 +39,7 @@
 
 #include <ros/ros.h>
 #include <geometry_utils/Transform3.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -111,7 +112,8 @@ private:
 
   // Publish incremental and integrated pose estimates.
   void PublishPose(const geometry_utils::Transform3& pose,
-                   const ros::Publisher& pub) const;
+                   const Eigen::Matrix<double, 6, 6>& covariance,
+                   const ros::Publisher& pub);
 
   // The node's name.
   std::string name_;

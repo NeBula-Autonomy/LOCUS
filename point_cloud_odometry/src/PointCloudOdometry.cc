@@ -282,7 +282,7 @@ bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXY
          J21,    J22,	   J23,   J24,  J25,    J26,
          J31,    J32,	   J33,   J34,  J35,    J36;
   
-  Eigen::MatrixXd H(6,6);
+  Eigen::Matrix<double, 6, 6> H;
   H = Eigen::MatrixXd::Zero(6, 6);
 
   // Compute the entries of Jacobian
@@ -313,16 +313,16 @@ bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXY
     J35 = 0;
     J36 = 1;
     // Form the 3X6 Jacobian matrix
-    Eigen::MatrixXd J(3,6);
+    Eigen::Matrix<double, 3, 6> J;
     J << J11,    J12,	   J13,   J14,  J15,    J16,
          J21,    J22,	   J23,   J24,  J25,    J26,
          J31,    J32,	   J33,   J34,  J35,    J36;
     // Compute J'XJ (6X6) matrix and keep adding for all the points in the point cloud
     H += J.transpose() * J;
-    Eigen::MatrixXd cov(6,6);
-    // gtsam::Matrix66 cov;
-    cov = H.inverse() * icpFitnessScore_;
   }
+  Eigen::Matrix<double, 6, 6> cov;
+  cov = H.inverse() * icpFitnessScore_;
+  covariance = cov;
   
   return true;
 }

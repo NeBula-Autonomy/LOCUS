@@ -268,13 +268,17 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
         name_.c_str(), pose_update.translation.Norm(),
         pose_update.rotation.ToEulerZYX().Norm());
   }
+  Eigen::Matrix<double, 6, 6> icp_covariance;
 
+  // Compute the covariance matrix for the estimated transform.
+  ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
+  
   integrated_estimate_ =
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
 
   // Convert pose estimates to ROS format and publish.
-  PublishPose(incremental_estimate_, incremental_estimate_pub_);
-  PublishPose(integrated_estimate_, integrated_estimate_pub_);
+  PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
+  PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
 
   // Publish point clouds for visualization.
   PublishPoints(*query, query_pub_);
@@ -315,7 +319,8 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
          J21,    J22,	   J23,   J24,  J25,    J26,
          J31,    J32,	   J33,   J34,  J35,    J36;
   
-  Eigen::MatrixXd H(6,6);
+  Eigen::Matrix<double, 6, 6> H;
+  //Eigen::MatrixXd H(6,6);
   H = Eigen::MatrixXd::Zero(6, 6);
 
   // Compute the entries of Jacobian
@@ -346,16 +351,19 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
     J35 = 0;
     J36 = 1;
     // Form the 3X6 Jacobian matrix
-    Eigen::MatrixXd J(3,6);
+    // Eigen::MatrixXd J(3,6);
+    Eigen::Matrix<double, 3, 6> J;
     J << J11,    J12,	   J13,   J14,  J15,    J16,
          J21,    J22,	   J23,   J24,  J25,    J26,
          J31,    J32,	   J33,   J34,  J35,    J36;
     // Compute J'XJ (6X6) matrix and keep adding for all the points in the point cloud
     H += J.transpose() * J;
-    Eigen::MatrixXd cov(6,6);
+    // Eigen::MatrixXd cov(6,6);
     // gtsam::Matrix66 cov;
-    cov = H.inverse() * icpFitnessScore_;
   }
+  Eigen::Matrix<double, 6, 6> cov;
+  cov = H.inverse() * icpFitnessScore_;
+  covariance = cov;
   
   return true;
 }
@@ -371,25 +379,43 @@ void PointCloudLocalization::PublishPoints(const PointCloud& points,
   }
 }
 
-void PointCloudLocalization::PublishPose(const gu::Transform3& pose,
-                                         const ros::Publisher& pub) const {
+void PointCloudLocalization::PublishPose(const geometry_utils::Transform3& pose,
+                                         const Eigen::Matrix<double, 6, 6>& covariance,
+                                         const ros::Publisher& pub){
   // Check for subscribers before doing any work.
   if (pub.getNumSubscribers() == 0)
    return;
 
-  // Convert from gu::Transform3 to ROS's PoseStamped type and publish.
-  geometry_msgs::PoseStamped ros_pose;
-  ros_pose.pose = gr::ToRosPose(pose);
+  // Convert from gu::Transform3 to ROS's Pose with covariance stamped type and publish.
+  geometry_msgs::PoseWithCovarianceStamped ros_pose;
+  ros_pose.pose.pose = gr::ToRosPose(pose);
   ros_pose.header.frame_id = fixed_frame_id_;
   ros_pose.header.stamp = stamp_;
+
+  for (size_t i = 0; i < 36; i++) {
+    size_t row = static_cast<size_t>(i / 6);
+    size_t col = i % 6;
+    ros_pose.pose.covariance[i] = covariance(row, col);
+  }
+
   pub.publish(ros_pose);
 }
 
-void PointCloudLocalization::PublishPoseNoUpdate() {
-  // Convert pose estimates to ROS format and publish.
-  PublishPose(incremental_estimate_, incremental_estimate_pub_);
-  PublishPose(integrated_estimate_, integrated_estimate_pub_);
-}
+
+// inline geometry_msgs::Pose ToRosPose(const Transform3& trans) {
+//   geometry_msgs::Pose msg;
+//   msg.position = ToRosPoint(trans.translation);
+//   msg.orientation = ToRosQuat(RToQuat(trans.rotation));
+
+//   return msg;
+// }
+
+// TODO: Check to see if we still need this function.
+// void PointCloudLocalization::PublishPoseNoUpdate() {
+//   // Convert pose estimates to ROS format and publish.
+//   PublishPose(incremental_estimate_, incremental_estimate_pub_);
+//   PublishPose(integrated_estimate_, integrated_estimate_pub_);
+// }
 
 void PointCloudLocalization::UpdateTimestamp(ros::Time& stamp) {
   stamp_ = stamp;
