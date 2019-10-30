@@ -320,7 +320,6 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
          J31,    J32,	   J33,   J34,  J35,    J36;
   
   Eigen::Matrix<double, 6, 6> H;
-  //Eigen::MatrixXd H(6,6);
   H = Eigen::MatrixXd::Zero(6, 6);
 
   // Compute the entries of Jacobian
@@ -408,12 +407,13 @@ void PointCloudLocalization::PublishPose(const geometry_utils::Transform3& pose,
 //   return msg;
 // }
 
-// TODO: Check to see if we still need this function.
-// void PointCloudLocalization::PublishPoseNoUpdate() {
-//   // Convert pose estimates to ROS format and publish.
-//   PublishPose(incremental_estimate_, incremental_estimate_pub_);
-//   PublishPose(integrated_estimate_, integrated_estimate_pub_);
-// }
+void PointCloudLocalization::PublishPoseNoUpdate() {
+  // Convert pose estimates to ROS format and publish.
+  Eigen::Matrix<double, 6, 6> covariance;
+  covariance = Eigen::MatrixXd::Zero(6, 6);
+  PublishPose(incremental_estimate_, covariance, incremental_estimate_pub_);
+  PublishPose(integrated_estimate_, covariance, integrated_estimate_pub_);
+}
 
 void PointCloudLocalization::UpdateTimestamp(ros::Time& stamp) {
   stamp_ = stamp;
