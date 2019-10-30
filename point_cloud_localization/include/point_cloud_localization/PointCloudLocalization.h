@@ -34,68 +34,86 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-#ifndef POINT_CLOUD_ODOMETRY_H
-#define POINT_CLOUD_ODOMETRY_H
+#ifndef POINT_CLOUD_LOCALIZATION_H
+#define POINT_CLOUD_LOCALIZATION_H
 
-#include <geometry_utils/Transform3.h>
-#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <geometry_utils/Transform3.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
 
-class PointCloudOdometry {
-public:
+class PointCloudLocalization {
+ public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-  PointCloudOdometry();
-  ~PointCloudOdometry();
+  PointCloudLocalization();
+  ~PointCloudLocalization();
 
   // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
   bool Initialize(const ros::NodeHandle& n);
 
-  // Align incoming point cloud with previous point cloud, updating odometry.
-  bool UpdateEstimate(const PointCloud& points);
+  // Transform a point cloud from the sensor frame into the fixed frame using
+  // the current best position estimate.
+  bool TransformPointsToFixedFrame(const PointCloud& points,
+                                   PointCloud* points_transformed) const;
 
+  // Transform a point cloud from the fixed frame into the sensor frame using
+  // the current best position estimate.
+  bool TransformPointsToSensorFrame(const PointCloud& points,
+                                    PointCloud* points_transformed) const;
+
+  // Store incremental estimate from odometry.
+  bool MotionUpdate(const geometry_utils::Transform3& incremental_odom);
+
+  // Align incoming point cloud with a reference point cloud from the map.
+  // Output the query scan aligned in the localization frame.
+  bool MeasurementUpdate(const PointCloud::Ptr& query,
+                         const PointCloud::Ptr& reference,
+                         PointCloud* aligned_query);
+
+  // Compute ICP Covariance Matrix
+  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
+  
   // Get pose estimates.
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
   const geometry_utils::Transform3& GetIntegratedEstimate() const;
 
-  // Get the most recent point cloud that we processed. Return false and warn if
-  // not initialized.
-  bool GetLastPointCloud(PointCloud::Ptr& out) const;
+  // Set integrated estimate. Useful for graph SLAM whenever the pose graph is
+  // updated and the map is regenerated.
+  void SetIntegratedEstimate(
+      const geometry_utils::Transform3& integrated_estimate);
 
-  // Pose estimates.
-  geometry_utils::Transform3 integrated_estimate_;
+  // Pose estimate.
   geometry_utils::Transform3 incremental_estimate_;
+  geometry_utils::Transform3 integrated_estimate_;
+
+  // Publish for first pose
+  void PublishPoseNoUpdate();
+
+  // Update timestamp
+  void UpdateTimestamp(ros::Time& stamp);
 
   // ICP fitness score
   double icpFitnessScore_;
 
   // Aligned point cloud returned by ICP
-  PointCloud icpAlignedPointsOdometry_;
+  PointCloud icpAlignedPointsLocalization_;
  
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
-  // Use ICP between a query and reference point cloud to estimate pose.
-  bool UpdateICP();
-
-  // Compute ICP Covariance Matrix
-  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
-  
-
-  // Publish reference and query point clouds.
-  void PublishPoints(const PointCloud::Ptr& points, const ros::Publisher& pub);
+  // Publish reference, query, and aligned query point clouds.
+  void PublishPoints(const PointCloud& points,
+                     const ros::Publisher& pub) const;
 
   // Publish incremental and integrated pose estimates.
   void PublishPose(const geometry_utils::Transform3& pose,
+                   const Eigen::Matrix<double, 6, 6>& covariance,
                    const ros::Publisher& pub);
-
-  // Subscribe to odometry from external estimator too be used as prior.
-  void StateEstimateOdometryCallback(const nav_msgs::Odometry& msg);
 
   // The node's name.
   std::string name_;
@@ -103,42 +121,31 @@ private:
   // Publishers.
   ros::Publisher reference_pub_;
   ros::Publisher query_pub_;
+  ros::Publisher aligned_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
-
-  // Subscribers
-  ros::Subscriber
-      state_estimator_sub_; // State estimate from an external estimator (such
-                            // as LION) used as prior.
 
   // Most recent point cloud time stamp for publishers.
   ros::Time stamp_;
 
   // Coordinate frames.
   std::string fixed_frame_id_;
-  std::string odometry_frame_id_;
+  std::string base_frame_id_;
 
   // Transform broadcasting to other nodes.
   tf2_ros::TransformBroadcaster tfbr_;
 
-  // For initialization.
-  bool initialized_;
-
-  // Point cloud containers.
-  PointCloud::Ptr query_;
-  PointCloud::Ptr reference_;
-
-  // Parameters for filtering, and ICP.
+  // Parameters for filtering and ICP.
   struct Parameters {
     // Stop ICP if the transformation from the last iteration was this small.
-    double icp_tf_epsilon;
+    double tf_epsilon;
 
     // During ICP, two points won't be considered a correspondence if they are
     // at least this far from one another.
-    double icp_corr_dist;
+    double corr_dist;
 
     // Iterate ICP this many times.
-    unsigned int icp_iterations;
+    unsigned int iterations;
   } params_;
 
   // Maximum acceptable translation and rotation tolerances. If
@@ -147,6 +154,9 @@ private:
   bool transform_thresholding_;
   double max_translation_;
   double max_rotation_;
+
+  // To not publish tfs
+  bool b_publish_tfs_{false};
 };
 
 #endif
