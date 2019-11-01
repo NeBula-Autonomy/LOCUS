@@ -218,6 +218,8 @@ bool PointCloudOdometry::UpdateICP() {
   icp.align(icpAlignedPointsOdometry_);
   icpFitnessScore_ = icp.getFitnessScore();
 
+  ROS_INFO_STREAM("ICP Fitness score in PointCloudOdometry::UpdateICP is " << icpFitnessScore_);
+
   const Eigen::Matrix4f T = icp.getFinalTransformation();
 
   // Update pose estimates.

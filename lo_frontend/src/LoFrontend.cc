@@ -41,7 +41,8 @@ namespace gu = geometry_utils;
 
 LoFrontend::LoFrontend()
   : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
-  b_add_first_scan_to_key_(true), translation_threshold_kf_(1.0) {}
+  b_add_first_scan_to_key_(true), translation_threshold_kf_(1.0),
+  last_timestamp_(-1.0), point_cloud_time_diff_limit_(0.1) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -98,6 +99,10 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("translation_threshold_kf", translation_threshold_kf_)){
     return false;
   }
+  if (!pu::Get("point_cloud_time_diff_limit", point_cloud_time_diff_limit_)){
+    return false;
+  }
+  
 
   return true;
 }
@@ -134,7 +139,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
   pcld_sub_ =
-      nl.subscribe("pcld", 10, &LoFrontend::PointCloudCallback, this);
+      nl.subscribe("pcld", 1, &LoFrontend::PointCloudCallback, this);
 
   return CreatePublishers(n);
 }
@@ -164,6 +169,8 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   // Sort all messages accumulated since the last estimate update.
   synchronizer_.SortMessages(); // Andrea: Do we need it?
 
+  int count = 0;
+  float time_diff = 0;
   // Iterate through sensor messages, passing to update functions
   // (ProcessPointCloudMessage).
   MeasurementSynchronizer::sensor_type type;
@@ -187,7 +194,10 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
       break;
     }
     }
+    count ++;
   }
+
+  ROS_INFO_STREAM("Number of scans processed in one LoFrontend::EstimateTimerCallback is " << count);
 
   // Remove processed messages from the synchronizer.
   synchronizer_.ClearMessages();
@@ -217,6 +227,23 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 }
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
+
+  // Check the timestamps
+  ros::Time curent_timestamp;
+  curent_timestamp.fromNSec(msg->header.stamp * 1000);
+  // ROS_INFO_STREAM("Current timestamp is " << curent_timestamp.toSec());
+  if (last_timestamp_ > 0.0){
+    // Not the first point cloud
+    double delta_time = curent_timestamp.toSec() - last_timestamp_;
+    ROS_INFO_STREAM("Delta time is " << delta_time);
+
+    if (delta_time > point_cloud_time_diff_limit_){
+      ROS_WARN_STREAM("Time diff between point clouds is " << delta_time << " s, which is more than the limt, " << point_cloud_time_diff_limit_ << "s [LoFrontend]. Last received to put in buffer is at " << last_pcld_stamp_ << " s.");
+    }
+  }
+
+  last_timestamp_ = curent_timestamp.toSec();
+
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
