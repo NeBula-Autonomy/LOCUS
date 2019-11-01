@@ -1,0 +1,72 @@
+<launch>
+  <arg name="robot_namespace" default="robot"/>
+
+  <!-- Velodyne topic throttle params -->
+  <arg name="vlp_throttle_freq" default="5.0"/><!-- Hz -->
+
+  <group ns="$(arg robot_namespace)">
+    <!-- Laser-Odometry -->
+    <node pkg="lo_frontend"
+          name="lo_frontend"
+          type="lo_frontend_node"
+          output="screen">
+
+
+      <!-- Topics -->
+      <remap from="~pcld" to="velodyne_points/transformed"/>
+      <!-- <remap from="~ODOM_TOPIC/husky/lion/odom" to="hero/lion/odom"/> -->
+      <remap from="~IMU_TOPIC" to="/vn100/imu"/>
+
+      <!-- Initial pose -->
+      <rosparam param="init">
+        position: {x: 0.972545921803, y: 2.03618049622, z: 0.516347706318}
+        orientation: {roll: 0.01, pitch: 0.2, yaw: 2.9798307}
+        position_sigma: {x: 0.316, y: 0.316, z: 0.316}
+        orientation_sigma: {roll: 0.141, pitch: 0.141, yaw: 0.141}
+      </rosparam>
+
+      <!-- Noise parameters -->
+      <rosparam param="noise">
+        odom_position_sigma: 0.6324
+        odom_attitude_sigma: 0.316
+      </rosparam>      
+
+      <!-- Rates -->
+      <rosparam file="$(find lo_frontend)/config/blam_rates.yaml"/>
+
+      <!-- Frames -->
+      <rosparam file="$(find lo_frontend)/config/blam_frames.yaml" subst_value="true"/>
+
+      <!-- Point cloud filter -->
+      <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
+
+      <!-- Point cloud odometry -->
+      <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>
+
+      <!-- Point cloud localization -->
+      <rosparam file="$(find point_cloud_localization)/config/parameters.yaml"/>
+
+      <!-- Point cloud mapper -->
+      <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
+    </node>
+
+    <!-- Trotthling input cloud -->
+    <!--node name="point_cloud_throttler" type="throttle" pkg="topic_tools" args="messages velodyne_points $(arg vlp_throttle_freq)">
+    </node-->
+ 
+
+    <!-- Republish node with different frame_id -->
+    <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
+          args="standalone pcl/PassThrough">
+      <remap from="~input" to="velodyne_points"/>
+      <!--<remap from="~input" to="velodyne_points_throttle"/> -->
+      <remap from="~output" to="velodyne_points/transformed"/>
+      <rosparam subst_value="true">
+        filter_field_name: z
+        filter_limit_min: -100
+        filter_limit_max: 100
+        output_frame: $(arg robot_namespace)/base_link
+      </rosparam>
+    </node>
+  </group>
+</launch>
