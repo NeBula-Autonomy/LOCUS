@@ -275,9 +275,9 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     }
     // TODO: At this point, if needed, we can deactivate the external attitude usage 
 
-    std_msgs::Float64 external_attitude_lidar_ts_diff; 
-    external_attitude_lidar_ts_diff.data = min_ts_diff; 
-    PublishTimestampDifference(external_attitude_lidar_ts_diff, timestamp_difference_pub_); 
+    // std_msgs::Float64 external_attitude_lidar_ts_diff; 
+    // external_attitude_lidar_ts_diff.data = min_ts_diff; 
+    // PublishTimestampDifference(external_attitude_lidar_ts_diff, timestamp_difference_pub_); 
     
     // Compute the change in attitude, make a copy of it and store it in the deque
     external_attitude_change_ = external_attitude_previous_.inverse()*external_attitude_current_;  
@@ -333,7 +333,7 @@ bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
 
 Eigen::Matrix3d PointCloudOdometry::GetExtAttYawChange(){
   // Get the attitude change from the queue. 
-  Eigen::Quaterniond external_attitude_change_local_copy = external_attitude_change_deque_.front();  
+  Eigen::Quaterniond external_attitude_change_local_copy = external_attitude_change_;  
 
   // Init
   Eigen::Matrix3d rot_yaw_mat;
