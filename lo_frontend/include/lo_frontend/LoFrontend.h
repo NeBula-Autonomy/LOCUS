@@ -112,6 +112,9 @@ private:
 
   double translation_threshold_kf_;
 
+  double last_timestamp_;
+  double point_cloud_time_diff_limit_;
+
   bool b_add_first_scan_to_key_;
 
   // Subscribers.

@@ -4,3 +4,6 @@
 # TODO - later - remove old parts of the point cloud to only keep a local map...
 translation_threshold_kf: 1.0
 # Tune this to be larger to avoid delays - map update and publishis expensive 
+
+# Limit to print warning for time diff between point clouds
+point_cloud_time_diff_limit: 0.11
