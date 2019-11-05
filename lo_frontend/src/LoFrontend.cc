@@ -40,7 +40,9 @@ namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
 LoFrontend::LoFrontend()
-  : estimate_update_rate_(0.0), visualization_update_rate_(0.0) {}
+  : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
+  b_add_first_scan_to_key_(true), translation_threshold_kf_(1.0),
+  last_timestamp_(-1.0), point_cloud_time_diff_limit_(0.1) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -93,6 +95,15 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("frame_id/base", base_frame_id_))
     return false;
 
+  // Load Settings 
+  if (!pu::Get("translation_threshold_kf", translation_threshold_kf_)){
+    return false;
+  }
+  if (!pu::Get("point_cloud_time_diff_limit", point_cloud_time_diff_limit_)){
+    return false;
+  }
+  
+
   return true;
 }
 
@@ -128,7 +139,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   // TODO: Andrea: we may use tcpnodelay and put this on a separate queue.
   pcld_sub_ =
-      nl.subscribe("pcld", 100000, &LoFrontend::PointCloudCallback, this);
+      nl.subscribe("pcld", 1, &LoFrontend::PointCloudCallback, this);
 
   return CreatePublishers(n);
 }
@@ -158,6 +169,8 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
   // Sort all messages accumulated since the last estimate update.
   synchronizer_.SortMessages(); // Andrea: Do we need it?
 
+  int count = 0;
+  float time_diff = 0;
   // Iterate through sensor messages, passing to update functions
   // (ProcessPointCloudMessage).
   MeasurementSynchronizer::sensor_type type;
@@ -181,7 +194,10 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
       break;
     }
     }
+    count ++;
   }
+
+  ROS_INFO_STREAM("Number of scans processed in one LoFrontend::EstimateTimerCallback is " << count);
 
   // Remove processed messages from the synchronizer.
   synchronizer_.ClearMessages();
@@ -211,22 +227,56 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 }
 
 void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
+
+  // Check the timestamps
+  ros::Time curent_timestamp;
+  curent_timestamp.fromNSec(msg->header.stamp * 1000);
+  // ROS_INFO_STREAM("Current timestamp is " << curent_timestamp.toSec());
+  if (last_timestamp_ > 0.0){
+    // Not the first point cloud
+    double delta_time = curent_timestamp.toSec() - last_timestamp_;
+    ROS_INFO_STREAM("Delta time is " << delta_time);
+
+    if (delta_time > point_cloud_time_diff_limit_){
+      ROS_WARN_STREAM("Time diff between point clouds is " << delta_time << " s, which is more than the limt, " << point_cloud_time_diff_limit_ << "s [LoFrontend]. Last received to put in buffer is at " << last_pcld_stamp_ << " s.");
+    }
+  }
+
+  last_timestamp_ = curent_timestamp.toSec();
+
   // Filter the incoming point cloud message.
   PointCloud::Ptr msg_filtered(new PointCloud);
   filter_.Filter(msg, msg_filtered);
 
+  PointCloud::Ptr msg_transformed(new PointCloud);
+
   // Update odometry by performing ICP.
   if (!odometry_.UpdateEstimate(*msg_filtered)) {
-    // Add point cloud in map if it is first we receive.
-    ROS_INFO("First update");
+    b_add_first_scan_to_key_ = true;
+  }
+
+  if (b_add_first_scan_to_key_) {
     // First update ever.
+    // Transforming msg to fixed frame for non-zero initial position
+    localization_.TransformPointsToFixedFrame(*msg_filtered,
+                                              msg_transformed.get());
     PointCloud::Ptr unused(new PointCloud);
-    mapper_.InsertPoints(msg_filtered, unused.get());
+    mapper_.InsertPoints(msg_transformed, unused.get());
+
+    // Publish localization pose messages
+    ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
+    localization_.UpdateTimestamp(stamp);
+    localization_.PublishPoseNoUpdate();
+
+    // Revert the first scan to map
+    b_add_first_scan_to_key_ = false;
+
+    // update stored pose 
+    last_keyframe_pose_ = localization_.GetIntegratedEstimate();
     return;
   }
    
   // Containers.
-  PointCloud::Ptr msg_transformed(new PointCloud);
   PointCloud::Ptr msg_neighbors(new PointCloud);
   PointCloud::Ptr msg_base(new PointCloud);
   PointCloud::Ptr msg_fixed(new PointCloud);
@@ -247,20 +297,23 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // sensor frame.
   localization_.MeasurementUpdate(msg_filtered, msg_neighbors, msg_base.get());
 
-  geometry_utils::Transform3 currPose = localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
-  // If last translation from ICP is larger than 1m, set Identity in motion
-  // update Is it some sort of outlier rejection?
-  if (ToGtsam(geometry_utils::PoseDelta(currPose, this->last_keyframe_))
+  // If last translation from ICP is larger than 1m
+  if (ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose))
           .translation()
-          .norm() > 1) {
+          .norm() > translation_threshold_kf_) {
+    // Set identity as TransformPointsToFixedFrame adds integrated to incrememntal to transform (normally goes before the update)
     localization_.MotionUpdate(gu::Transform3::Identity());
+
+    // Transform point cloud to update the map
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed.get());
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_fixed, unused.get());
+    // ROS_WARN("Updating the map");
 
-    // Also reset the robot's estimated position.
-    // localization_.SetIntegratedEstimate(loop_closure_.GetLastPose());
+    // Update the last keyframe pose
+    last_keyframe_pose_ = current_pose;
   }
 
   // Publish the incoming point cloud message from the base frame.
@@ -270,24 +323,25 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
-  ROS_INFO("Publishing pose and scan");
-  // Send pose and scan pair
-  core_msgs::PoseAndScan poseScanMsg;
+  if (pose_scan_pub_.getNumSubscribers() != 0) {
+    ROS_INFO("Publishing pose and scan");
+    // Send pose and scan pair
+    core_msgs::PoseAndScan poseScanMsg;
 
-  sensor_msgs::PointCloud2 scan_msg;
+    sensor_msgs::PointCloud2 scan_msg;
 
-  pcl::toROSMsg(*msg.get(), scan_msg);
+    pcl::toROSMsg(*msg.get(), scan_msg);
 
-  // fromPCL()
-  // toPCL()
+    // fromPCL()
+    // toPCL()
 
-  poseScanMsg.header.stamp = scan_msg.header.stamp;
-  poseScanMsg.header.frame_id = base_frame_id_;
-  poseScanMsg.scan = scan_msg;
-  poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(currPose);
-  poseScanMsg.pose.header.stamp = scan_msg.header.stamp;
-  poseScanMsg.pose.header.frame_id = fixed_frame_id_;
+    poseScanMsg.header.stamp = scan_msg.header.stamp;
+    poseScanMsg.header.frame_id = base_frame_id_;
+    poseScanMsg.scan = scan_msg;
+    poseScanMsg.pose.pose = geometry_utils::ros::ToRosPose(current_pose);
+    poseScanMsg.pose.header.stamp = scan_msg.header.stamp;
+    poseScanMsg.pose.header.frame_id = fixed_frame_id_;
 
-  pose_scan_pub_.publish(poseScanMsg);
-  
+    pose_scan_pub_.publish(poseScanMsg);
+  }
 }

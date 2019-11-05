@@ -2,10 +2,10 @@
 <package>
   <name>lo_frontend</name>
   <version>0.0.0</version>
-  <description>The blam_slam package</description>
+  <description>Front end odometry package</description>
 
   <author email="eanelson@eecs.berkeley.edu">Erik Nelson</author>
-  <maintainer email="eanelson@eecs.berkeley.edu">Erik Nelson</maintainer>
+  <maintainer email="benjamin.morrell@jpl.nasa.gov">Benjamin Morrell</maintainer>
 
   <license>GPLv2</license>
 
@@ -16,7 +16,6 @@
   <build_depend>measurement_synchronizer</build_depend>
   <build_depend>point_cloud_filter</build_depend>
   <build_depend>point_cloud_odometry</build_depend>
-  <build_depend>laser_loop_closure</build_depend>
   <build_depend>point_cloud_mapper</build_depend>
   <build_depend>point_cloud_localization</build_depend>
   <build_depend>geometry_utils</build_depend>
@@ -31,7 +30,6 @@
   <run_depend>measurement_synchronizer</run_depend>
   <run_depend>point_cloud_filter</run_depend>
   <run_depend>point_cloud_odometry</run_depend>
-  <run_depend>laser_loop_closure</run_depend>
   <run_depend>point_cloud_mapper</run_depend>
   <run_depend>point_cloud_localization</run_depend>
   <run_depend>geometry_utils</run_depend>

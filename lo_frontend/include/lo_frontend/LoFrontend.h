@@ -98,7 +98,7 @@ private:
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
 
   // position when points were last added to map
-  geometry_utils::Transform3 last_keyframe_; // TODO: Andrea: check if used
+  geometry_utils::Transform3 last_keyframe_pose_; // TODO: Andrea: check if used
   ros::Time last_pcld_stamp_;                // TODO: Andrea: check if used.
 
   // The node's name.
@@ -109,6 +109,13 @@ private:
   double visualization_update_rate_;
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
+
+  double translation_threshold_kf_;
+
+  double last_timestamp_;
+  double point_cloud_time_diff_limit_;
+
+  bool b_add_first_scan_to_key_;
 
   // Subscribers.
   ros::Subscriber pcld_sub_; // pc from lidar

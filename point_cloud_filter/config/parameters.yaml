@@ -3,7 +3,7 @@ filtering:
   grid_filter: true
 
   # Resolution of voxel grid filter.
-  grid_res: 0.1
+  grid_res: 0.35
 
   # Apply a random downsample filter on incoming point clouds.
   random_filter: true
