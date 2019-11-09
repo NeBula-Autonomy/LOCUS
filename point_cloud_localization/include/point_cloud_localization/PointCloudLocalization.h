@@ -44,6 +44,8 @@
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+#include <std_msgs/Float64.h>
+
 class PointCloudLocalization {
  public:
   typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -114,6 +116,9 @@ private:
   void PublishPose(const geometry_utils::Transform3& pose,
                    const Eigen::Matrix<double, 6, 6>& covariance,
                    const ros::Publisher& pub);
+  
+  // Publish condition number of ICP covariance matrix.
+  void PublishConditionNumber(double& k, const ros::Publisher& pub);           
 
   // The node's name.
   std::string name_;
@@ -124,6 +129,7 @@ private:
   ros::Publisher aligned_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
+  ros::Publisher condition_number_pub_;
 
   // Most recent point cloud time stamp for publishers.
   ros::Time stamp_;

@@ -140,6 +140,7 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "localization_incremental_estimate", 10, false);
   integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseWithCovarianceStamped>(
       "localization_integrated_estimate", 10, false);
+  condition_number_pub_ = nl.advertise<std_msgs::Float64>("condition_number", 10, false);
 
   return true;
 }
@@ -300,7 +301,9 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
+bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, 
+                                                  const Eigen::Matrix4f T,
+                                                  Eigen::Matrix<double, 6, 6> &covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
@@ -368,6 +371,17 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
     H += J.transpose() * J;
   }
   covariance = H.inverse() * icpFitnessScore_;
+
+  // Compute the SVD of the covariance matrix
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+  //Extract the singular values from SVD
+  auto singular_values = svd.singularValues();
+  // The covariance matrix is a symmetric matrix, so its  singular  values  are  the absolute values of its nonzero eigenvalues
+  // Condition number is the ratio of the largest and smallest eigenvalues.
+  double condition_number = singular_values(0)/singular_values(5);
+  PublishConditionNumber(condition_number, condition_number_pub_);
+   
   return true;
 }
 
@@ -404,12 +418,10 @@ void PointCloudLocalization::PublishPose(const geometry_utils::Transform3& pose,
   pub.publish(ros_pose);
 }
 
-
 // inline geometry_msgs::Pose ToRosPose(const Transform3& trans) {
 //   geometry_msgs::Pose msg;
 //   msg.position = ToRosPoint(trans.translation);
 //   msg.orientation = ToRosQuat(RToQuat(trans.rotation));
-
 //   return msg;
 // }
 
@@ -419,6 +431,13 @@ void PointCloudLocalization::PublishPoseNoUpdate() {
   covariance = Eigen::MatrixXd::Zero(6, 6);
   PublishPose(incremental_estimate_, covariance, incremental_estimate_pub_);
   PublishPose(integrated_estimate_, covariance, integrated_estimate_pub_);
+}
+
+void PointCloudLocalization::PublishConditionNumber(double& k, const ros::Publisher& pub) {
+  // Convert condition number value to ROS format and publish.
+  std_msgs::Float64 condition_number;
+  condition_number.data = k;
+  pub.publish(condition_number);
 }
 
 void PointCloudLocalization::UpdateTimestamp(ros::Time& stamp) {
