@@ -300,7 +300,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance){
+bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
@@ -331,26 +331,33 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
     double p_y = pointCloud.points[i].y;
     double p_z = pointCloud.points[i].z;
 
-    J11 = 0;
-    J12 = p_y*cos(p)*sin(y) - p_x*cos(p)*cos(y) - p_z*sin(p);
-    J13 = p_y*cos(y)*sin(p) + p_x*sin(p)*sin(y);
-    J14 = 1;
-    J15 = 0;
-    J16 = 0;
+    J11 = 0.0;
+    J12 = -2.0*(p_z*sin(p) + p_x*cos(p)*cos(y) - p_y*cos(p)*sin(y))*(t_x - p_x + p_z*cos(p) - p_x*cos(y)*sin(p) + p_y*sin(p)*sin(y));
+    J13 = 2.0*(p_y*cos(y)*sin(p) + p_x*sin(p)*sin(y))*(t_x - p_x + p_z*cos(p) - p_x*cos(y)*sin(p) + p_y*sin(p)*sin(y));
+    J14 = 2.0*t_x - 2.0*p_x + 2.0*p_z*cos(p) - 2.0*p_x*cos(y)*sin(p) + 2.0*p_y*sin(p)*sin(y);
+    J15 = 0.0;
+    J16 = 0.0;
 
-    J21 = -p_x*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)) - p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) - p_z*sin(p)*sin(r);
-    J22 = p_z*cos(p)*cos(r) - p_x*cos(r)*cos(y)*sin(p) + p_y*cos(r)*sin(p)*sin(y);
-    J23 = p_y*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) - p_x*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y));
-    J24 = 0;
-    J25 = 1;
-    J26 = 0;
+    J21 = 2.0*(p_x*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)) + p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) +
+           p_z*sin(p)*sin(r))*(p_y - t_y + p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) + p_y*(cos(y)*sin(r) +
+           cos(p)*cos(r)*sin(y)) - p_z*cos(r)*sin(p));
+    J22 = -2.0*(p_z*cos(p)*cos(r) - p_x*cos(r)*cos(y)*sin(p) + p_y*cos(r)*sin(p)*sin(y))*(p_y - t_y + 
+          p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) + p_y*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) - p_z*cos(r)*sin(p));
+    J23 = 2.0*(p_x*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) - p_y*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)))*(p_y - t_y + 
+          p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) + p_y*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) - p_z*cos(r)*sin(p));
+    J24 = 0.0;
+    J25 = 2.0*t_y - 2.0*p_y - 2.0*p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) - 2.0*p_y*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) + 2.0*p_z*cos(r)*sin(p);
+    J26 = 0.0;
 
-    J31 = p_z*cos(r)*sin(p) - p_y*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) - p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y));
-    J32 = p_z*cos(p)*sin(r) - p_x*cos(y)*sin(p)*sin(r) + p_y*sin(p)*sin(r)*sin(y);
-    J33 =  p_x*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) - p_y*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r));
-    J34 = 0;
-    J35 = 0;
-    J36 = 1;
+    J31 = -2.0*(p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) + p_y*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) - p_z*cos(r)*sin(p))*(t_z - p_z +
+           p_x*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)) + p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) + p_z*sin(p)*sin(r));
+    J32 = 2.0*(p_z*cos(p)*sin(r) - p_x*cos(y)*sin(p)*sin(r) + p_y*sin(p)*sin(r)*sin(y))*(t_z - p_z + p_x*(cos(r)*sin(y) +
+          cos(p)*cos(y)*sin(r)) + p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) + p_z*sin(p)*sin(r));
+    J33 = 2.0*(p_x*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) - p_y*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)))*(t_z - p_z +
+          p_x*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)) + p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) + p_z*sin(p)*sin(r));
+    J34 = 0.0;
+    J35 = 0.0;
+    J36 = 2.0*t_z - 2.0*p_z + 2.0*p_x*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)) + 2.0*p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) + 2.0*p_z*sin(p)*sin(r);
 
     // Form the 3X6 Jacobian matrix
     Eigen::Matrix<double, 3, 6> J;
@@ -360,10 +367,7 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
     // Compute J'XJ (6X6) matrix and keep adding for all the points in the point cloud
     H += J.transpose() * J;
   }
-  Eigen::Matrix<double, 6, 6> cov;
-  cov = H.inverse() * icpFitnessScore_;
-  covariance = cov;
-  
+  covariance = H.inverse() * icpFitnessScore_;
   return true;
 }
 
