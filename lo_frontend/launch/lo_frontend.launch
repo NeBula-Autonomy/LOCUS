@@ -50,9 +50,9 @@
           args="/$(arg robot_namespace)/lo_frontend/localization_integrated_estimate
                 /$(arg robot_namespace)/lo_frontend/odometry
                 nav_msgs/Odometry
-                'nav_msgs.msg.Odometry(header=m.header, pose=geometry_msgs.msg.PoseWithCovariance(pose=m.pose))' --import nav_msgs geometry_msgs">
+                'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
     </node>
-
+ 
     <!-- Republish node with different frame_id -->
     <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
           args="standalone pcl/PassThrough">

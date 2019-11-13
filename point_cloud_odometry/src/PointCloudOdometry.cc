@@ -215,8 +215,10 @@ bool PointCloudOdometry::UpdateICP() {
   icp.setInputSource(query_);
   icp.setInputTarget(reference_);
 
-  PointCloud unused_result;
-  icp.align(unused_result);
+  icp.align(icpAlignedPointsOdometry_);
+  icpFitnessScore_ = icp.getFitnessScore();
+
+  ROS_INFO_STREAM("ICP Fitness score in PointCloudOdometry::UpdateICP is " << icpFitnessScore_);
 
   const Eigen::Matrix4f T = icp.getFinalTransformation();
 
@@ -261,6 +263,72 @@ bool PointCloudOdometry::UpdateICP() {
   return true;
 }
 
+bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance){
+  geometry_utils::Transform3 ICP_transformation;
+
+  // Extract translation values from T
+  double t_x = T(0,3);
+  double t_y = T(1,3);
+  double t_z = T(2,3);
+
+  // Extract roll, pitch and yaw from T
+  ICP_transformation.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                            T(1, 0), T(1, 1), T(1, 2),
+                                            T(2, 0), T(2, 1), T(2, 2));
+  double r = ICP_transformation.rotation.Roll();
+  double p = ICP_transformation.rotation.Pitch();
+  double y = ICP_transformation.rotation.Yaw();
+
+  // Symbolic expression of the Jacobian matrix
+  double J11,    J12,	   J13,   J14,  J15,    J16,
+         J21,    J22,	   J23,   J24,  J25,    J26,
+         J31,    J32,	   J33,   J34,  J35,    J36;
+  
+  Eigen::Matrix<double, 6, 6> H;
+  H = Eigen::MatrixXd::Zero(6, 6);
+
+  // Compute the entries of Jacobian
+  // Entries of Jacobian matrix are obtained from MATLAB Symbolic Toolbox
+  for (size_t i = 0; i < pointCloud.points.size(); ++i){
+    double p_x = pointCloud.points[i].x;
+    double p_y = pointCloud.points[i].y;
+    double p_z = pointCloud.points[i].z;
+
+    J11 = 0;
+    J12 = p_y*cos(p)*sin(y) - p_x*cos(p)*cos(y) - p_z*sin(p);
+    J13 = p_y*cos(y)*sin(p) + p_x*sin(p)*sin(y);
+    J14 = 1;
+    J15 = 0;
+    J16 = 0;
+
+    J21 = -p_x*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r)) - p_y*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) - p_z*sin(p)*sin(r);
+    J22 = p_z*cos(p)*cos(r) - p_x*cos(r)*cos(y)*sin(p) + p_y*cos(r)*sin(p)*sin(y);
+    J23 = p_y*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y)) - p_x*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y));
+    J24 = 0;
+    J25 = 1;
+    J26 = 0;
+
+    J31 = p_z*cos(r)*sin(p) - p_y*(cos(y)*sin(r) + cos(p)*cos(r)*sin(y)) - p_x*(sin(r)*sin(y) - cos(p)*cos(r)*cos(y));
+    J32 = p_z*cos(p)*sin(r) - p_x*cos(y)*sin(p)*sin(r) + p_y*sin(p)*sin(r)*sin(y);
+    J33 =  p_x*(cos(r)*cos(y) - cos(p)*sin(r)*sin(y)) - p_y*(cos(r)*sin(y) + cos(p)*cos(y)*sin(r));
+    J34 = 0;
+    J35 = 0;
+    J36 = 1;
+    // Form the 3X6 Jacobian matrix
+    Eigen::Matrix<double, 3, 6> J;
+    J << J11,    J12,	   J13,   J14,  J15,    J16,
+         J21,    J22,	   J23,   J24,  J25,    J26,
+         J31,    J32,	   J33,   J34,  J35,    J36;
+    // Compute J'XJ (6X6) matrix and keep adding for all the points in the point cloud
+    H += J.transpose() * J;
+  }
+  Eigen::Matrix<double, 6, 6> cov;
+  cov = H.inverse() * icpFitnessScore_;
+  covariance = cov;
+  
+  return true;
+}
+
 void PointCloudOdometry::PublishPoints(const PointCloud::Ptr& points,
                                        const ros::Publisher& pub) {
   // Check for subscribers before doing any work.
@@ -271,7 +339,7 @@ void PointCloudOdometry::PublishPoints(const PointCloud::Ptr& points,
     pub.publish(out);
   }
 }
-
+ 
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
                                      const ros::Publisher& pub) {
   // Check for subscribers before doing any work.
