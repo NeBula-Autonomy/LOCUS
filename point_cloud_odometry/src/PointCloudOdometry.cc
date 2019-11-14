@@ -198,7 +198,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   stamp_.fromNSec(points.header.stamp * 1e3);
 
   // If this is the first point cloud, store it and wait for anotherinverse.
-    if (!initialized_) {
+  if (!initialized_) {
     if (use_external_attitude_==true){
       copyPointCloud(points, *query_); 
       if (external_attitude_has_been_received_ == true){
@@ -247,7 +247,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   */
   if(external_attitude_deque_copy.size()==min_external_attitude_deque_size_){
     // use_external_attitude_ = false; 
-    ROS_WARN("External attitude data provider crashed - Relying now on pure ICP"); 
+    ROS_WARN("External attitude data provider crashed - Relying now on pure ICP [DISABLED NOW]"); 
   }
   
   if(use_external_attitude_==true){
@@ -259,11 +259,11 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     external_attitude_current_ = external_attitude_deque_copy[0].internal_external_attitude_; 
     double min_ts_diff = 1000;   
     for (int i=0; i<external_attitude_deque_copy.size(); ++i) {
-          double cur_ts_diff = (external_attitude_deque_copy[i].internal_external_attitude_timestamp_ - stamp_).toSec();
-          if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
-              external_attitude_current_ = external_attitude_deque_copy[i].internal_external_attitude_; 
-              min_ts_diff = cur_ts_diff; 
-          }
+      double cur_ts_diff = (external_attitude_deque_copy[i].internal_external_attitude_timestamp_ - stamp_).toSec();
+      if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
+        external_attitude_current_ = external_attitude_deque_copy[i].internal_external_attitude_; 
+        min_ts_diff = cur_ts_diff; 
+      }
     }
 
     // Warn user if the selected external attitude comes from the future or too far from the past 
@@ -361,6 +361,9 @@ bool PointCloudOdometry::UpdateICP() {
 
   Eigen::Matrix4d yaw_prior;
   yaw_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+
+  PointCloud::Ptr query_trans( new PointCloud);
+  
   // Transform query with the prior if set to true
   if (use_external_attitude_ == true){
     // Get what we want to transform 
@@ -375,8 +378,9 @@ bool PointCloudOdometry::UpdateICP() {
     ROS_INFO_STREAM("Yaw prior is:\n" << yaw_prior );
 
     // Transform query
-    // TODO CHECK THIS!
-    pcl::transformPointCloud(*query_, *query_, yaw_prior);
+    pcl::transformPointCloud(*query_, *query_trans, yaw_prior);
+  } else{
+    *query_trans = *query_;
   }
 
   // Compute the incremental transformation.
@@ -385,7 +389,7 @@ bool PointCloudOdometry::UpdateICP() {
   icp.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp.setMaximumIterations(params_.icp_iterations);
   icp.setRANSACIterations(0);
-  icp.setInputSource(query_);
+  icp.setInputSource(query_trans);
   icp.setInputTarget(reference_);
 
   icp.align(icpAlignedPointsOdometry_);
@@ -402,7 +406,7 @@ bool PointCloudOdometry::UpdateICP() {
   if (use_external_attitude_ == true){
     // ------------------- //
     // Add the prior yaw that we used. 
-    T = yaw_prior * T;
+    T = T * yaw_prior;
     // TODO - maybe change around
   }
 

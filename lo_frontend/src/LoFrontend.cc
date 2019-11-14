@@ -243,7 +243,7 @@ void LoFrontend::EstimateTimerCallback(const ros::TimerEvent& ev) {
     count ++;
   }
 
-  ROS_INFO_STREAM("Number of scans processed in one LoFrontend::EstimateTimerCallback is " << count);
+  // ROS_INFO_STREAM("Number of scans processed in one LoFrontend::EstimateTimerCallback is " << count);
 
   // Remove processed messages from the synchronizer.
   synchronizer_.ClearMessages();
