@@ -80,7 +80,7 @@ public:
   PointCloud icpAlignedPointsOdometry_;
  
   // Enables external attitude data fusion
-  void SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp); 
+  void SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame); 
 
 private:
   // Node initialization.
@@ -92,6 +92,7 @@ private:
 
   // Get attitude change in yaw only
   Eigen::Matrix3d GetExtAttYawChange();
+  Eigen::Matrix3d GetExtAttChange();
 
   // Compute ICP Covariance Matrix
   bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
@@ -115,7 +116,8 @@ private:
 
   // External Attitude Data
   Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
-  bool use_external_attitude_, external_attitude_has_been_received_; 
+  bool b_use_external_attitude_, external_attitude_has_been_received_; 
+  bool b_use_yaw_only_;
   struct external_attitude {
     Eigen::Quaterniond internal_external_attitude_;
     ros::Time internal_external_attitude_timestamp_;

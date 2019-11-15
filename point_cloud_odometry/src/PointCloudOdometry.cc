@@ -140,7 +140,10 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
 
-  if (!pu::Get("external_attitude/use_external_attitude", use_external_attitude_)) 
+  if (!pu::Get("external_attitude/b_use_external_attitude", b_use_external_attitude_)) 
+    return false;
+
+  if (!pu::Get("external_attitude/b_use_yaw_only", b_use_yaw_only_)) 
     return false;
 
   if (!pu::Get("frame_id/base", base_frame_id_))
@@ -166,12 +169,14 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   return true;
 }
 
-void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp){  
+void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame){  
 
   Eigen::Quaterniond q = Eigen::Quaterniond(double(quaternion.w), double(quaternion.x), double(quaternion.y), double(quaternion.z));
 
-  // Transform incoming quaternion from imu to base_link frames
-  q = I_T_B_q_*q*I_T_B_q_.inverse();
+  if (b_in_imu_frame){
+    // Transform incoming quaternion from imu to base_link frames - if it is an IMU message...
+    q = I_T_B_q_*q*I_T_B_q_.inverse();
+  }
 
   // Buffering external attitude in FIFO Structure - an optimal deque size increases speed and decreases computational load when a search in the deque is performed (syncing stage)
   if (external_attitude_deque_.size()==max_external_attitude_deque_size_){ 
@@ -199,7 +204,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
 
   // If this is the first point cloud, store it and wait for anotherinverse.
   if (!initialized_) {
-    if (use_external_attitude_==true){
+    if (b_use_external_attitude_==true){
       copyPointCloud(points, *query_); 
       if (external_attitude_has_been_received_ == true){
         external_attitude_previous_ = external_attitude_first_; 
@@ -214,14 +219,14 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
 
                         - We could handle this maybe creating a counter that keeps track of how many times 
                           the UpdateEstimate() method has been called with a new incoming PointCloudand if after 
-                          25 calls has still not been initialized, we deactivate the use_external_attitude_ usage 
+                          25 calls has still not been initialized, we deactivate the b_use_external_attitude_ usage 
                           and  proceed with pure ICP Lidar. 
         */
         number_of_calls_ = number_of_calls_ + 1; 
         if (number_of_calls_==25){
           ROS_WARN("UpdateEstimate has been called 25 times, but no external attitude has been received yet.");
           ROS_WARN("Deactivating external attitude usage and relying on pure ICP Lidar now.");
-          // use_external_attitude_ = false; 
+          // b_use_external_attitude_ = false; 
         }
 
         return false;
@@ -246,11 +251,11 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
                   - Alternative approaches to this could be also elaborated (e.g. timeout on the subscription level). 
   */
   if(external_attitude_deque_copy.size()==min_external_attitude_deque_size_){
-    // use_external_attitude_ = false; 
+    // b_use_external_attitude_ = false; 
     ROS_WARN("External attitude data provider crashed - Relying now on pure ICP [DISABLED NOW]"); 
   }
   
-  if(use_external_attitude_==true){
+  if(b_use_external_attitude_==true){
 
     /* ------------- SYNCING STAGE -------------  
     Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan
@@ -357,28 +362,45 @@ Eigen::Matrix3d PointCloudOdometry::GetExtAttYawChange(){
   return rot_yaw_mat;
 }
 
+Eigen::Matrix3d PointCloudOdometry::GetExtAttChange(){
+  // Get the attitude change from the queue. 
+  Eigen::Quaterniond external_attitude_change_local_copy = external_attitude_change_;  
+
+  // Init
+  Eigen::Matrix3d rot_mat = external_attitude_change_local_copy.normalized().toRotationMatrix();
+
+  // Return the yaw matrix
+  return rot_mat;
+}
+
 bool PointCloudOdometry::UpdateICP() {
 
-  Eigen::Matrix4d yaw_prior;
-  yaw_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+  Eigen::Matrix4d rot_prior;
+  rot_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
 
   PointCloud::Ptr query_trans( new PointCloud);
   
   // Transform query with the prior if set to true
-  if (use_external_attitude_ == true){
+  if (b_use_external_attitude_ == true){
     // Get what we want to transform 
-    // Process IMU attitude
-    Eigen::Matrix3d yaw_prior_R = GetExtAttYawChange();
+    if (b_use_yaw_only_){
+      // Process IMU attitude
+      Eigen::Matrix3d rot_prior_R = GetExtAttYawChange();
 
-    yaw_prior.block(0, 0, 3, 3) = yaw_prior_R;
-    Eigen::Matrix<double, 3, 1> T;
-    T << 0, 0, 0;
-    yaw_prior.block(0, 3, 3, 1) = T;
+      rot_prior.block(0, 0, 3, 3) = rot_prior_R;
+      Eigen::Matrix<double, 3, 1> T;
+      T << 0, 0, 0;
+      rot_prior.block(0, 3, 3, 1) = T;
 
-    ROS_INFO_STREAM("Yaw prior is:\n" << yaw_prior );
+      ROS_INFO_STREAM("Yaw prior is:\n" << rot_prior);
+
+    } else {
+      // Use full rotation
+      rot_prior.block(0, 0, 3, 3) = GetExtAttChange();
+    }
 
     // Transform query
-    pcl::transformPointCloud(*query_, *query_trans, yaw_prior);
+    pcl::transformPointCloud(*query_, *query_trans, rot_prior);
   } else{
     *query_trans = *query_;
   }
@@ -403,10 +425,10 @@ bool PointCloudOdometry::UpdateICP() {
 
   T = icp.getFinalTransformation().cast<double>(); 
 
-  if (use_external_attitude_ == true){
+  if (b_use_external_attitude_ == true){
     // ------------------- //
     // Add the prior yaw that we used. 
-    T = T * yaw_prior;
+    T = T * rot_prior;
     // TODO - maybe change around
   }
 

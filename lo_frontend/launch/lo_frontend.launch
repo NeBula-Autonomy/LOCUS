@@ -18,8 +18,8 @@
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
       <!-- <remap from="~ODOM_TOPIC" to="hero/lion/odom"/> -->
-      <remap from="~IMU_TOPIC" to="vn100/imu"/>
-      <!-- <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/> -->
+      <!-- <remap from="~IMU_TOPIC" to="vn100/imu"/> -->
+      <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
 
       <param name="robot_name" value="$(arg robot_namespace)"/>
       <param name="tf_prefix" value="$(arg robot_namespace)"/>
