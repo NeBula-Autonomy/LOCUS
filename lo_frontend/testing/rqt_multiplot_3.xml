@@ -514,11 +514,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/husky/lion/odom/rpy</topic>
-                                    <type>geometry_msgs/Vector3Stamped</type>
+                                    <topic>/husky/lo_frontend/rpy_computed</topic>
+                                    <type>geometry_msgs/Vector3</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>vector/x</field>
+                                    <field>x</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -527,8 +527,8 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/husky/lion/odom/rpy</topic>
-                                    <type>geometry_msgs/Vector3Stamped</type>
+                                    <topic>/husky/lo_frontend/rpy_computed</topic>
+                                    <type>geometry_msgs/Vector3</type>
                                 </y_axis>
                             </axes>
                             <color>
@@ -551,7 +551,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>lion</title>
+                            <title>LIDAR</title>
                         </curve_2>
                     </curves>
                     <legend>
@@ -690,11 +690,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/husky/lion/odom/rpy</topic>
-                                    <type>geometry_msgs/Vector3Stamped</type>
+                                    <topic>/husky/lo_frontend/rpy_computed</topic>
+                                    <type>geometry_msgs/Vector3</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>vector/y</field>
+                                    <field>y</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -703,8 +703,8 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/husky/lion/odom/rpy</topic>
-                                    <type>geometry_msgs/Vector3Stamped</type>
+                                    <topic>/husky/lo_frontend/rpy_computed</topic>
+                                    <type>geometry_msgs/Vector3</type>
                                 </y_axis>
                             </axes>
                             <color>
@@ -727,7 +727,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>lion</title>
+                            <title>ICP</title>
                         </curve_2>
                     </curves>
                     <legend>
@@ -866,11 +866,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/husky/lion/odom/rpy</topic>
-                                    <type>geometry_msgs/Vector3Stamped</type>
+                                    <topic>/husky/lo_frontend/rpy_computed</topic>
+                                    <type>geometry_msgs/Vector3</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>vector/z</field>
+                                    <field>z</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -879,8 +879,8 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/husky/lion/odom/rpy</topic>
-                                    <type>geometry_msgs/Vector3Stamped</type>
+                                    <topic>/husky/lo_frontend/rpy_computed</topic>
+                                    <type>geometry_msgs/Vector3</type>
                                 </y_axis>
                             </axes>
                             <color>
@@ -903,7 +903,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>lion</title>
+                            <title>ICP</title>
                         </curve_2>
                     </curves>
                     <legend>
