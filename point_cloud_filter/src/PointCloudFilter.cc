@@ -97,7 +97,7 @@ bool PointCloudFilter::RegisterCallbacks(const ros::NodeHandle& n) {
 }
 
 bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
-                              PointCloud::Ptr points_filtered) const {
+                              PointCloud::Ptr points_filtered) {
   if (points_filtered == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
     return false;
@@ -144,9 +144,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     }
   // Downsample point cloud by extracting features  
   } else {
-        PointCloud::Ptr inPCL(new PointCloud);
-        inPCL = boost::make_shared<std::remove_const<std::remove_reference<decltype(*points)>::type>::type>(*points);
-        arrangePCLInScanLines(*inPCL, 0.1); // Todo: the VLP scan period should be a parameter set by user
+        arrangePCLInScanLines(*points_filtered, 0.1); // Todo: the VLP scan period should be a parameter set by user
 
         //extract features
         extractFeatures();
@@ -280,7 +278,7 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
         size_t scanEndIdx = scanIndices_[i].second;
 
         // skip empty scans
-        if (scanEndIdx <= scanStartIdx + 2 * config_.curvatureRegion)
+        if (scanEndIdx <= scanStartIdx + 2 * feature_config_.curvatureRegion)
         {
             continue;
         }
@@ -289,10 +287,10 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
         setScanBuffersFor(scanStartIdx, scanEndIdx);
 
         // extract features from equally sized scan regions
-        for (int j = 0; j < config_.nFeatureRegions; j++)
+        for (int j = 0; j < feature_config_.nFeatureRegions; j++)
         {
-            size_t sp = ((scanStartIdx + config_.curvatureRegion) * (config_.nFeatureRegions - j) + (scanEndIdx - config_.curvatureRegion) * j) / config_.nFeatureRegions;
-            size_t ep = ((scanStartIdx + config_.curvatureRegion) * (config_.nFeatureRegions - 1 - j) + (scanEndIdx - config_.curvatureRegion) * (j + 1)) / config_.nFeatureRegions - 1;
+            size_t sp = ((scanStartIdx + feature_config_.curvatureRegion) * (feature_config_.nFeatureRegions - j) + (scanEndIdx - feature_config_.curvatureRegion) * j) / feature_config_.nFeatureRegions;
+            size_t ep = ((scanStartIdx + feature_config_.curvatureRegion) * (feature_config_.nFeatureRegions - 1 - j) + (scanEndIdx - feature_config_.curvatureRegion) * (j + 1)) / feature_config_.nFeatureRegions - 1;
 
             // skip empty regions
             if (ep <= sp)
@@ -307,7 +305,7 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
             // Calculate the curvature for points in the scans
             // Extract corner features
             int largestPickedNum = 0;
-            for (size_t k = regionSize; k > 0 && largestPickedNum < config_.maxCornerLessSharp;)
+            for (size_t k = regionSize; k > 0 && largestPickedNum < feature_config_.maxCornerLessSharp;)
             {
                 size_t idx = regionSortIndices_[--k];
                 size_t scanIdx = idx - scanStartIdx;
@@ -315,11 +313,11 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
 
                 // Pick sharp points, the sharp and less sharp need to be above "surfaceCurvatureThreshold"
                 // Technically there is no difference between the two. Some of them are marked are sharp to reduce data for laser odometry
-                if (scanNeighborPicked_[scanIdx] == 0 && regionCurvature_[regionIdx] > config_.surfaceCurvatureThreshold)
+                if (scanNeighborPicked_[scanIdx] == 0 && regionCurvature_[regionIdx] > feature_config_.surfaceCurvatureThreshold)
                 {
 
                     largestPickedNum++;
-                    if (largestPickedNum <= config_.maxCornerSharp)
+                    if (largestPickedNum <= feature_config_.maxCornerSharp)
                     {
                         regionLabel_[regionIdx] = CORNER_SHARP;
                         cornerPointsSharp_.push_back(laserCloud_[idx]);
@@ -337,13 +335,13 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
             // Extract flat surface features
             // A certain number of points that are less than "surfaceCurvatureThreshold" are marked as Flat
             int smallestPickedNum = 0;
-            for (int k = 0; k < regionSize && smallestPickedNum < config_.maxSurfaceFlat; k++)
+            for (int k = 0; k < regionSize && smallestPickedNum < feature_config_.maxSurfaceFlat; k++)
             {
                 size_t idx = regionSortIndices_[k];
                 size_t scanIdx = idx - scanStartIdx;
                 size_t regionIdx = idx - sp;
 
-                if (scanNeighborPicked_[scanIdx] == 0 && regionCurvature_[regionIdx] < config_.surfaceCurvatureThreshold)
+                if (scanNeighborPicked_[scanIdx] == 0 && regionCurvature_[regionIdx] < feature_config_.surfaceCurvatureThreshold)
                 {
                     smallestPickedNum++;
                     regionLabel_[regionIdx] = SURFACE_FLAT;
@@ -367,7 +365,7 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
         pcl::PointCloud<pcl::PointXYZI> surfPointsLessFlatScanDS;
         pcl::VoxelGrid<pcl::PointXYZI> downSizeFilter;
         downSizeFilter.setInputCloud(surfPointsLessFlatScan);
-        downSizeFilter.setLeafSize(config_.lessFlatFilterSize, config_.lessFlatFilterSize, config_.lessFlatFilterSize);
+        downSizeFilter.setLeafSize(feature_config_.lessFlatFilterSize, feature_config_.lessFlatFilterSize, feature_config_.lessFlatFilterSize);
         downSizeFilter.filter(surfPointsLessFlatScanDS);
 
         surfacePointsLessFlat_ += surfPointsLessFlatScanDS;
@@ -385,7 +383,7 @@ void PointCloudFilter::setRegionBuffersFor(const size_t &startIdx, const size_t 
 
     // calculate point curvatures and reset sort indices
     // looping through # number of neighbor points(curvatureRegion) and calculate squared difference
-    float pointWeight = -2 * config_.curvatureRegion;
+    float pointWeight = -2 * feature_config_.curvatureRegion;
 
     for (size_t i = startIdx, regionIdx = 0; i <= endIdx; i++, regionIdx++)
     {
@@ -393,7 +391,7 @@ void PointCloudFilter::setRegionBuffersFor(const size_t &startIdx, const size_t 
         float diffY = pointWeight * laserCloud_[i].y;
         float diffZ = pointWeight * laserCloud_[i].z;
 
-        for (int j = 1; j <= config_.curvatureRegion; j++)
+        for (int j = 1; j <= feature_config_.curvatureRegion; j++)
         {
             diffX += laserCloud_[i + j].x + laserCloud_[i - j].x;
             diffY += laserCloud_[i + j].y + laserCloud_[i - j].y;
@@ -425,7 +423,7 @@ void PointCloudFilter::setScanBuffersFor(const size_t &startIdx, const size_t &e
 
     // Mark unreliable points as picked 
     // Points that have depth difference greater than 0.1 meters are set as already picked so they can be ignored later
-    for (size_t i = startIdx + config_.curvatureRegion; i < endIdx - config_.curvatureRegion; i++)
+    for (size_t i = startIdx + feature_config_.curvatureRegion; i < endIdx - feature_config_.curvatureRegion; i++)
     {
         const pcl::PointXYZI &previousPoint = (laserCloud_[i - 1]);
         const pcl::PointXYZI &point = (laserCloud_[i]);
@@ -444,7 +442,7 @@ void PointCloudFilter::setScanBuffersFor(const size_t &startIdx, const size_t &e
 
                 if (weighted_distance < 0.1)
                 {
-                    std::fill_n(&scanNeighborPicked_[i - startIdx - config_.curvatureRegion], config_.curvatureRegion + 1, 1);
+                    std::fill_n(&scanNeighborPicked_[i - startIdx - feature_config_.curvatureRegion], feature_config_.curvatureRegion + 1, 1);
 
                     continue;
                 }
@@ -455,10 +453,10 @@ void PointCloudFilter::setScanBuffersFor(const size_t &startIdx, const size_t &e
 
                 if (weighted_distance < 0.1)
                 {
-                    std::fill_n(&scanNeighborPicked_[i - startIdx + 1], config_.curvatureRegion + 1, 1);
+                    std::fill_n(&scanNeighborPicked_[i - startIdx + 1], feature_config_.curvatureRegion + 1, 1);
                 }
             }
-        }
+        }  
 
         float diffPrevious = calcSquaredDiff(point, previousPoint);
         float dis = calcSquaredPointDistance(point);
@@ -478,7 +476,7 @@ void PointCloudFilter::markAsPicked(const size_t &cloudIdx, const size_t &scanId
 
     // Not only mark the point as picked but mark all the points 
     // used in the curvatureRegion around it as picked as well
-    for (int i = 1; i <= config_.curvatureRegion; i++)
+    for (int i = 1; i <= feature_config_.curvatureRegion; i++)
     {
         if (calcSquaredDiff(laserCloud_[cloudIdx + i], laserCloud_[cloudIdx + i - 1]) > 0.05)
         {
@@ -488,7 +486,7 @@ void PointCloudFilter::markAsPicked(const size_t &cloudIdx, const size_t &scanId
         scanNeighborPicked_[scanIdx + i] = 1;
     }
 
-    for (int i = 1; i <= config_.curvatureRegion; i++)
+    for (int i = 1; i <= feature_config_.curvatureRegion; i++)
     {
         if (calcSquaredDiff(laserCloud_[cloudIdx - i], laserCloud_[cloudIdx - i + 1]) > 0.05)
         {

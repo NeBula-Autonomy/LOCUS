@@ -60,16 +60,7 @@
       SURFACE_FLAT = -1      ///< flat surface point
   };
 
-  struct Configuration
-  {
-    const int curvatureRegion = 5;
-    const int nFeatureRegions = 6;
-    const int maxCornerSharp = 2; // 2 * 6(feature_regions) * 16(rings) = 192 sharp features
-    const int maxCornerLessSharp = 10 * maxCornerSharp; //1920 less sharp features
-    const int maxSurfaceFlat = 4;
-    const float surfaceCurvatureThreshold = 0.1;
-    const float lessFlatFilterSize = 0.2;
-  } config_;  
+
 
 class PointCloudFilter {
  public:
@@ -86,7 +77,7 @@ class PointCloudFilter {
 
   // Filter an incoming point cloud
   bool Filter(const PointCloud::ConstPtr& points,
-              PointCloud::Ptr points_filtered) const;
+              PointCloud::Ptr points_filtered);
 
 // VLP16 characteristics
 const float lowerBound_ = -15;
@@ -96,6 +87,17 @@ const uint16_t nScanRings_ = 16;
 float factor_ = (nScanRings_ - 1) / (upperBound_ - lowerBound_);       
 
  private:
+
+   struct Configuration
+  {
+    const int curvatureRegion = 5;
+    const int nFeatureRegions = 6;
+    const int maxCornerSharp = 2; // 2 * 6(feature_regions) * 16(rings) = 192 sharp features
+    const int maxCornerLessSharp = 10 * maxCornerSharp; //1920 less sharp features
+    const int maxSurfaceFlat = 4;
+    const float surfaceCurvatureThreshold = 0.1;
+    const float lessFlatFilterSize = 0.2;
+  } feature_config_;  
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
