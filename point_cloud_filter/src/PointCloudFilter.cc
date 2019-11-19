@@ -145,10 +145,10 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
   // Downsample point cloud by extracting features  
   } else {
 
-        arrangePCLInScanLines(*points_filtered, 0.1); // Todo: the VLP scan period should be a parameter set by user
+    arrangePCLInScanLines(*points_filtered, 0.1); // Todo: the VLP scan period should be a parameter set by user
 
-        //extract features
-        extractFeatures();
+    //extract features
+    extractFeatures();
   }
   return true;
 }
