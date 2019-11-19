@@ -70,7 +70,7 @@
 
 class LoFrontend {
 public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef geometry_msgs::PoseStamped PoseStamped; 

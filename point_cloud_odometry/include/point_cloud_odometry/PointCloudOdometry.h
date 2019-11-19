@@ -50,7 +50,7 @@
 
 class PointCloudOdometry {
 public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
   PointCloudOdometry();
   ~PointCloudOdometry();

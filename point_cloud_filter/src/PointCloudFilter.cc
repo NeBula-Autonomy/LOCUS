@@ -110,7 +110,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     if (params_.random_filter) {
       const int n_points = static_cast<int>((1.0 - params_.decimate_percentage) *
                                             points_filtered->size());
-      pcl::RandomSample<pcl::PointXYZ> random_filter;
+      pcl::RandomSample<pcl::PointXYZI> random_filter;
       random_filter.setSample(n_points);
       random_filter.setInputCloud(points_filtered);
       random_filter.filter(*points_filtered);
@@ -118,7 +118,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
 
     // Apply a voxel grid filter to the incoming point cloud.
     if (params_.grid_filter) {
-      pcl::VoxelGrid<pcl::PointXYZ> grid;
+      pcl::VoxelGrid<pcl::PointXYZI> grid;
       grid.setLeafSize(params_.grid_res, params_.grid_res, params_.grid_res);
       grid.setInputCloud(points_filtered);
       grid.filter(*points_filtered);
@@ -126,7 +126,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
 
     // Remove statistical outliers in incoming the point cloud.
     if (params_.outlier_filter) {
-      pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+      pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
       sor.setInputCloud(points_filtered);
       sor.setMeanK(params_.outlier_knn);
       sor.setStddevMulThresh(params_.outlier_std);
@@ -136,7 +136,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     // Remove points without a threshold number of neighbors within a specified
     // radius.
     if (params_.radius_filter) {
-      pcl::RadiusOutlierRemoval<pcl::PointXYZ> rad;
+      pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
       rad.setInputCloud(points_filtered);
       rad.setRadiusSearch(params_.radius);
       rad.setMinNeighborsInRadius(params_.radius_knn);
@@ -144,6 +144,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     }
   // Downsample point cloud by extracting features  
   } else {
+
         arrangePCLInScanLines(*points_filtered, 0.1); // Todo: the VLP scan period should be a parameter set by user
 
         //extract features
@@ -502,3 +503,11 @@ int PointCloudFilter::getRingForAngle(const float &angle) const
 {
     return int(((angle * 180 / M_PI) - lowerBound_) * factor_ + 0.5);
 }
+
+
+//  PointCloud output_temp;
+//     applyFilter (output_temp);
+//     output_temp.header = input_->header;
+//     output_temp.sensor_origin_ = input_->sensor_origin_;
+//     output_temp.sensor_orientation_ = input_->sensor_orientation_;
+//     pcl::copyPointCloud (output_temp, output);

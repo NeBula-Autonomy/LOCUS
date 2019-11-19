@@ -64,7 +64,7 @@
 
 class PointCloudFilter {
  public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
   typedef pcl::PointCloud<pcl::PointXYZI>::ConstPtr pclConstPtr;
   typedef pcl::PointCloud<pcl::PointXYZI>::Ptr pclPtr;
   typedef std::pair<size_t, size_t> IndexRange;

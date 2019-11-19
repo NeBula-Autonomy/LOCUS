@@ -153,7 +153,7 @@ MeasurementSynchronizer::GetPointCloudMessage(unsigned int index) {
 }
 
 const MeasurementSynchronizer::Message<
-    pcl::PointCloud<pcl::PointXYZ>>::ConstPtr&
+    pcl::PointCloud<pcl::PointXYZI>>::ConstPtr&
 MeasurementSynchronizer::GetPCLPointCloudMessage(unsigned int index) {
   return pending_pcl_pclds_[index];
 }
@@ -181,10 +181,10 @@ void MeasurementSynchronizer::AddPointCloudMessage(
 }
 
 void MeasurementSynchronizer::AddPCLPointCloudMessage(
-    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg,
+    const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& msg,
     const std::string& tag) {
-  Message<pcl::PointCloud<pcl::PointXYZ>>::Ptr p(
-      new Message<pcl::PointCloud<pcl::PointXYZ>>(msg, tag));
+  Message<pcl::PointCloud<pcl::PointXYZI>>::Ptr p(
+      new Message<pcl::PointCloud<pcl::PointXYZI>>(msg, tag));
   pending_pcl_pclds_.push_back(p);
 }
 

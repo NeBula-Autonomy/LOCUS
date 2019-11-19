@@ -81,7 +81,7 @@ class MeasurementSynchronizer {
 
   // Typedefs for queues of all sensor types.
   typedef std::vector<Message<sensor_msgs::PointCloud2>::ConstPtr> pcld_queue;
-  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr> pcl_pcld_queue;
+  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr> pcl_pcld_queue;
   typedef std::vector<Message<sensor_msgs::Imu>::ConstPtr> imu_queue;
   typedef std::vector<Message<nav_msgs::Odometry>::ConstPtr> odom_queue;
   typedef std::vector<Message<geometry_msgs::PoseStamped>::ConstPtr> pose_queue;
@@ -96,7 +96,7 @@ class MeasurementSynchronizer {
   // Methods for accessing a single measurement by index.
   const Message<sensor_msgs::PointCloud2>::ConstPtr& GetPointCloudMessage(
       unsigned int index);
-  const Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr&
+  const Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr&
       GetPCLPointCloudMessage(unsigned int index);
   const Message<sensor_msgs::Imu>::ConstPtr& GetImuMessage(
       unsigned int index);
@@ -109,7 +109,7 @@ class MeasurementSynchronizer {
   void AddPointCloudMessage(const sensor_msgs::PointCloud2::ConstPtr& msg,
                             const std::string& tag = std::string());
   void AddPCLPointCloudMessage(
-      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg,
+      const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& msg,
       const std::string& tag = std::string());
   void AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg);
   void AddOdomMessage(const nav_msgs::Odometry::ConstPtr& msg);
