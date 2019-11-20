@@ -155,22 +155,22 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     pcld_temp += cornerPointsLessSharp_;
     pcld_temp += surfacePointsFlat_;
     pcld_temp += surfacePointsLessFlat_;
+    pcld_temp.header = points_filtered->header;
 
     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
 
     // Define a translation of zero
     transform.translation() << 0.0, 0.0, 0.0;
 
-    // Define a rotation of theta radians about y and z axis - theta radians around Z axis
+    // Define a rotation of theta radians about y and z axis
     float theta = M_PI/2;
     transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitY()));
     transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitZ()));
 
     // Executing the transformation
-    PointCloud transformed_cloud;
-    pcl::transformPointCloud ( pcld_temp, transformed_cloud, transform);
-    transformed_cloud.header = points_filtered->header;
-    pcl::copyPointCloud (transformed_cloud, *points_filtered);
+    PointCloud::Ptr transformed_cloud (new PointCloud ());
+    pcl::transformPointCloud ( pcld_temp, *transformed_cloud, transform);
+    *points_filtered = *transformed_cloud;
 
   }
   return true;
