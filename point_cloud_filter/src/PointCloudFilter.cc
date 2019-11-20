@@ -144,11 +144,19 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     }
   // Downsample point cloud by extracting features  
   } else {
-
+    //arrange points in scan lines
     arrangePCLInScanLines(*points_filtered, 0.1); // Todo: the VLP scan period should be a parameter set by user
 
-    //extract features
+    //extract features from the arranged points
     extractFeatures();
+    
+    pcl::PointCloud<pcl::PointXYZI> pcld_temp;
+    pcld_temp += cornerPointsSharp_;
+    pcld_temp += cornerPointsLessSharp_;
+    pcld_temp += surfacePointsFlat_;
+    pcld_temp += surfacePointsLessFlat_;
+    pcl::copyPointCloud (pcld_temp, *points_filtered);
+
   }
   return true;
 }
