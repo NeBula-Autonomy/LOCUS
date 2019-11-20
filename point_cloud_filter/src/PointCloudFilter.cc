@@ -155,7 +155,22 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     pcld_temp += cornerPointsLessSharp_;
     pcld_temp += surfacePointsFlat_;
     pcld_temp += surfacePointsLessFlat_;
-    pcl::copyPointCloud (pcld_temp, *points_filtered);
+
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+
+    // Define a translation of zero
+    transform.translation() << 0.0, 0.0, 0.0;
+
+    // Define a rotation of theta radians about y and z axis - theta radians around Z axis
+    float theta = M_PI/2;
+    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitY()));
+    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitZ()));
+
+    // Executing the transformation
+    PointCloud transformed_cloud;
+    pcl::transformPointCloud ( pcld_temp, transformed_cloud, transform);
+    transformed_cloud.header = points_filtered->header;
+    pcl::copyPointCloud (transformed_cloud, *points_filtered);
 
   }
   return true;
@@ -511,11 +526,3 @@ int PointCloudFilter::getRingForAngle(const float &angle) const
 {
     return int(((angle * 180 / M_PI) - lowerBound_) * factor_ + 0.5);
 }
-
-
-//  PointCloud output_temp;
-//     applyFilter (output_temp);
-//     output_temp.header = input_->header;
-//     output_temp.sensor_origin_ = input_->sensor_origin_;
-//     output_temp.sensor_orientation_ = input_->sensor_orientation_;
-//     pcl::copyPointCloud (output_temp, output);
