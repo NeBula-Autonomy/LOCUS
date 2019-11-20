@@ -43,6 +43,10 @@
 
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <std_msgs/Float64.h>
 
 class PointCloudOdometry {
 public:
@@ -75,6 +79,9 @@ public:
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
  
+  // Enables external attitude data fusion
+  void SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame); 
+
 private:
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
@@ -82,6 +89,10 @@ private:
 
   // Use ICP between a query and reference point cloud to estimate pose.
   bool UpdateICP();
+
+  // Get attitude change in yaw only
+  Eigen::Matrix3d GetExtAttYawChange();
+  Eigen::Matrix3d GetExtAttChange();
 
   // Compute ICP Covariance Matrix
   bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
@@ -94,22 +105,34 @@ private:
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
-  // Subscribe to odometry from external estimator too be used as prior.
-  void StateEstimateOdometryCallback(const nav_msgs::Odometry& msg);
+  // Publish timestamp difference between external attitude and LIDAR signal 
+  void PublishTimestampDifference(const std_msgs::Float64& timediff,
+                                  const ros::Publisher& pub);
+
+  bool LoadCalibrationFromTfTree();
 
   // The node's name.
   std::string name_;
+
+  // External Attitude Data
+  Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
+  bool b_use_external_attitude_, external_attitude_has_been_received_; 
+  bool b_use_yaw_only_;
+  struct external_attitude {
+    Eigen::Quaterniond internal_external_attitude_;
+    ros::Time internal_external_attitude_timestamp_;
+  };
+  std::deque<external_attitude> external_attitude_deque_;
+  std::deque<Eigen::Quaterniond> external_attitude_change_deque_;
+  static constexpr size_t max_external_attitude_deque_size_ = 100; 
+  static constexpr size_t min_external_attitude_deque_size_ = 50;
 
   // Publishers.
   ros::Publisher reference_pub_;
   ros::Publisher query_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
-
-  // Subscribers
-  ros::Subscriber
-      state_estimator_sub_; // State estimate from an external estimator (such
-                            // as LION) used as prior.
+  ros::Publisher timestamp_difference_pub_;
 
   // Most recent point cloud time stamp for publishers.
   ros::Time stamp_;
@@ -147,6 +170,27 @@ private:
   bool transform_thresholding_;
   double max_translation_;
   double max_rotation_;
+
+  /*
+  --------- Adding support for IMU Lidar calibration ------- 
+  */
+  std::string base_frame_id_; 
+  std::string imu_frame_id_;  
+
+  tf::TransformListener imu_T_laser_listener_;
+  Eigen::Affine3d I_T_B_;    
+  Eigen::Affine3d B_T_I_; 
+  Eigen::Quaterniond I_T_B_q_;     
+
+  /*
+  ------------- Deactivate external attitude usage when external provider crashes at start -------------
+  
+  DOCUMENTATION:  This counter keeps track of how many time UpdateEstimate has been called
+                  and deactivate external attitude usage after a value of 25 is reached
+                  enabling the code to not being stuck in a uninitialized state and continue by relying on pure ICP Lidar 
+  */
+  int number_of_calls_;   
+
 };
 
 #endif

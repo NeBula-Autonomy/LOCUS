@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_ros
   tf2_ros
+  eigen_conversions
 )
 
 catkin_package(
@@ -33,6 +34,7 @@ catkin_package(
     sensor_msgs
     pcl_ros
     tf2_ros
+    eigen_conversions
 )
 
 find_package(PCL 1.7 REQUIRED)

@@ -44,6 +44,10 @@
 #include <memory>
 #include <vector>
 
+#include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
+
 class MeasurementSynchronizer {
  public:
   MeasurementSynchronizer();
@@ -52,7 +56,10 @@ class MeasurementSynchronizer {
   // Enums for all valid sensor message types.
   typedef enum {
     POINTCLOUD,
-    PCL_POINTCLOUD
+    PCL_POINTCLOUD,
+    IMU,
+    ODOM, 
+    POSE 
   } sensor_type;
 
   // Basic sorting, querying, clearing.
@@ -74,18 +81,29 @@ class MeasurementSynchronizer {
 
   // Typedefs for queues of all sensor types.
   typedef std::vector<Message<sensor_msgs::PointCloud2>::ConstPtr> pcld_queue;
-  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr>
-      pcl_pcld_queue;
+  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr> pcl_pcld_queue;
+  typedef std::vector<Message<sensor_msgs::Imu>::ConstPtr> imu_queue;
+  typedef std::vector<Message<nav_msgs::Odometry>::ConstPtr> odom_queue;
+  typedef std::vector<Message<geometry_msgs::PoseStamped>::ConstPtr> pose_queue;
 
   // Methods for accessing entire queues of accumulated measurements.
   const pcld_queue& GetPointCloudMessages();
   const pcl_pcld_queue& GetPCLPointCloudMessages();
+  const imu_queue& GetImuMessages();
+  const odom_queue& GetOdomMessages();
+  const pose_queue& GetPoseMessages();
 
   // Methods for accessing a single measurement by index.
   const Message<sensor_msgs::PointCloud2>::ConstPtr& GetPointCloudMessage(
       unsigned int index);
   const Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr&
       GetPCLPointCloudMessage(unsigned int index);
+  const Message<sensor_msgs::Imu>::ConstPtr& GetImuMessage(
+      unsigned int index);
+  const Message<nav_msgs::Odometry>::ConstPtr& GetOdomMessage(
+      unsigned int index);
+  const Message<geometry_msgs::PoseStamped>::ConstPtr& GetPoseMessage(
+      unsigned int index);
 
   // Methods for adding sensor measurements of specific types.
   void AddPointCloudMessage(const sensor_msgs::PointCloud2::ConstPtr& msg,
@@ -93,6 +111,10 @@ class MeasurementSynchronizer {
   void AddPCLPointCloudMessage(
       const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& msg,
       const std::string& tag = std::string());
+  void AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg);
+  void AddOdomMessage(const nav_msgs::Odometry::ConstPtr& msg);
+  void AddPoseMessage(const geometry_msgs::PoseStamped::ConstPtr& msg);
+
 
   // Static enum to string conversion.
   static std::string GetTypeString(const sensor_type& type) {
@@ -101,6 +123,12 @@ class MeasurementSynchronizer {
         return std::string("POINTCLOUD");
       case PCL_POINTCLOUD:
         return std::string("PCL_POINTCLOUD");
+      case IMU: 
+        return std::string("IMU");
+      case ODOM: 
+        return std::string("ODOM");
+      case POSE: 
+        return std::string("POSE");
       // No default to force compile-time error.
     }
   }
@@ -127,6 +155,9 @@ class MeasurementSynchronizer {
   // Queues of sensor messages.
   pcld_queue pending_pclds_;
   pcl_pcld_queue pending_pcl_pclds_;
+  imu_queue pending_imus_;
+  odom_queue pending_odoms_;
+  pose_queue pending_poses_;
 
   unsigned int pending_index_;
   std::vector<TimestampedType::ConstPtr> sensor_ordering_;

@@ -309,9 +309,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> pointCloud, 
-                                                  const Eigen::Matrix4f T,
-                                                  Eigen::Matrix<double, 6, 6> &covariance){
+bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
