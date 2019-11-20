@@ -46,7 +46,7 @@
 
 class PointCloudOdometry {
 public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
   PointCloudOdometry();
   ~PointCloudOdometry();
@@ -84,7 +84,7 @@ private:
   bool UpdateICP();
 
   // Compute ICP Covariance Matrix
-  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
+  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
   
 
   // Publish reference and query point clouds.

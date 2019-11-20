@@ -48,7 +48,7 @@
 
 class PointCloudLocalization {
  public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
   PointCloudLocalization();
   ~PointCloudLocalization();
@@ -76,7 +76,7 @@ class PointCloudLocalization {
                          PointCloud* aligned_query);
 
   // Compute ICP Covariance Matrix
-  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6>& covariance);
+  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6>& covariance);
   
   // Get pose estimates.
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
@@ -143,6 +143,10 @@ private:
 
   // Parameters for filtering and ICP.
   struct Parameters {
+    
+    // Compute ICP covariance and condition number
+    bool compute_icp_covariance;
+
     // Stop ICP if the transformation from the last iteration was this small.
     double tf_epsilon;
 

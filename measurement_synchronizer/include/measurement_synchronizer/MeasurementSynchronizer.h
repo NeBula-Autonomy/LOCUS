@@ -74,7 +74,7 @@ class MeasurementSynchronizer {
 
   // Typedefs for queues of all sensor types.
   typedef std::vector<Message<sensor_msgs::PointCloud2>::ConstPtr> pcld_queue;
-  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr>
+  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr>
       pcl_pcld_queue;
 
   // Methods for accessing entire queues of accumulated measurements.
@@ -84,14 +84,14 @@ class MeasurementSynchronizer {
   // Methods for accessing a single measurement by index.
   const Message<sensor_msgs::PointCloud2>::ConstPtr& GetPointCloudMessage(
       unsigned int index);
-  const Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr&
+  const Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr&
       GetPCLPointCloudMessage(unsigned int index);
 
   // Methods for adding sensor measurements of specific types.
   void AddPointCloudMessage(const sensor_msgs::PointCloud2::ConstPtr& msg,
                             const std::string& tag = std::string());
   void AddPCLPointCloudMessage(
-      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg,
+      const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& msg,
       const std::string& tag = std::string());
 
   // Static enum to string conversion.

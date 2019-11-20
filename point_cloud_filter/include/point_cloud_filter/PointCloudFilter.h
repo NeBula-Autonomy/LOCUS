@@ -42,7 +42,7 @@
 
 class PointCloudFilter {
  public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
   PointCloudFilter();
   ~PointCloudFilter();

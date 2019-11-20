@@ -50,7 +50,7 @@ namespace pu = parameter_utils;
 
 using pcl::GeneralizedIterativeClosestPoint;
 using pcl::PointCloud;
-using pcl::PointXYZ;
+using pcl::PointXYZI;
 using pcl::transformPointCloud;
 
 PointCloudLocalization::PointCloudLocalization() {}
@@ -113,6 +113,7 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
 
   // Load algorithm parameters.
+  if (!pu::Get("localization/compute_icp_covariance", params_.compute_icp_covariance)) return false;
   if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) return false;
   if (!pu::Get("localization/corr_dist", params_.corr_dist)) return false;
   if (!pu::Get("localization/iterations", params_.iterations)) return false;
@@ -234,7 +235,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   // ICP-based alignment. Generalized ICP does (roughly) plane-to-plane
   // matching, and is much more robust than standard ICP.
-  GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp;
   icp.setTransformationEpsilon(params_.tf_epsilon);
   icp.setMaxCorrespondenceDistance(params_.corr_dist);
   icp.setMaximumIterations(params_.iterations);
@@ -271,18 +272,25 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
         name_.c_str(), pose_update.translation.Norm(),
         pose_update.rotation.ToEulerZYX().Norm());
   }
-  Eigen::Matrix<double, 6, 6> icp_covariance;
 
-  // Compute the covariance matrix for the estimated transform.
-  ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
-  
   integrated_estimate_ =
-      gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
+    gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
 
-  // Convert pose estimates to ROS format and publish.
-  PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
-  PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+  Eigen::Matrix<double, 6, 6> icp_covariance;
+  icp_covariance = Eigen::MatrixXd::Zero(6, 6);
 
+  if (params_.compute_icp_covariance) {
+    // Compute the covariance matrix for the estimated transform.
+    ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
+    
+    // Convert pose estimates to ROS format and publish.
+    PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
+    PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+  } else {
+    // Convert pose estimates to ROS format and publish.
+    PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
+    PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+  }
   // Publish point clouds for visualization.
   PublishPoints(*query, query_pub_);
   PublishPoints(*reference, reference_pub_);
@@ -301,7 +309,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, 
+bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> pointCloud, 
                                                   const Eigen::Matrix4f T,
                                                   Eigen::Matrix<double, 6, 6> &covariance){
   geometry_utils::Transform3 ICP_transformation;
