@@ -50,7 +50,7 @@ namespace pu = parameter_utils;
 
 using pcl::GeneralizedIterativeClosestPoint;
 using pcl::PointCloud;
-using pcl::PointXYZ;
+using pcl::PointXYZI;
 using pcl::transformPointCloud;
 
 PointCloudLocalization::PointCloudLocalization() {}
@@ -233,7 +233,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   // ICP-based alignment. Generalized ICP does (roughly) plane-to-plane
   // matching, and is much more robust than standard ICP.
-  GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp;
   icp.setTransformationEpsilon(params_.tf_epsilon);
   icp.setMaxCorrespondenceDistance(params_.corr_dist);
   icp.setMaximumIterations(params_.iterations);
@@ -300,7 +300,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
+bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T

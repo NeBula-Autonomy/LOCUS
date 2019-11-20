@@ -1,4 +1,7 @@
 filtering:
+  # Filter point cloud by extracting features
+  extract_features: false
+
   # Apply a voxel grid filter on incoming point clouds.
   grid_filter: true
 

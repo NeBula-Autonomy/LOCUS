@@ -51,7 +51,7 @@ namespace pu = parameter_utils;
 using pcl::copyPointCloud;
 using pcl::GeneralizedIterativeClosestPoint;
 using pcl::PointCloud;
-using pcl::PointXYZ;
+using pcl::PointXYZI;
 
 PointCloudOdometry::PointCloudOdometry() : initialized_(false) {
   query_.reset(new PointCloud);
@@ -406,7 +406,7 @@ bool PointCloudOdometry::UpdateICP() {
   }
 
   // Compute the incremental transformation.
-  GeneralizedIterativeClosestPoint<PointXYZ, PointXYZ> icp;
+  GeneralizedIterativeClosestPoint<PointXYZI, PointXYZI> icp;
   icp.setTransformationEpsilon(params_.icp_tf_epsilon);
   icp.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp.setMaximumIterations(params_.icp_iterations);
@@ -474,7 +474,7 @@ bool PointCloudOdometry::UpdateICP() {
   return true;
 }
 
-bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance){
+bool PointCloudOdometry::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
