@@ -274,6 +274,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   // Compute the covariance matrix for the estimated transform.
   ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
+  icp_covariance = Eigen::Matrix<double, 6, 6>::Zero();
   
   integrated_estimate_ =
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
