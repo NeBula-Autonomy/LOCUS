@@ -258,7 +258,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   if (b_add_first_scan_to_key_) {
     // First update ever.
     // Transforming msg to fixed frame for non-zero initial position
-    localization_.TransformPointsToFixedFrame(*msg_filtered,
+    localization_.TransformPointsToFixedFrame(*msg,
                                               msg_transformed.get());
     PointCloud::Ptr unused(new PointCloud);
     mapper_.InsertPoints(msg_transformed, unused.get());
