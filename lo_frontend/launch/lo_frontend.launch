@@ -103,8 +103,8 @@
     </node>
 
         <!-- Run a VoxelGrid filter to clean NaNs, downsample the data, and transform poincloud before publication-->
-    <node pkg="nodelet" type="nodelet" name="pcl_manager_lo" args="manager" output="screen" respawn="true"/>
-    <node pkg="nodelet" type="nodelet" name="voxel_grid_lo" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
+    <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="pcl_manager_lo" args="manager" output="screen" respawn="true"/>
+    <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="voxel_grid_lo" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
     <remap from="~input" to="combined_point_cloud" /><!--ADD BACK _throttle-->
     <remap from="~output" to="combined_point_cloud_filtered" />
     <rosparam subst_value="true">
