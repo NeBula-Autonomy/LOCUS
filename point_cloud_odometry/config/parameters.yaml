@@ -17,6 +17,6 @@ icp:
 # Replace rotational part of the transformation computed by pure ICP Lidar with attitude received by external provider
 external_attitude: 
   b_use_external_attitude: false 
-  b_use_yaw_only: false
+  b_use_yaw_only: true
 
   
