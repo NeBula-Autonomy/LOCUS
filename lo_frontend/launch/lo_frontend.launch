@@ -1,7 +1,7 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
-  <arg name="b_use_two_pc" default="true"/>
+  <arg name="b_use_two_pc" default="false"/>
 
 
   <arg if="$(arg b_use_two_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
