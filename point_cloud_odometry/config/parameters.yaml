@@ -14,9 +14,8 @@ icp:
   max_translation: 0.09
   max_rotation: 0.1
 
-# Replace rotational part of the transformation computed by pure ICP Lidar with attitude received by external provider
+# External attitude integration
 external_attitude: 
   b_use_external_attitude: false 
   b_use_yaw_only: true
-
   
