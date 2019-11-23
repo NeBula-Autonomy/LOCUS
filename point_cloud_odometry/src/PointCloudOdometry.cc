@@ -80,13 +80,13 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
-  // Load frame ids.
+  // Load frame ids
   if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
   if (!pu::Get("frame_id/odometry", odometry_frame_id_))
     return false;
 
-  // Load initial position.
+  // Load initial position
   double init_x = 0.0, init_y = 0.0, init_z = 0.0;
   double init_qx = 0.0, init_qy = 0.0, init_qz = 0.0, init_qw = 1.0;
   bool b_have_fiducial = true;
@@ -105,8 +105,7 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
 
-
-  // convert initial quaternion to Roll/Pitch/Yaw
+  // Convert initial quaternion to Roll/Pitch/Yaw
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
   gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
   gu::Rot3 m1;
@@ -125,7 +124,8 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   } else {
     ROS_INFO_STREAM("Have loaded fiducial pose, using:\n" << init);
   }
-  // Load algorithm parameters.
+
+  // Load algorithm parameters
   if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon))
     return false;
   if (!pu::Get("icp/corr_dist", params_.icp_corr_dist))
@@ -142,7 +142,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
 
   if (!pu::Get("external_attitude/b_use_external_attitude", b_use_external_attitude_)) 
     return false;
-
   if (!pu::Get("external_attitude/b_use_yaw_only", b_use_yaw_only_)) 
     return false;
 

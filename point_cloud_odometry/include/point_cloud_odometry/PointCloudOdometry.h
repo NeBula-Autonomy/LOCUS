@@ -116,18 +116,8 @@ private:
   // The node's name
   std::string name_;
 
-  // External attitude
-  Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
-  bool b_use_external_attitude_, external_attitude_has_been_received_; 
-  bool b_use_yaw_only_;
-  struct external_attitude {
-    Eigen::Quaterniond internal_external_attitude_;
-    ros::Time internal_external_attitude_timestamp_;
-  };
-  std::deque<external_attitude> external_attitude_deque_;
-  std::deque<Eigen::Quaterniond> external_attitude_change_deque_;
-  static constexpr size_t max_external_attitude_deque_size_ = 100; 
-  static constexpr size_t min_external_attitude_deque_size_ = 50;
+  // For initialization
+  bool initialized_;
 
   // Publishers
   ros::Publisher reference_pub_;
@@ -145,9 +135,6 @@ private:
 
   // Transform broadcasting to other nodes
   tf2_ros::TransformBroadcaster tfbr_;
-
-  // For initialization
-  bool initialized_;
 
   // Point cloud containers
   PointCloud::Ptr query_;
@@ -170,6 +157,19 @@ private:
   bool transform_thresholding_;
   double max_translation_;
   double max_rotation_;
+
+  // External attitude
+  Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
+  bool b_use_external_attitude_, external_attitude_has_been_received_; 
+  bool b_use_yaw_only_;
+  struct external_attitude {
+    Eigen::Quaterniond internal_external_attitude_;
+    ros::Time internal_external_attitude_timestamp_;
+  };
+  std::deque<external_attitude> external_attitude_deque_;
+  std::deque<Eigen::Quaterniond> external_attitude_change_deque_;
+  static constexpr size_t max_external_attitude_deque_size_ = 100; 
+  static constexpr size_t min_external_attitude_deque_size_ = 50;
 
   // IMU Lidar calibration 
   std::string base_frame_id_; 
