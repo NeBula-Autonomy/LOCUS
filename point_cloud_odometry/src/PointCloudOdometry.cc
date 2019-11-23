@@ -169,7 +169,7 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   return true;
 }
 
-void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame){  
+void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame){  
 
   Eigen::Quaterniond q = Eigen::Quaterniond(double(quaternion.w), double(quaternion.x), double(quaternion.y), double(quaternion.z));
 

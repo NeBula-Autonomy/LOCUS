@@ -49,27 +49,29 @@
 #include <std_msgs/Float64.h>
 
 class PointCloudOdometry {
+
 public:
+
   typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
   PointCloudOdometry();
   ~PointCloudOdometry();
 
-  // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
+  // Calls LoadParameters and RegisterCallbacks. Fails on failure of either
   bool Initialize(const ros::NodeHandle& n);
 
-  // Align incoming point cloud with previous point cloud, updating odometry.
+  // Align incoming point cloud with previous point cloud, updating odometry
   bool UpdateEstimate(const PointCloud& points);
 
-  // Get pose estimates.
+  // Get pose estimates
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
   const geometry_utils::Transform3& GetIntegratedEstimate() const;
 
-  // Get the most recent point cloud that we processed. Return false and warn if
-  // not initialized.
+  // Get the most recent point cloud that we processed
+  // Return false and warn if not initialized
   bool GetLastPointCloud(PointCloud::Ptr& out) const;
 
-  // Pose estimates.
+  // Pose estimates
   geometry_utils::Transform3 integrated_estimate_;
   geometry_utils::Transform3 incremental_estimate_;
 
@@ -79,15 +81,16 @@ public:
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
  
-  // Enables external attitude data fusion
-  void SetExternalAttitude(const geometry_msgs::Quaternion_<std::allocator<void>>& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame); 
+  // Enable external attitude data fusion
+  void SetExternalAttitude(const geometry_msgs::Quaternion& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame); 
 
 private:
-  // Node initialization.
+
+  // Node initialization
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
-  // Use ICP between a query and reference point cloud to estimate pose.
+  // Use ICP between a query and reference point cloud to estimate pose
   bool UpdateICP();
 
   // Get attitude change in yaw only
@@ -97,24 +100,23 @@ private:
   // Compute ICP Covariance Matrix
   bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
   
-
-  // Publish reference and query point clouds.
+  // Publish reference and query point clouds
   void PublishPoints(const PointCloud::Ptr& points, const ros::Publisher& pub);
 
-  // Publish incremental and integrated pose estimates.
+  // Publish incremental and integrated pose estimates
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
-  // Publish timestamp difference between external attitude and LIDAR signal 
+  // Publish timestamp difference between external attitude and Lidar data 
   void PublishTimestampDifference(const std_msgs::Float64& timediff,
                                   const ros::Publisher& pub);
 
   bool LoadCalibrationFromTfTree();
 
-  // The node's name.
+  // The node's name
   std::string name_;
 
-  // External Attitude Data
+  // External attitude
   Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
   bool b_use_external_attitude_, external_attitude_has_been_received_; 
   bool b_use_yaw_only_;
@@ -127,68 +129,60 @@ private:
   static constexpr size_t max_external_attitude_deque_size_ = 100; 
   static constexpr size_t min_external_attitude_deque_size_ = 50;
 
-  // Publishers.
+  // Publishers
   ros::Publisher reference_pub_;
   ros::Publisher query_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
   ros::Publisher timestamp_difference_pub_;
 
-  // Most recent point cloud time stamp for publishers.
+  // Most recent point cloud time stamp for publishers
   ros::Time stamp_;
 
-  // Coordinate frames.
+  // Coordinate frames
   std::string fixed_frame_id_;
   std::string odometry_frame_id_;
 
-  // Transform broadcasting to other nodes.
+  // Transform broadcasting to other nodes
   tf2_ros::TransformBroadcaster tfbr_;
 
-  // For initialization.
+  // For initialization
   bool initialized_;
 
-  // Point cloud containers.
+  // Point cloud containers
   PointCloud::Ptr query_;
   PointCloud::Ptr reference_;
 
-  // Parameters for filtering, and ICP.
+  // Parameters for filtering, and ICP
   struct Parameters {
-    // Stop ICP if the transformation from the last iteration was this small.
+    // Stop ICP if the transformation from the last iteration was this small
     double icp_tf_epsilon;
-
     // During ICP, two points won't be considered a correspondence if they are
-    // at least this far from one another.
+    // at least this far from one another
     double icp_corr_dist;
-
-    // Iterate ICP this many times.
+    // Iterate ICP this many times
     unsigned int icp_iterations;
   } params_;
 
-  // Maximum acceptable translation and rotation tolerances. If
-  // transform_thresholding_ is set to false, neither of these thresholds are
-  // considered.
+  // Maximum acceptable translation and rotation tolerances. 
+  // If transform_thresholding_ is set to false, 
+  // neither of these thresholds are considered
   bool transform_thresholding_;
   double max_translation_;
   double max_rotation_;
 
-  /*
-  --------- Adding support for IMU Lidar calibration ------- 
-  */
+  // IMU Lidar calibration 
   std::string base_frame_id_; 
   std::string imu_frame_id_;  
-
   tf::TransformListener imu_T_laser_listener_;
   Eigen::Affine3d I_T_B_;    
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;     
 
-  /*
-  ------------- Deactivate external attitude usage when external provider crashes at start -------------
-  
-  DOCUMENTATION:  This counter keeps track of how many time UpdateEstimate has been called
-                  and deactivate external attitude usage after a value of 25 is reached
-                  enabling the code to not being stuck in a uninitialized state and continue by relying on pure ICP Lidar 
-  */
+  // Deactivate external attitude usage when external provider crashes at start
+  // This counter keeps track of how many time UpdateEstimate has been called.
+  // Deactivates external attitude usage after a value of 25 is reached, 
+  // Enabling code to not get stuck in a uninitialized state and continue by relying on pure ICP Lidar 
   int number_of_calls_;   
 
 };
