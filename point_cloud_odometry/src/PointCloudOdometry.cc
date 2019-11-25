@@ -211,17 +211,10 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
         return false;
       }
       else{
-        /* ------------- Deactivate external attitude usage when external provider crashes at start ------------- 
-        
-        DOCUMENTATION:  - What about if external attitude provider crashes at start and we never receive a first attitude? 
-                          Odometry would be stuck and no poses would be created.
 
-                        - We could handle this maybe creating a counter that keeps track of how many times 
-                          the UpdateEstimate() method has been called with a new incoming PointCloudand if after 
-                          25 calls has still not been initialized, we deactivate the b_use_external_attitude_ usage 
-                          and  proceed with pure ICP Lidar. 
-        */
+        // Deactivate external attitude usage if provider crashes at start
         number_of_calls_ = number_of_calls_ + 1; 
+        // TODO: Have this as a param 
         if (number_of_calls_==25){
           ROS_WARN("UpdateEstimate has been called 25 times, but no external attitude has been received yet.");
           ROS_WARN("Deactivating external attitude usage and relying on pure ICP Lidar now.");
@@ -256,10 +249,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   
   if(b_use_external_attitude_==true){
 
-    /* ------------- SYNCING STAGE -------------  
-    Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan
-    */ 
-
+    // Given the timestamp of received Lidar scan, search for the closest external attitude element
     external_attitude_current_ = external_attitude_deque_copy[0].attitude; 
     double min_ts_diff = 1000;   
     for (int i=0; i<external_attitude_deque_copy.size(); ++i) {
@@ -276,8 +266,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     }
     if (min_ts_diff<0 && fabs(min_ts_diff)>fabs(0.1)){
       ROS_WARN("WARNING: External attitude comes from the past, but it's too old");
-    }
-    // TODO: At this point, if needed, we can deactivate the external attitude usage 
+    }    
 
     // std_msgs::Float64 external_attitude_lidar_ts_diff; 
     // external_attitude_lidar_ts_diff.data = min_ts_diff; 
