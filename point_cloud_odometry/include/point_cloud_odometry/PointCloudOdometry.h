@@ -167,8 +167,8 @@ private:
        b_external_attitude_has_been_received_,
        b_use_yaw_only_;
   struct external_attitude {
-    Eigen::Quaterniond internal_external_attitude_;
-    ros::Time internal_external_attitude_timestamp_;
+    Eigen::Quaterniond attitude;
+    ros::Time timestamp;
   };
   std::deque<external_attitude> external_attitude_deque_;
   std::deque<Eigen::Quaterniond> external_attitude_change_deque_;

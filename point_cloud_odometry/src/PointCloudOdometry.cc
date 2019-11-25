@@ -260,12 +260,12 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
     Choose the closest external attitude signal in respect to the timestamp of the current received LIDAR scan
     */ 
 
-    external_attitude_current_ = external_attitude_deque_copy[0].internal_external_attitude_; 
+    external_attitude_current_ = external_attitude_deque_copy[0].attitude; 
     double min_ts_diff = 1000;   
     for (int i=0; i<external_attitude_deque_copy.size(); ++i) {
-      double cur_ts_diff = (external_attitude_deque_copy[i].internal_external_attitude_timestamp_ - stamp_).toSec();
+      double cur_ts_diff = (external_attitude_deque_copy[i].timestamp - stamp_).toSec();
       if (cur_ts_diff<0 && fabs(cur_ts_diff)<fabs(min_ts_diff)){
-        external_attitude_current_ = external_attitude_deque_copy[i].internal_external_attitude_; 
+        external_attitude_current_ = external_attitude_deque_copy[i].attitude; 
         min_ts_diff = cur_ts_diff; 
       }
     }
