@@ -73,7 +73,7 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
     return false;
   }
 
-  external_attitude_has_been_received_ = false;
+  b_external_attitude_has_been_received_ = false;
   number_of_calls_ = 0;
 
   return true;
@@ -186,10 +186,10 @@ void PointCloudOdometry::SetExternalAttitude(const geometry_msgs::Quaternion& qu
     external_attitude_deque_.push_back(external_attitude{q, timestamp});
   }
 
-  if (external_attitude_has_been_received_==false){
+  if (b_external_attitude_has_been_received_==false){
     external_attitude_first_ = q; // First time receiving the external attitude  
     std::cout << "Receiving external attitude for the first time ---> external_first_attitude_ now exists!";
-    external_attitude_has_been_received_ = true;
+    b_external_attitude_has_been_received_ = true;
   }
 }
 
@@ -205,7 +205,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
   if (!initialized_) {
     if (b_use_external_attitude_==true){
       copyPointCloud(points, *query_); 
-      if (external_attitude_has_been_received_ == true){
+      if (b_external_attitude_has_been_received_ == true){
         external_attitude_previous_ = external_attitude_first_; 
         initialized_ = true;
         return false;

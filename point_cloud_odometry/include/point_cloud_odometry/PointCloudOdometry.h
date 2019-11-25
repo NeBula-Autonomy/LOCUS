@@ -159,9 +159,13 @@ private:
   double max_rotation_;
 
   // External attitude
-  Eigen::Quaterniond external_attitude_first_, external_attitude_current_, external_attitude_previous_, external_attitude_change_; 
-  bool b_use_external_attitude_, external_attitude_has_been_received_; 
-  bool b_use_yaw_only_;
+  Eigen::Quaterniond external_attitude_first_, 
+                     external_attitude_current_, 
+                     external_attitude_previous_, 
+                     external_attitude_change_; 
+  bool b_use_external_attitude_,
+       b_external_attitude_has_been_received_,
+       b_use_yaw_only_;
   struct external_attitude {
     Eigen::Quaterniond internal_external_attitude_;
     ros::Time internal_external_attitude_timestamp_;
