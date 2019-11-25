@@ -140,9 +140,11 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
 
-  if (!pu::Get("external_attitude/b_use_external_attitude", b_use_external_attitude_)) 
+  if (!pu::Get("external_attitude/use_external_attitude", b_use_external_attitude_)) 
     return false;
-  if (!pu::Get("external_attitude/b_use_yaw_only", b_use_yaw_only_)) 
+  if (!pu::Get("external_attitude/use_yaw_only", b_use_yaw_only_)) 
+    return false;
+  if (!pu::Get("external_attitude/max_number_of_calls", max_number_of_calls_)) 
     return false;
 
   if (!pu::Get("frame_id/base", base_frame_id_))
@@ -215,7 +217,7 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
         // Deactivate external attitude usage if provider crashes at start
         number_of_calls_ = number_of_calls_ + 1; 
         // TODO: Have this as a param 
-        if (number_of_calls_==25){
+        if (number_of_calls_==max_number_of_calls_){
           ROS_WARN("UpdateEstimate has been called 25 times, but no external attitude has been received yet.");
           ROS_WARN("Deactivating external attitude usage and relying on pure ICP Lidar now.");
           // b_use_external_attitude_ = false; 

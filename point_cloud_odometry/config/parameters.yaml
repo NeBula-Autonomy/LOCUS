@@ -16,6 +16,7 @@ icp:
 
 # External attitude integration
 external_attitude: 
-  b_use_external_attitude: false 
-  b_use_yaw_only: true
+  use_external_attitude: false 
+  use_yaw_only: true
+  max_number_of_calls: 25
   

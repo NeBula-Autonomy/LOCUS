@@ -188,7 +188,8 @@ private:
   // Deactivates external attitude usage after a value of 25 is reached, 
   // Enabling code to not get stuck in a uninitialized state and continue by relying on pure ICP Lidar 
   int number_of_calls_;   
-
+  int max_number_of_calls_;
+  
 };
 
 #endif
