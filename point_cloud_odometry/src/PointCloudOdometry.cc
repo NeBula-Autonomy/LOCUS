@@ -417,7 +417,7 @@ bool PointCloudOdometry::UpdateICP() {
   icp.align(icpAlignedPointsOdometry_);
   icpFitnessScore_ = icp.getFitnessScore();
 
-  ROS_INFO_STREAM("ICP Fitness score in PointCloudOdometry::UpdateICP is " << icpFitnessScore_);
+  // ROS_INFO_STREAM("ICP Fitness score in PointCloudOdometry::UpdateICP is " << icpFitnessScore_);
   PointCloud unused_result;
   icp.align(unused_result);
 
