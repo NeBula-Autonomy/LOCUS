@@ -42,6 +42,7 @@ namespace gu = geometry_utils;
 LoFrontend::LoFrontend()
   : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
   b_add_first_scan_to_key_(true), translation_threshold_kf_(1.0),
+  rotation_threshold_kf_(1.0),
   last_timestamp_(-1.0), point_cloud_time_diff_limit_(0.1) {}
 
 LoFrontend::~LoFrontend() {}
@@ -98,6 +99,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
 
   // Load Settings 
   if (!pu::Get("translation_threshold_kf", translation_threshold_kf_)){
+    return false;
+  }
+  if (!pu::Get("rotation_threshold_kf", rotation_threshold_kf_)){
     return false;
   }
   if (!pu::Get("point_cloud_time_diff_limit", point_cloud_time_diff_limit_)){
@@ -357,10 +361,10 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
 
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
-  // If last translation from ICP is larger than 1m
-  if (ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose))
-          .translation()
-          .norm() > translation_threshold_kf_) {
+  // If last translation from ICP is larger than 1m or rotation is more than threshold
+  gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
+  if (delta.translation().norm() > translation_threshold_kf_ ||
+      fabs(2*acos(delta.rotation().toQuaternion().w())) < rotation_threshold_kf_) {
     // Set identity as TransformPointsToFixedFrame adds integrated to incrememntal to transform (normally goes before the update)
     localization_.MotionUpdate(gu::Transform3::Identity());
 

@@ -131,6 +131,7 @@ private:
   ros::Timer visualization_update_timer_;
 
   double translation_threshold_kf_;
+  double rotation_threshold_kf_;
 
   double last_timestamp_;
   double point_cloud_time_diff_limit_;
