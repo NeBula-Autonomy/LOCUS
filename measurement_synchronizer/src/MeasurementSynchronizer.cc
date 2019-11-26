@@ -42,7 +42,7 @@ MeasurementSynchronizer::~MeasurementSynchronizer() {}
 void MeasurementSynchronizer::SortMessages() {
   sensor_ordering_.clear();
 
-  // Accumulate all new messages in a single list.
+  // Accumulate all new messages in a single list
   unsigned int ii = 0;
   for (pcld_queue::const_iterator it = pending_pclds_.begin();
        it != pending_pclds_.end(); ++it, ++ii) {
@@ -85,7 +85,7 @@ void MeasurementSynchronizer::SortMessages() {
     sensor_ordering_.push_back(p);
   }  
 
-  // Sort the list by time.
+  // Sort the list by time
   std::sort(sensor_ordering_.begin(), sensor_ordering_.end(),
             MeasurementSynchronizer::CompareTimestamps);
 
