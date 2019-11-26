@@ -352,7 +352,7 @@ Eigen::Matrix3d PointCloudOdometry::GetExtAttYawChange(){
   tf::Matrix3x3 m(q0);
   m.getRPY(roll, pitch, yaw);
 
-  ROS_INFO_STREAM("Yaw delta from IMU is " << yaw*180.0/M_PI << " deg. [PointCloudOdometry]");
+  // ROS_INFO_STREAM("Yaw delta from IMU is " << yaw*180.0/M_PI << " deg. [PointCloudOdometry]");
 
   /* remove pitch and roll, just want yaw */
   rot_yaw_mat = Eigen::Matrix3d();
@@ -392,7 +392,7 @@ bool PointCloudOdometry::UpdateICP() {
       T << 0, 0, 0;
       rot_prior.block(0, 3, 3, 1) = T;
 
-      ROS_INFO_STREAM("Yaw prior is:\n" << rot_prior);
+      // ROS_INFO_STREAM("Yaw prior is:\n" << rot_prior);
 
     } else {
       // Use full rotation

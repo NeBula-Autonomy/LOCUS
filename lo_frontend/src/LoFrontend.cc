@@ -277,7 +277,7 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 }
 
 void LoFrontend::ProcessImuMessage(const Imu::ConstPtr& msg){
-  odometry_.SetExternalAttitude(msg->orientation, msg->header.stamp, true);   
+  odometry_.SetExternalAttitude(msg->orientation, msg->header.stamp, false);   
 }
 
 void LoFrontend::ProcessOdomMessage(const Odometry::ConstPtr& msg){
