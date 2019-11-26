@@ -39,21 +39,14 @@
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
-<<<<<<< HEAD
-LoFrontend::LoFrontend()
-  : estimate_update_rate_(0.0), visualization_update_rate_(0.0),
-  b_add_first_scan_to_key_(true), translation_threshold_kf_(1.0),
-  rotation_threshold_kf_(1.0),
-  last_timestamp_(-1.0), point_cloud_time_diff_limit_(0.1) {}
-=======
 LoFrontend::LoFrontend(): 
   estimate_update_rate_(0.0),
   visualization_update_rate_(0.0),
   b_add_first_scan_to_key_(true),
   translation_threshold_kf_(1.0),
+  rotation_threshold_kf_(1.0),
   last_timestamp_(-1.0), 
   point_cloud_time_diff_limit_(0.1) {}
->>>>>>> feature/imu_polish
 
 LoFrontend::~LoFrontend() {}
 
@@ -97,7 +90,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("frame_id/base", base_frame_id_))
     return false;
-<<<<<<< HEAD
 
   // Load Settings 
   if (!pu::Get("translation_threshold_kf", translation_threshold_kf_)){
@@ -107,13 +99,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   }
   if (!pu::Get("point_cloud_time_diff_limit", point_cloud_time_diff_limit_)){
-=======
-  // Load settings 
-  if (!pu::Get("translation_threshold_kf", translation_threshold_kf_))
->>>>>>> feature/imu_polish
     return false;
-  if (!pu::Get("point_cloud_time_diff_limit", point_cloud_time_diff_limit_))
-    return false; 
+  }
+
   return true;
 }
 
