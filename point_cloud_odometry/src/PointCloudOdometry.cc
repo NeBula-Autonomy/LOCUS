@@ -217,10 +217,10 @@ bool PointCloudOdometry::UpdateEstimate(const PointCloud& points) {
         // Deactivate external attitude usage if provider crashes at start
         number_of_calls_ = number_of_calls_ + 1; 
         // TODO: Have this as a param 
-        if (number_of_calls_==max_number_of_calls_){
+        if (number_of_calls_==max_number_of_calls_) {
           ROS_WARN("UpdateEstimate has been called 25 times, but no external attitude has been received yet.");
           ROS_WARN("Deactivating external attitude usage and relying on pure ICP Lidar now.");
-          // b_use_external_attitude_ = false; 
+          b_use_external_attitude_ = false; 
         }
 
         return false;
