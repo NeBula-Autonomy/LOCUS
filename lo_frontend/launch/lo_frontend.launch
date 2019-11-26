@@ -52,6 +52,7 @@
 
       <!-- Point cloud mapper -->
       <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
+
     </node>
 
     <!-- Trotthling input cloud -->
@@ -97,12 +98,13 @@
 
     <!-- Combining the two point clouds -->
     <node if="$(arg b_use_two_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo">
+      <rosparam file="$(find point_cloud_merger)/config/parameters.yaml"/>
       <remap from="~pcld" to="$(arg pc_trans_in_1)"/>
       <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
       <remap from="~combined_point_cloud" to="combined_point_cloud"/>
     </node>
 
-        <!-- Run a VoxelGrid filter to clean NaNs, downsample the data, and transform poincloud before publication-->
+    <!-- Run a VoxelGrid filter to clean NaNs, downsample the data, and transform poincloud before publication-->
     <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="pcl_manager_lo" args="manager" output="screen" respawn="true"/>
     <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="voxel_grid_lo" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
     <remap from="~input" to="combined_point_cloud" /><!--ADD BACK _throttle-->

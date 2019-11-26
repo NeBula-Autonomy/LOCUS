@@ -7,7 +7,8 @@
 
 namespace pu = parameter_utils;
 
-PointCloudMerger::PointCloudMerger() {}
+PointCloudMerger::PointCloudMerger(): b_use_random_filter_(false),
+b_use_radius_filter_(false) {}
 PointCloudMerger::~PointCloudMerger() {}
 
 bool PointCloudMerger::Initialize(const ros::NodeHandle& n) {
@@ -35,6 +36,13 @@ bool PointCloudMerger::LoadParameters(const ros::NodeHandle& n) {
   // Load mergering parameters.
 //   if (!pu::Get("merging/grid_merger", params_.grid_merger)) return false;
 //   if (!pu::Get("merging/grid_res", params_.grid_res)) return false;
+
+  if (!pu::Get("merging/decimate_percentage", decimate_percentage_)) return false;
+  if (!pu::Get("merging/b_use_random_filter", b_use_random_filter_)) return false;
+
+  if (!pu::Get("merging/b_use_radius_filter", b_use_radius_filter_)) return false;
+  if (!pu::Get("merging/radius", radius_)) return false;
+  if (!pu::Get("merging/radius_knn", radius_knn_)) return false;
 
 
   return true;
@@ -72,7 +80,27 @@ void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::Con
   pcl::fromROSMsg(*pcld2, p2);
 
   // Simple add together (could do filtering later)
-  PointCloud::ConstPtr sum(new PointCloud(p1 + p2));
+  PointCloud::Ptr sum(new PointCloud(p1 + p2));
+
+  // Filter the combined point cloud
+  if (b_use_random_filter_){
+    const int n_points = static_cast<int>((1.0 - decimate_percentage_) *
+                                              sum->size());
+    pcl::RandomSample<pcl::PointXYZI> random_filter;
+    random_filter.setSample(n_points);
+    random_filter.setInputCloud(sum);
+    random_filter.filter(*sum);
+  }
+
+  if (b_use_radius_filter_){
+    pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
+    rad.setInputCloud(sum);
+    rad.setRadiusSearch(radius_);
+    rad.setMinNeighborsInRadius(radius_knn_);
+    rad.filter(*sum);
+  }
+  // Or a radius filter?
+
   PublishMergedPointCloud(sum);
 }
 

@@ -15,6 +15,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/filters/filter.h>
+#include <pcl/filters/random_sample.h>
+#include <pcl/filters/radius_outlier_removal.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
@@ -66,6 +69,17 @@ class PointCloudMerger {
 
   // Publishers
   ros::Publisher merged_pcld_pub_;
+
+  double decimate_percentage_;
+  bool b_use_random_filter_;
+
+  // Apply a radius outlier filter.
+  bool b_use_radius_filter_;
+  // Size of the radius filter.
+  double radius_;
+  // If this number of neighbors are not found within a radius around each
+  // point, remove that point.
+  unsigned int radius_knn_;
 
 
   // struct Parameters {
