@@ -297,7 +297,7 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   if (last_timestamp_ > 0.0){
     // Not the first point cloud
     double delta_time = curent_timestamp.toSec() - last_timestamp_;
-    ROS_INFO_STREAM("Delta time is " << delta_time);
+    // ROS_INFO_STREAM("Delta time is " << delta_time);
 
     if (delta_time > point_cloud_time_diff_limit_){
       ROS_WARN_STREAM("Time diff between point clouds is " << delta_time << " s, which is more than the limt, " << point_cloud_time_diff_limit_ << "s [LoFrontend]. Last received to put in buffer is at " << last_pcld_stamp_ << " s.");
@@ -364,7 +364,8 @@ void LoFrontend::ProcessPointCloudMessage(const PointCloud::ConstPtr& msg) {
   // If last translation from ICP is larger than 1m or rotation is more than threshold
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   if (delta.translation().norm() > translation_threshold_kf_ ||
-      fabs(2*acos(delta.rotation().toQuaternion().w())) < rotation_threshold_kf_) {
+      fabs(2*acos(delta.rotation().toQuaternion().w())) > rotation_threshold_kf_) {
+    ROS_INFO_STREAM("Adding to map with translation " << delta.translation().norm() << " and rotation " << 2*acos(delta.rotation().toQuaternion().w())*180.0/M_PI << " deg");
     // Set identity as TransformPointsToFixedFrame adds integrated to incrememntal to transform (normally goes before the update)
     localization_.MotionUpdate(gu::Transform3::Identity());
 

@@ -249,7 +249,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   icp.align(icpAlignedPointsLocalization_);
   icpFitnessScore_ = icp.getFitnessScore();
 
-  ROS_INFO_STREAM("ICP Fitness score in PointCloudLocalization::MeasurementUpdate is " << icpFitnessScore_);
+  // ROS_INFO_STREAM("ICP Fitness score in PointCloudLocalization::MeasurementUpdate is " << icpFitnessScore_);
 
   // Retrieve transformation and estimate and update.
   const Eigen::Matrix4f T = icp.getFinalTransformation();
