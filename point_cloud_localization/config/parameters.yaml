@@ -1,11 +1,14 @@
 localization:
 
+  # Compute ICP covariance and condition number
+  compute_icp_covariance: false
+
   # Stop ICP if the transformation from the last iteration was this small.
   tf_epsilon: 0.0000000001
 
   # During ICP, two points won't be considered a correspondence if they are
   # at least this far from one another.
-  corr_dist: 0.5
+  corr_dist: 0.2
 
   # Iterate ICP this many times.
   iterations: 15 # 20 # Default from original branch is 10

@@ -32,6 +32,7 @@
   <run_depend>point_cloud_filter</run_depend>
   <run_depend>point_cloud_odometry</run_depend>
   <run_depend>point_cloud_mapper</run_depend>
+  <run_depend>point_cloud_merger</run_depend>
   <run_depend>point_cloud_localization</run_depend>
   <run_depend>geometry_utils</run_depend>
   <run_depend>parameter_utils</run_depend>

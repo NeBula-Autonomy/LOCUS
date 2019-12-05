@@ -50,7 +50,7 @@ namespace pu = parameter_utils;
 
 using pcl::GeneralizedIterativeClosestPoint;
 using pcl::PointCloud;
-using pcl::PointXYZ;
+using pcl::PointXYZI;
 using pcl::transformPointCloud;
 
 PointCloudLocalization::PointCloudLocalization() {}
@@ -113,6 +113,7 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
 
   // Load algorithm parameters.
+  if (!pu::Get("localization/compute_icp_covariance", params_.compute_icp_covariance)) return false;
   if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) return false;
   if (!pu::Get("localization/corr_dist", params_.corr_dist)) return false;
   if (!pu::Get("localization/iterations", params_.iterations)) return false;
@@ -140,6 +141,7 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "localization_incremental_estimate", 10, false);
   integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseWithCovarianceStamped>(
       "localization_integrated_estimate", 10, false);
+  condition_number_pub_ = nl.advertise<std_msgs::Float64>("condition_number", 10, false);
 
   return true;
 }
@@ -233,7 +235,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   // ICP-based alignment. Generalized ICP does (roughly) plane-to-plane
   // matching, and is much more robust than standard ICP.
-  GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp;
   icp.setTransformationEpsilon(params_.tf_epsilon);
   icp.setMaxCorrespondenceDistance(params_.corr_dist);
   icp.setMaximumIterations(params_.iterations);
@@ -247,7 +249,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   icp.align(icpAlignedPointsLocalization_);
   icpFitnessScore_ = icp.getFitnessScore();
 
-  ROS_INFO_STREAM("ICP Fitness score in PointCloudLocalization::MeasurementUpdate is " << icpFitnessScore_);
+  // ROS_INFO_STREAM("ICP Fitness score in PointCloudLocalization::MeasurementUpdate is " << icpFitnessScore_);
 
   // Retrieve transformation and estimate and update.
   const Eigen::Matrix4f T = icp.getFinalTransformation();
@@ -270,18 +272,25 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
         name_.c_str(), pose_update.translation.Norm(),
         pose_update.rotation.ToEulerZYX().Norm());
   }
-  Eigen::Matrix<double, 6, 6> icp_covariance;
 
-  // Compute the covariance matrix for the estimated transform.
-  ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
-  
   integrated_estimate_ =
-      gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
+    gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
 
-  // Convert pose estimates to ROS format and publish.
-  PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
-  PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+  Eigen::Matrix<double, 6, 6> icp_covariance;
+  icp_covariance = Eigen::Matrix<double, 6, 6>::Zero();
 
+  if (params_.compute_icp_covariance) {
+    // Compute the covariance matrix for the estimated transform.
+    ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
+    
+    // Convert pose estimates to ROS format and publish.
+    PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
+    PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+  } else {
+    // Convert pose estimates to ROS format and publish.
+    PublishPose(incremental_estimate_, icp_covariance, incremental_estimate_pub_);
+    PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+  }
   // Publish point clouds for visualization.
   PublishPoints(*query, query_pub_);
   PublishPoints(*reference, reference_pub_);
@@ -300,7 +309,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZ> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
+bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> pointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> &covariance){
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
@@ -368,6 +377,17 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
     H += J.transpose() * J;
   }
   covariance = H.inverse() * icpFitnessScore_;
+
+  // Compute the SVD of the covariance matrix
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+  //Extract the singular values from SVD
+  auto singular_values = svd.singularValues();
+  // The covariance matrix is a symmetric matrix, so its  singular  values  are  the absolute values of its nonzero eigenvalues
+  // Condition number is the ratio of the largest and smallest eigenvalues.
+  double condition_number = singular_values(0)/singular_values(5);
+  PublishConditionNumber(condition_number, condition_number_pub_);
+   
   return true;
 }
 
@@ -404,12 +424,10 @@ void PointCloudLocalization::PublishPose(const geometry_utils::Transform3& pose,
   pub.publish(ros_pose);
 }
 
-
 // inline geometry_msgs::Pose ToRosPose(const Transform3& trans) {
 //   geometry_msgs::Pose msg;
 //   msg.position = ToRosPoint(trans.translation);
 //   msg.orientation = ToRosQuat(RToQuat(trans.rotation));
-
 //   return msg;
 // }
 
@@ -419,6 +437,13 @@ void PointCloudLocalization::PublishPoseNoUpdate() {
   covariance = Eigen::MatrixXd::Zero(6, 6);
   PublishPose(incremental_estimate_, covariance, incremental_estimate_pub_);
   PublishPose(integrated_estimate_, covariance, integrated_estimate_pub_);
+}
+
+void PointCloudLocalization::PublishConditionNumber(double& k, const ros::Publisher& pub) {
+  // Convert condition number value to ROS format and publish.
+  std_msgs::Float64 condition_number;
+  condition_number.data = k;
+  pub.publish(condition_number);
 }
 
 void PointCloudLocalization::UpdateTimestamp(ros::Time& stamp) {

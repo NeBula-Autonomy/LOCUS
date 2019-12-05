@@ -49,11 +49,13 @@
 #include <geometry_msgs/PoseStamped.h>
 
 class MeasurementSynchronizer {
- public:
+
+public:
+
   MeasurementSynchronizer();
   ~MeasurementSynchronizer();
 
-  // Enums for all valid sensor message types.
+  // Enums for all valid sensor message types
   typedef enum {
     POINTCLOUD,
     PCL_POINTCLOUD,
@@ -62,13 +64,13 @@ class MeasurementSynchronizer {
     POSE 
   } sensor_type;
 
-  // Basic sorting, querying, clearing.
+  // Basic sorting, querying, clearing
   void SortMessages();
   bool GetNextMessage(sensor_type* type, unsigned int* index);
   bool NextMessageExists();
   void ClearMessages();
 
-  // Templated message type for holding generic sensor messages.
+  // Templated message type for holding generic sensor messages
   template<typename T>
   struct Message {
     typename T::ConstPtr msg;
@@ -79,24 +81,24 @@ class MeasurementSynchronizer {
         : msg(m), tag(t) {}
   };
 
-  // Typedefs for queues of all sensor types.
+  // Typedefs for queues of all sensor types
   typedef std::vector<Message<sensor_msgs::PointCloud2>::ConstPtr> pcld_queue;
-  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr> pcl_pcld_queue;
+  typedef std::vector<Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr> pcl_pcld_queue;
   typedef std::vector<Message<sensor_msgs::Imu>::ConstPtr> imu_queue;
   typedef std::vector<Message<nav_msgs::Odometry>::ConstPtr> odom_queue;
   typedef std::vector<Message<geometry_msgs::PoseStamped>::ConstPtr> pose_queue;
 
-  // Methods for accessing entire queues of accumulated measurements.
+  // Methods for accessing entire queues of accumulated measurements
   const pcld_queue& GetPointCloudMessages();
   const pcl_pcld_queue& GetPCLPointCloudMessages();
   const imu_queue& GetImuMessages();
   const odom_queue& GetOdomMessages();
   const pose_queue& GetPoseMessages();
 
-  // Methods for accessing a single measurement by index.
+  // Methods for accessing a single measurement by index
   const Message<sensor_msgs::PointCloud2>::ConstPtr& GetPointCloudMessage(
       unsigned int index);
-  const Message<pcl::PointCloud<pcl::PointXYZ>>::ConstPtr&
+  const Message<pcl::PointCloud<pcl::PointXYZI>>::ConstPtr&
       GetPCLPointCloudMessage(unsigned int index);
   const Message<sensor_msgs::Imu>::ConstPtr& GetImuMessage(
       unsigned int index);
@@ -105,18 +107,17 @@ class MeasurementSynchronizer {
   const Message<geometry_msgs::PoseStamped>::ConstPtr& GetPoseMessage(
       unsigned int index);
 
-  // Methods for adding sensor measurements of specific types.
+  // Methods for adding sensor measurements of specific types
   void AddPointCloudMessage(const sensor_msgs::PointCloud2::ConstPtr& msg,
                             const std::string& tag = std::string());
   void AddPCLPointCloudMessage(
-      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg,
+      const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& msg,
       const std::string& tag = std::string());
   void AddImuMessage(const sensor_msgs::Imu::ConstPtr& msg);
   void AddOdomMessage(const nav_msgs::Odometry::ConstPtr& msg);
   void AddPoseMessage(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
-
-  // Static enum to string conversion.
+  // Static enum to string conversion
   static std::string GetTypeString(const sensor_type& type) {
     switch(type) {
       case POINTCLOUD:
@@ -129,12 +130,12 @@ class MeasurementSynchronizer {
         return std::string("ODOM");
       case POSE: 
         return std::string("POSE");
-      // No default to force compile-time error.
+      // No default to force compile-time error
     }
   }
 
  private:
-  // Templated message for sorting generic sensor messages by timestamp.
+  // Templated message for sorting generic sensor messages by timestamp
   struct TimestampedType {
     double time;
     sensor_type type;
@@ -145,14 +146,14 @@ class MeasurementSynchronizer {
     typedef std::shared_ptr<const TimestampedType> ConstPtr;
   };
 
-  // Sorting function.
+  // Sorting function
   static bool CompareTimestamps(const TimestampedType::ConstPtr& lhs,
                                 const TimestampedType::ConstPtr& rhs) {
     return ((lhs->time < rhs->time) ||
             ((lhs->time == rhs->time) && (lhs->type < rhs->type)));
   }
 
-  // Queues of sensor messages.
+  // Queues of sensor messages
   pcld_queue pending_pclds_;
   pcl_pcld_queue pending_pcl_pclds_;
   imu_queue pending_imus_;

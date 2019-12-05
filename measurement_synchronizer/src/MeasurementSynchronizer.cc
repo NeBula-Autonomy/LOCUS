@@ -42,7 +42,7 @@ MeasurementSynchronizer::~MeasurementSynchronizer() {}
 void MeasurementSynchronizer::SortMessages() {
   sensor_ordering_.clear();
 
-  // Accumulate all new messages in a single list.
+  // Accumulate all new messages in a single list
   unsigned int ii = 0;
   for (pcld_queue::const_iterator it = pending_pclds_.begin();
        it != pending_pclds_.end(); ++it, ++ii) {
@@ -85,7 +85,7 @@ void MeasurementSynchronizer::SortMessages() {
     sensor_ordering_.push_back(p);
   }  
 
-  // Sort the list by time.
+  // Sort the list by time
   std::sort(sensor_ordering_.begin(), sensor_ordering_.end(),
             MeasurementSynchronizer::CompareTimestamps);
 
@@ -153,7 +153,7 @@ MeasurementSynchronizer::GetPointCloudMessage(unsigned int index) {
 }
 
 const MeasurementSynchronizer::Message<
-    pcl::PointCloud<pcl::PointXYZ>>::ConstPtr&
+    pcl::PointCloud<pcl::PointXYZI>>::ConstPtr&
 MeasurementSynchronizer::GetPCLPointCloudMessage(unsigned int index) {
   return pending_pcl_pclds_[index];
 }
@@ -181,10 +181,10 @@ void MeasurementSynchronizer::AddPointCloudMessage(
 }
 
 void MeasurementSynchronizer::AddPCLPointCloudMessage(
-    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg,
+    const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& msg,
     const std::string& tag) {
-  Message<pcl::PointCloud<pcl::PointXYZ>>::Ptr p(
-      new Message<pcl::PointCloud<pcl::PointXYZ>>(msg, tag));
+  Message<pcl::PointCloud<pcl::PointXYZI>>::Ptr p(
+      new Message<pcl::PointCloud<pcl::PointXYZI>>(msg, tag));
   pending_pcl_pclds_.push_back(p);
 }
 

@@ -37,10 +37,10 @@
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
-// Std libs.
+// Standard libraries
 #include <math.h>
 
-// ROS.
+// ROS
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -63,14 +63,16 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 
+// Messages
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 
-
 class LoFrontend {
+
 public:
-  typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+
+  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef geometry_msgs::PoseStamped PoseStamped; 
@@ -82,81 +84,78 @@ public:
   // The from_log argument specifies whether to run SLAM online (subscribe to
   // topics) or by loading messages from a bag file.
   bool Initialize(const ros::NodeHandle& n, bool from_log);
-
-  // Sensor message processing.
+  // Sensor message processing
   void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
-
   // IMU message processing 
   void ProcessImuMessage(const Imu::ConstPtr& msg);
-
   // ODOM message processing 
   void ProcessOdomMessage(const Odometry::ConstPtr& msg);
-
   // POSE message processing 
   void ProcessPoseMessage(const PoseStamped::ConstPtr& msg);
 
 private:
-  // Node initialization.
+
+  // Node initialization
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n, bool from_log);
   bool RegisterLogCallbacks(const ros::NodeHandle& n);
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  // Sensor callbacks.
+  // Sensor callbacks
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
-  void ImuCallback(const sensor_msgs::Imu::ConstPtr& msg);
-  void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-  void PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+  void ImuCallback(const Imu::ConstPtr& msg);
+  void OdomCallback(const Odometry::ConstPtr& msg);
+  void PoseCallback(const PoseStamped::ConstPtr& msg);
 
-  // Timer callbacks.
-  // Will run ICP and add PC on local map.
+  // Timer callbacks
+  // Will run ICP and add PC on local map
   void EstimateTimerCallback(const ros::TimerEvent& ev);
-  // TODO: Andrea: ?
   void VisualizationTimerCallback(const ros::TimerEvent& ev);
 
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
 
-  // position when points were last added to map
+  // Position when points were last added to map
   geometry_utils::Transform3 last_keyframe_pose_; // TODO: Andrea: check if used
-  ros::Time last_pcld_stamp_;                // TODO: Andrea: check if used.
+  ros::Time last_pcld_stamp_;                     // TODO: Andrea: check if used
 
-  // The node's name.
+  // The node's name
   std::string name_;
 
-  // Update rates and callback timers.
+  // Update rates and callback timers
   double estimate_update_rate_;
   double visualization_update_rate_;
   ros::Timer estimate_update_timer_;
   ros::Timer visualization_update_timer_;
 
   double translation_threshold_kf_;
+  double rotation_threshold_kf_;
 
   double last_timestamp_;
   double point_cloud_time_diff_limit_;
-
   bool b_add_first_scan_to_key_;
 
-  // Subscribers.
-  ros::Subscriber pcld_sub_;  // pc from lidar
+  // Subscribers
+  ros::Subscriber pcld_sub_;  
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
   ros::Subscriber pose_sub_;    
 
   // Publishers
-  ros::Publisher base_frame_pcld_pub_; // TODO: Andrea: ?
-  ros::Publisher pose_scan_pub_;       // pose and scan ?
+  ros::Publisher base_frame_pcld_pub_; 
+  ros::Publisher pose_scan_pub_; 
 
-  // Names of coordinate frames.
-  std::string fixed_frame_id_; // TODO: Andrea: ?
-  std::string base_frame_id_;  // TODO: Andrea: ?
+  // Names of coordinate frames
+  std::string fixed_frame_id_; 
+  std::string base_frame_id_; 
 
-  // Class objects (LoFrontend is a composite class).
+  // Class objects (LoFrontend is a composite class)
   MeasurementSynchronizer synchronizer_;
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
-  PointCloudLocalization localization_; // TODO: Andrea: needed?
-  PointCloudMapper mapper_;             // TODO: Andrea: needed?
+  PointCloudLocalization localization_; 
+  PointCloudMapper mapper_;             
+
 };
 
-#endif // LO_FRONTEND_LO_FRONTEND_H
+#endif 
