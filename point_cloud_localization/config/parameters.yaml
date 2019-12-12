@@ -1,7 +1,7 @@
 localization:
 
   # Compute ICP covariance and condition number
-  compute_icp_covariance: false
+  compute_icp_covariance: true
 
   # Stop ICP if the transformation from the last iteration was this small.
   tf_epsilon: 0.0000000001

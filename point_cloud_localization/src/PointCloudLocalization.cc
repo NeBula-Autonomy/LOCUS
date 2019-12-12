@@ -380,12 +380,15 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  // Eigen::JacobiSVD<Eigen::MatrixXd> svd( covariance, Eigen::ComputeFullV | Eigen::ComputeFullU);
 
   //Extract the singular values from SVD
   auto singular_values = svd.singularValues();
   // The covariance matrix is a symmetric matrix, so its  singular  values  are  the absolute values of its nonzero eigenvalues
   // Condition number is the ratio of the largest and smallest eigenvalues.
   double condition_number = singular_values(0)/singular_values(5);
+  long int power = 20;
+  condition_number = condition_number / exp(power);
   PublishConditionNumber(condition_number, condition_number_pub_);
    
   return true;
