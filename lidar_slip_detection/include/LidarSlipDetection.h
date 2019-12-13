@@ -36,6 +36,7 @@
 #define LIDAR_SLIP_DETECTION_H
 
 #include <ros/ros.h>
+#include <ros/time.h>
 
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
@@ -73,12 +74,17 @@ public:
   bool CreatePublishers(const ros::NodeHandle& n);
 
   // Odometry Callbacks
-  void LidarOdometryCallback(const Odometry::ConstPtr& msg); 
   void WheelOdometryCallback(const Odometry::ConstPtr& msg);
+  void LidarOdometryCallback(const Odometry::ConstPtr& msg); 
   
   // Condition Number Callback
   void ConditionNumberCallback(const double& condition_number);
 
+  PoseCovStamped lidar_last_pose_;
+  PoseCovStamped wheel_last_pose_;
+
+  double wheel_delta_;
+  double lidar_delta_;
 
  protected:
 
@@ -91,7 +97,7 @@ public:
   ros::Publisher lidar_slip_amount_pub_;
   ros::Publisher lidar_slip_status_pub_;
 
-  void InitializeInitialPose(PoseCovStamped first_pose);
+  void InitializePose(PoseCovStamped first_pose);
   geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose, const PoseCovStamped second_pose);
   void PublishLidarSlipAmount(double& slip_amount, const ros::Publisher& pub);
   void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);

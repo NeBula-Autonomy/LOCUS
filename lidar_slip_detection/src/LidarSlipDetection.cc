@@ -52,6 +52,8 @@ LidarSlipDetection::~LidarSlipDetection() {}
 
 bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
   CreatePublishers(n);
+  InitializePose(lidar_last_pose_);
+  InitializePose(wheel_last_pose_);
   return true;
 }
 
@@ -77,16 +79,42 @@ bool LidarSlipDetection::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
+void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
+  // Callback function for wheel odometry
+  PoseCovStamped wheel_current_pose;
+  wheel_current_pose.header = msg->header;
+  wheel_current_pose.pose = msg->pose;
+  geometry_utils::Transform3 wheel_transform = GetTransform(wheel_last_pose_, wheel_current_pose);
+  double x = wheel_transform.translation(0);
+  double y = wheel_transform.translation(1);
+  double z = wheel_transform.translation(2);
+  wheel_delta_ = std::sqrt(x * x + y * y + z * z);
+  wheel_last_pose_ = wheel_current_pose;
+
+
+}
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   // Callback function for lidar odometry
-  PoseCovStamped first_pose, second_pose;
-  InitializeInitialPose(first_pose);
-}
-
-void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
-  // Callback function for wheel odometry
-
+  double slip_amount = 0.0;
+  bool slip_status = false;
+  PoseCovStamped lidar_current_pose;
+  lidar_current_pose.header = msg->header;
+  lidar_current_pose.pose = msg->pose;
+  geometry_utils::Transform3 lidar_transform= GetTransform(lidar_last_pose_, lidar_current_pose);
+  double x = lidar_transform.translation(0);
+  double y = lidar_transform.translation(1);
+  double z = lidar_transform.translation(2);
+  lidar_delta_ = std::sqrt(x * x + y * y + z * z);
+  if (lidar_delta_ > 0) {
+    double slip_amount = abs(wheel_delta_ - lidar_delta_);
+    if (slip_amount > 0.1) {
+      bool slip_status = true;
+    }
+  }
+  PublishLidarSlipAmount(slip_amount, lidar_slip_amount_pub_);
+  PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
+  lidar_last_pose_ = lidar_current_pose;
 }
 
 void LidarSlipDetection::ConditionNumberCallback(const double &condition_number) {
@@ -94,17 +122,18 @@ void LidarSlipDetection::ConditionNumberCallback(const double &condition_number)
 
 }
 
-void LidarSlipDetection::InitializeInitialPose(PoseCovStamped first_pose) {
-  first_pose.pose.pose.position.x = 0;
-  first_pose.pose.pose.position.y = 0;
-  first_pose.pose.pose.position.z = 0;
-  first_pose.pose.pose.orientation.x = 0;
-  first_pose.pose.pose.orientation.y = 0;
-  first_pose.pose.pose.orientation.z = 0;
-  first_pose.pose.pose.orientation.w = 1;
+void LidarSlipDetection::InitializePose(PoseCovStamped pose) {
+  pose.header.stamp = ros::Time::now();
+  pose.pose.pose.position.x = 0;
+  pose.pose.pose.position.y = 0;
+  pose.pose.pose.position.z = 0;
+  pose.pose.pose.orientation.x = 0;
+  pose.pose.pose.orientation.y = 0;
+  pose.pose.pose.orientation.z = 0;
+  pose.pose.pose.orientation.w = 1;
 }
 
-geometry_utils::Transform3 GetTransform(
+geometry_utils::Transform3 LidarSlipDetection::GetTransform(
     const PoseCovStamped first_pose, const PoseCovStamped second_pose) {
   // Gets the delta between two pose stamped
   auto pose_first = gr::FromROS(first_pose.pose.pose);
@@ -127,6 +156,3 @@ void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status, const ros::Pu
   lidar_slip_status.data = slip_status;
   pub.publish(lidar_slip_status);
 }
-
-// PublishLidarSlipAmount(lidar_slip_amount, lidar_slip_amount_pub_);
-// PublishLidarSlipStatus(lidar_slip_status, lidar_slip_status_pub_);
