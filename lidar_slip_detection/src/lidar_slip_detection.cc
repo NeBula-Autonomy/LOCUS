@@ -35,7 +35,7 @@
  */
 
 #include <ros/ros.h>
-#include <LidarSlipDetection.h>
+#include <lidar_slip_detection/LidarSlipDetection.h>
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "lidar_slip_detection");

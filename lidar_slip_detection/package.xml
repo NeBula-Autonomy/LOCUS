@@ -4,7 +4,7 @@
   <version>0.0.0</version>
   <description>The lidar_slip_detection package</description>
 
-  <author email="yunchange@mit.edu">Yun Chnag</author>
+  <author email="kamak.ebadi@jpl.nasa.gov">Kamak Ebadi</author>
   <maintainer email="kamak.ebadi@jpl.nasa.gov">Kamak Ebadi</maintainer>
 
   <license>GPLv2</license>

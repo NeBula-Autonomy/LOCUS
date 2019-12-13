@@ -34,7 +34,7 @@
  * Authors: Yun Change, Kamak Ebadi ( yunchange@mit.edu, kamak.ebadi@jpl.nasa.gov )
  */
 
-#include <LidarSlipDetection.h>
+#include <lidar_slip_detection/LidarSlipDetection.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
