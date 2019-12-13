@@ -34,18 +34,15 @@
  * Authors: Yun Change, Kamak Ebadi ( yunchange@mit.edu, kamak.ebadi@jpl.nasa.gov )
  */
 
-// #include <lidar_slip_detection/LidarSlipDetection.h>
 #include <LidarSlipDetection.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <parameter_utils/ParameterUtils.h>
 
-
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
 namespace pu = parameter_utils;
-
 
 LidarSlipDetection::LidarSlipDetection() {}
 LidarSlipDetection::~LidarSlipDetection() {}
@@ -90,8 +87,6 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
   double z = wheel_transform.translation(2);
   wheel_delta_ = std::sqrt(x * x + y * y + z * z);
   wheel_last_pose_ = wheel_current_pose;
-
-
 }
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
@@ -148,7 +143,6 @@ void LidarSlipDetection::PublishLidarSlipAmount(double& slip_amount, const ros::
   lidar_slip_amount.data = slip_amount;
   pub.publish(lidar_slip_amount);
 }
-
 
 void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub) {
   // Convert condition number value to ROS format and publish.
