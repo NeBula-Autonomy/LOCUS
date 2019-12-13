@@ -35,12 +35,31 @@
 #ifndef LIDAR_SLIP_DETECTION_H
 #define LIDAR_SLIP_DETECTION_H
 
-#include <geometry_utils/Transform3.h>
-#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 
-#include <eigen_conversions/eigen_msg.h>
+#include <geometry_utils/GeometryUtilsROS.h>
+#include <geometry_utils/Transform3.h>
+#include <parameter_utils/ParameterUtils.h>
+
 #include <std_msgs/Float64.h>
+#include <std_msgs/Bool.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/TransformStamped.h>
+
+#include <gtsam/base/Vector.h>
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Rot3.h>
+#include <gtsam/linear/NoiseModel.h>
+
+#include <eigen_conversions/eigen_msg.h>
+
+namespace gu = geometry_utils;
+namespace gr = geometry_utils::ros;
+
+typedef nav_msgs::Odometry Odometry;
+typedef geometry_msgs::PoseWithCovarianceStamped PoseCovStamped;
 
 class LidarSlipDetection {
 
@@ -50,15 +69,35 @@ public:
   ~LidarSlipDetection();
 
   bool Initialize(const ros::NodeHandle& n);
+  bool RegisterCallbacks(const ros::NodeHandle& n);
+  bool CreatePublishers(const ros::NodeHandle& n);
 
-  void condNumCallback(const double &condition_number);
+  // Odometry Callbacks
+  void LidarOdometryCallback(const Odometry::ConstPtr& msg); 
+  void WheelOdometryCallback(const Odometry::ConstPtr& msg);
+  
+  // Condition Number Callback
+  void ConditionNumberCallback(const double& condition_number);
 
+
+ protected:
+
+  // Subscribers
+  ros::Subscriber condition_number_sub_;
+  ros::Subscriber lidar_odom_sub_;
+  ros::Subscriber wheel_odom_sub_;
+
+  // Publishers
+  ros::Publisher lidar_slip_amount_pub_;
+  ros::Publisher lidar_slip_status_pub_;
+
+  void InitializeInitialPose(PoseCovStamped first_pose);
+  geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose, const PoseCovStamped second_pose);
+  void PublishLidarSlipAmount(double& slip_amount, const ros::Publisher& pub);
+  void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
 
  private:
-  ros::Subscriber condNumSub_;
-  ros::Publisher lidarSlipPub_;
 
-  
 };
 
 #endif
