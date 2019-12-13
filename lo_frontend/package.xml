@@ -18,6 +18,7 @@
   <build_depend>point_cloud_odometry</build_depend>
   <build_depend>point_cloud_mapper</build_depend>
   <build_depend>point_cloud_localization</build_depend>
+  <build_depend>lidar_slip_detection</build_depend>
   <build_depend>geometry_utils</build_depend>
   <build_depend>parameter_utils</build_depend>
   <build_depend>pcl_ros</build_depend>
@@ -33,6 +34,7 @@
   <run_depend>point_cloud_odometry</run_depend>
   <run_depend>point_cloud_mapper</run_depend>
   <run_depend>point_cloud_merger</run_depend>
+  <run_depend>lidar_slip_detection</run_depend>
   <run_depend>point_cloud_localization</run_depend>
   <run_depend>geometry_utils</run_depend>
   <run_depend>parameter_utils</run_depend>
