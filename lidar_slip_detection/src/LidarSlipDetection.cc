@@ -48,21 +48,17 @@ LidarSlipDetection::LidarSlipDetection() {}
 LidarSlipDetection::~LidarSlipDetection() {}
 
 bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
-  CreatePublishers(n);
-  InitializePose(lidar_last_pose_);
-  InitializePose(wheel_last_pose_);
-  return true;
-}
-
-bool LidarSlipDetection::RegisterCallbacks(const ros::NodeHandle& n) {
-  ROS_INFO("%s: Registering online callbacks in LidarSlipDetection");
+  // Initialize subscribers
   ros::NodeHandle nl(n);
-
   lidar_odom_sub_ = nl.subscribe(
-      "lio_odom", 10, &LidarSlipDetection::LidarOdometryCallback, this);
+    "lio_odom", 10, &LidarSlipDetection::LidarOdometryCallback, this);
   wheel_odom_sub_ = nl.subscribe(
       "wio_odom", 10, &LidarSlipDetection::WheelOdometryCallback, this);
-  
+  // Initialize publishers
+  CreatePublishers(nl);
+  // Initialize wheel and lidar poses to zero
+  InitializePose(lidar_last_pose_);
+  InitializePose(wheel_last_pose_);
   return true;
 }
 

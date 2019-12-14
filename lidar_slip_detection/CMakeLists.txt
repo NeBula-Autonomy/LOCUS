@@ -17,10 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_utils
   parameter_utils
   geometry_msgs
-  sensor_msgs
-  pcl_ros
+  nav_msgs
   tf2_ros
-  eigen_conversions
 )
 
 catkin_package(
@@ -31,10 +29,8 @@ catkin_package(
     geometry_utils
     parameter_utils
     geometry_msgs
-    sensor_msgs
-    pcl_ros
+    nav_msgs
     tf2_ros
-    eigen_conversions
 )
 
 find_package(PCL 1.7 REQUIRED)

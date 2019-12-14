@@ -70,7 +70,6 @@ public:
   ~LidarSlipDetection();
 
   bool Initialize(const ros::NodeHandle& n);
-  bool RegisterCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
   // Odometry Callbacks
