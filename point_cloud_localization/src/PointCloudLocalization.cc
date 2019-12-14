@@ -387,10 +387,13 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
   // The covariance matrix is a symmetric matrix, so its  singular  values  are  the absolute values of its nonzero eigenvalues
   // Condition number is the ratio of the largest and smallest eigenvalues.
   double condition_number = singular_values(0)/singular_values(5);
-  long int power = 20;
-  condition_number = condition_number / exp(power);
+  if (condition_number > 8 * exp(14)) {
+    condition_number = 1;
+  } else {
+    condition_number = 0;
+  }
   PublishConditionNumber(condition_number, condition_number_pub_);
-   
+  
   return true;
 }
 

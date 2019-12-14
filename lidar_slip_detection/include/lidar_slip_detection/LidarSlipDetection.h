@@ -56,6 +56,8 @@
 
 #include <eigen_conversions/eigen_msg.h>
 
+#include <numeric>
+
 namespace gu = geometry_utils;
 namespace gr = geometry_utils::ros;
 
@@ -77,14 +79,14 @@ public:
   void LidarOdometryCallback(const Odometry::ConstPtr& msg); 
   
   // Condition Number Callback
-  void ConditionNumberCallback(const double& condition_number);
+  void ConditionNumberCallback(const std_msgs::Float64 &condition_number);
 
   PoseCovStamped lidar_last_pose_;
   PoseCovStamped wheel_last_pose_;
 
   double wheel_delta_;
   double lidar_delta_;
-
+ 
  protected:
 
   // Subscribers
@@ -95,11 +97,13 @@ public:
   // Publishers
   ros::Publisher lidar_slip_amount_pub_;
   ros::Publisher lidar_slip_status_pub_;
+  // ros::Publisher avg_condition_number_pub_;
 
   void InitializePose(PoseCovStamped first_pose);
   geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose, const PoseCovStamped second_pose);
   void PublishLidarSlipAmount(double& slip_amount, const ros::Publisher& pub);
   void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
+  // void PublishAvgConditionNumber(double& k, const ros::Publisher& pub);
 
  private:
 

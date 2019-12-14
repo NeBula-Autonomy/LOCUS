@@ -54,6 +54,8 @@ bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
     "lio_odom", 10, &LidarSlipDetection::LidarOdometryCallback, this);
   wheel_odom_sub_ = nl.subscribe(
       "wio_odom", 10, &LidarSlipDetection::WheelOdometryCallback, this);
+  condition_number_sub_ = nl.subscribe(
+    "condition_number", 10, &LidarSlipDetection::ConditionNumberCallback, this);
   // Initialize publishers
   CreatePublishers(nl);
   // Initialize wheel and lidar poses to zero
@@ -68,6 +70,7 @@ bool LidarSlipDetection::CreatePublishers(const ros::NodeHandle& n) {
 
   lidar_slip_amount_pub_ = nl.advertise<std_msgs::Float64>("lidar_slip_amount", 10, false);
   lidar_slip_status_pub_ = nl.advertise<std_msgs::Bool>("lidar_slip_status", 10, false);
+  // avg_condition_number_pub_ = nl.advertise<std_msgs::Float64>("average_condition_number", 10, false);
 
   return true;
 }
@@ -108,7 +111,7 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   lidar_last_pose_ = lidar_current_pose;
 }
 
-void LidarSlipDetection::ConditionNumberCallback(const double &condition_number) {
+void LidarSlipDetection::ConditionNumberCallback(const std_msgs::Float64 &condition_number) {
   // Callback function for condition number
 
 }
@@ -146,3 +149,10 @@ void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status, const ros::Pu
   lidar_slip_status.data = slip_status;
   pub.publish(lidar_slip_status);
 }
+
+// void LidarSlipDetection::PublishAvgConditionNumber(double& k, const ros::Publisher& pub) {
+//   // Convert condition number value to ROS format and publish.
+//   std_msgs::Float64 avg_condition_number;
+//   avg_condition_number.data = k;
+//   pub.publish(avg_condition_number);
+// }
