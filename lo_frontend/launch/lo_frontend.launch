@@ -1,7 +1,7 @@
 <launch>
   <arg name="robot_namespace" default="robot"/>
 
-  <arg name="b_use_two_pc" default="true"/>
+  <arg name="b_use_two_pc" default="false"/>
 
 
   <arg if="$(arg b_use_two_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
@@ -10,7 +10,7 @@
   <!-- Velodyne topic throttle params -->
   <arg name="vlp_throttle_freq" default="10.0"/><!-- Hz -->
   <arg name="pc_trans_in_1" default="velodyne_points/transformed"/>
-  <arg name="pc_trans_in_2" default="velodyne_front/velodyne_points/transformed"/>
+  <!--arg name="pc_trans_in_2" default="velodyne_front/velodyne_points/transformed"/-->
 
   <group ns="$(arg robot_namespace)">
   
@@ -85,7 +85,7 @@
     <!-- Republish node with different frame_id -->
     <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="transform_points_base_link_front"
           args="standalone pcl/PassThrough">
-      <remap from="~input" to="velodyne_front/velodyne_points"/>
+      <!--remap from="~input" to="velodyne_front/velodyne_points"/-->
       <!-- <remap from="~input" to="velodyne_front/velodyne_points_throttle"/> -->
       <remap from="~output" to="$(arg pc_trans_in_2)"/>
       <rosparam subst_value="true">
