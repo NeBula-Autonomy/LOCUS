@@ -118,6 +118,10 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("imu_integration/imu_max_number_of_calls", imu_max_number_of_calls_))
     return false;
+  if(!pu::Get("odom_integration/b_use_odom_integration", b_use_odom_integration_))
+    return false;
+  if(!pu::Get("odom_integration/odom_max_number_of_calls", odom_max_number_of_calls_))
+    return false;
   if(!pu::Get("queue_sizes/imu_queue_size", imu_queue_size_))
     return false;
   if(!pu::Get("queue_sizes/odom_queue_size", odom_queue_size_))
@@ -330,7 +334,7 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;
     b_pcld_received_ = true;
   }
-  else{
+  else {
     if(msg->header.seq!=pcld_seq_prev_+1) {
       ROS_WARN("Lidar scan dropped");
     }
@@ -353,6 +357,10 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
       return;
     }
     odometry_.SetImuQuaternion(GetImuQuaternion(imu_msg));
+  }
+
+  if (b_use_odom_integration_) {
+    ROS_INFO("To be implemented");
   }
   
   filter_.Filter(msg, msg_filtered_);
