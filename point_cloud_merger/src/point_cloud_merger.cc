@@ -1,6 +1,3 @@
-/*
- */
-
 #include <ros/ros.h>
 #include <point_cloud_merger/PointCloudMerger.h>
 

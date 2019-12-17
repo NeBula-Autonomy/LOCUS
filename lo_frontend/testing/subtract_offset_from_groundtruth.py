@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+"""
+Matteo Palieri, NASA Jet Propulsion Laboratory
+"""
+
 import rospy
 import math 
 import numpy as np 

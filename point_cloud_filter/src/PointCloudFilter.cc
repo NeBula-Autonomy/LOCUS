@@ -35,13 +35,6 @@
  */
 
 #include <point_cloud_filter/PointCloudFilter.h>
-#include <parameter_utils/ParameterUtils.h>
-
-#include <pcl/filters/filter.h>
-#include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/random_sample.h>
-#include <pcl/filters/statistical_outlier_removal.h>
-#include <pcl/filters/voxel_grid.h>
 
 namespace pu = parameter_utils;
 
@@ -50,49 +43,38 @@ PointCloudFilter::~PointCloudFilter() {}
 
 bool PointCloudFilter::Initialize(const ros::NodeHandle& n) {
   name_ = ros::names::append(n.getNamespace(), "PointCloudFilter");
-
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
   }
-
-  if (!RegisterCallbacks(n)) {
-    ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
-    return false;
-  }
-
   return true;
 }
 
 bool PointCloudFilter::LoadParameters(const ros::NodeHandle& n) {
-  // Load filtering parameters.
-  if (!pu::Get("filtering/grid_filter", params_.grid_filter)) return false;
-  if (!pu::Get("filtering/grid_res", params_.grid_res)) return false;
-
-  if (!pu::Get("filtering/random_filter", params_.random_filter)) return false;
+  if (!pu::Get("filtering/grid_filter", params_.grid_filter)) 
+    return false;
+  if (!pu::Get("filtering/grid_res", params_.grid_res)) 
+    return false;
+  if (!pu::Get("filtering/random_filter", params_.random_filter)) 
+    return false;
   if (!pu::Get("filtering/decimate_percentage", params_.decimate_percentage))
     return false;
-
-  if (!pu::Get("filtering/outlier_filter", params_.outlier_filter)) return false;
-  if (!pu::Get("filtering/outlier_std", params_.outlier_std)) return false;
-  if (!pu::Get("filtering/outlier_knn", params_.outlier_knn)) return false;
-
-  if (!pu::Get("filtering/radius_filter", params_.radius_filter)) return false;
-  if (!pu::Get("filtering/radius", params_.radius)) return false;
-  if (!pu::Get("filtering/radius_knn", params_.radius_knn)) return false;
-  if (!pu::Get("filtering/extract_features", params_.extract_features)) return false;
-
+  if (!pu::Get("filtering/outlier_filter", params_.outlier_filter)) 
+    return false;
+  if (!pu::Get("filtering/outlier_std", params_.outlier_std)) 
+    return false;
+  if (!pu::Get("filtering/outlier_knn", params_.outlier_knn)) 
+    return false;
+  if (!pu::Get("filtering/radius_filter", params_.radius_filter)) 
+    return false;
+  if (!pu::Get("filtering/radius", params_.radius)) 
+    return false;
+  if (!pu::Get("filtering/radius_knn", params_.radius_knn)) 
+    return false;
+  if (!pu::Get("filtering/extract_features", params_.extract_features)) 
+    return false;
   // Cap to [0.0, 1.0].
-  params_.decimate_percentage =
-      std::min(1.0, std::max(0.0, params_.decimate_percentage));
-
-  return true;
-}
-
-bool PointCloudFilter::RegisterCallbacks(const ros::NodeHandle& n) {
-  // Create a local nodehandle to manage callback subscriptions.
-  ros::NodeHandle nl(n);
-
+  params_.decimate_percentage = std::min(1.0, std::max(0.0, params_.decimate_percentage));
   return true;
 }
 
@@ -103,10 +85,10 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     return false;
   }
 
-  // Copy input points.
+  // Copy input points
   *points_filtered = *points; 
-  if (!params_.extract_features){
-    // Apply a random downsampling filter to the incoming point cloud.
+  if (!params_.extract_features) {
+    // Apply a random downsampling filter to the incoming point cloud
     if (params_.random_filter) {
       const int n_points = static_cast<int>((1.0 - params_.decimate_percentage) *
                                             points_filtered->size());
@@ -116,7 +98,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
       random_filter.filter(*points_filtered);
     }
 
-    // Apply a voxel grid filter to the incoming point cloud.
+    // Apply a voxel grid filter to the incoming point cloud
     if (params_.grid_filter) {
       pcl::VoxelGrid<pcl::PointXYZI> grid;
       grid.setLeafSize(params_.grid_res, params_.grid_res, params_.grid_res);
@@ -124,7 +106,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
       grid.filter(*points_filtered);
     }
 
-    // Remove statistical outliers in incoming the point cloud.
+    // Remove statistical outliers in incoming the point cloud
     if (params_.outlier_filter) {
       pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
       sor.setInputCloud(points_filtered);
@@ -133,21 +115,22 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
       sor.filter(*points_filtered);
     }
 
-    // Remove points without a threshold number of neighbors within a specified
-    // radius.
+    // Remove points without a threshold number of neighbors within a specified radius
     if (params_.radius_filter) {
       pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
       rad.setInputCloud(points_filtered);
       rad.setRadiusSearch(params_.radius);
       rad.setMinNeighborsInRadius(params_.radius_knn);
       rad.filter(*points_filtered);
-    }
-  // Downsample point cloud by extracting features  
-  } else {
-    //arrange points in scan lines
-    arrangePCLInScanLines(*points_filtered, 0.1); // Todo: the VLP scan period should be a parameter set by user
-
-    //extract features from the arranged points
+    }  
+  } 
+  else {
+    // Downsample point cloud by extracting features
+    // Arrange points in scan lines
+    // Todo: the VLP scan period should be a parameter set by user
+    arrangePCLInScanLines(*points_filtered, 0.1); 
+    
+    // Extract features from the arranged points
     extractFeatures();
     
     pcl::PointCloud<pcl::PointXYZI> pcld_temp;
@@ -171,7 +154,6 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     PointCloud::Ptr transformed_cloud (new PointCloud ());
     pcl::transformPointCloud ( pcld_temp, *transformed_cloud, transform);
     *points_filtered = *transformed_cloud;
-
   }
   return true;
 }
@@ -181,7 +163,7 @@ void PointCloudFilter::arrangePCLInScanLines(const PointCloud &laserCloudIn, flo
 {
     size_t cloudSize = laserCloudIn.size();
 
-    // determine scan start and end orientations
+    // Determine scan start and end orientations
     float startOri = -std::atan2(laserCloudIn[0].y, laserCloudIn[0].x);
     float endOri = -std::atan2(laserCloudIn[cloudSize - 1].y, laserCloudIn[cloudSize - 1].x) + 2 * float(M_PI);
 
@@ -199,26 +181,26 @@ void PointCloudFilter::arrangePCLInScanLines(const PointCloud &laserCloudIn, flo
     laserCloudScans_.clear();
     laserCloudScans_.resize(nScanRings_);
 
-    // extract valid points from input cloud
+    // Extract valid points from input cloud
     for (int i = 0; i < cloudSize; i++)
     {
         point.x = laserCloudIn[i].y;
         point.y = laserCloudIn[i].z;
         point.z = laserCloudIn[i].x;
 
-        // skip NaN and INF valued points
+        // Skip NaN and INF valued points
         if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z))
         {
             continue;
         }
 
-        // skip zero valued points
+        // Skip zero valued points
         if (point.x * point.x + point.y * point.y + point.z * point.z < 0.0001)
         {
             continue;
         }
 
-        // calculate vertical point angle and scan ID
+        // Calculate vertical point angle and scan ID
         float angle = std::atan(point.y / std::sqrt(point.x * point.x + point.z * point.z));
         int scanID = getRingForAngle(angle);
         if (scanID >= nScanRings_ || scanID < 0)
@@ -226,7 +208,7 @@ void PointCloudFilter::arrangePCLInScanLines(const PointCloud &laserCloudIn, flo
             continue;
         }
 
-        // calculate horizontal point angle
+        // Calculate horizontal point angle
         float ori = -std::atan2(point.x, point.z);
         if (!halfPassed)
         {
@@ -259,20 +241,19 @@ void PointCloudFilter::arrangePCLInScanLines(const PointCloud &laserCloudIn, flo
         }
 
         // Given the orientation of the current point and knowning the start/end orientations and total scan time 
-        // we compute the relative scan time at which this point was scanned when the lidar was doing its sweep.
+        // we compute the relative scan time at which this point was scanned when the lidar was doing its sweep
         float relTime = scanPeriod * (ori - startOri) / (endOri - startOri);
         point.intensity = scanID + relTime;
         laserCloudScans_[scanID].push_back(point);
     }
 
-    // construct sorted full resolution cloud
+    // Construct sorted full resolution cloud
     laserCloud_.clear();
     scanIndices_.clear();
     size_t cloudSizeScans = 0;
     for (int i = 0; i < laserCloudScans_.size(); i++)
     {
         laserCloud_ += laserCloudScans_[i];
-
         IndexRange range(cloudSizeScans, 0);
         cloudSizeScans += laserCloudScans_[i].size();
         range.second = cloudSizeScans > 0 ? cloudSizeScans - 1 : 0;
@@ -293,7 +274,7 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
     regionSortIndices_.clear();
     scanNeighborPicked_.clear();
 
-    // extract features from individual scans
+    // Extract features from individual scans
     size_t nScans = scanIndices_.size();
     for (size_t i = beginIdx; i < nScans; i++)
     {
@@ -301,22 +282,22 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
         size_t scanStartIdx = scanIndices_[i].first;
         size_t scanEndIdx = scanIndices_[i].second;
 
-        // skip empty scans
+        // Skip empty scans
         if (scanEndIdx <= scanStartIdx + 2 * feature_config_.curvatureRegion)
         {
             continue;
         }
 
-        // reset scan buffers
+        // Reset scan buffers
         setScanBuffersFor(scanStartIdx, scanEndIdx);
 
-        // extract features from equally sized scan regions
+        // Extract features from equally sized scan regions
         for (int j = 0; j < feature_config_.nFeatureRegions; j++)
         {
             size_t sp = ((scanStartIdx + feature_config_.curvatureRegion) * (feature_config_.nFeatureRegions - j) + (scanEndIdx - feature_config_.curvatureRegion) * j) / feature_config_.nFeatureRegions;
             size_t ep = ((scanStartIdx + feature_config_.curvatureRegion) * (feature_config_.nFeatureRegions - 1 - j) + (scanEndIdx - feature_config_.curvatureRegion) * (j + 1)) / feature_config_.nFeatureRegions - 1;
 
-            // skip empty regions
+            // Skip empty regions
             if (ep <= sp)
             {
                 continue;
@@ -324,7 +305,7 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
 
             size_t regionSize = ep - sp + 1;
 
-            // reset region buffers 
+            // Reset region buffers 
             setRegionBuffersFor(sp, ep);
             // Calculate the curvature for points in the scans
             // Extract corner features
@@ -385,7 +366,7 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
             }
         }
 
-        // down size less flat surface point cloud of current scan
+        // Down size less flat surface point cloud of current scan
         pcl::PointCloud<pcl::PointXYZI> surfPointsLessFlatScanDS;
         pcl::VoxelGrid<pcl::PointXYZI> downSizeFilter;
         downSizeFilter.setInputCloud(surfPointsLessFlatScan);
@@ -398,15 +379,15 @@ void PointCloudFilter::extractFeatures(const uint16_t &beginIdx)
 
 void PointCloudFilter::setRegionBuffersFor(const size_t &startIdx, const size_t &endIdx)
 {
-    // resize buffers
+    // Resize buffers
     size_t regionSize = endIdx - startIdx + 1;
     regionCurvature_.resize(regionSize);
     regionSortIndices_.resize(regionSize);
     // Initially every point is considered a SURFACE_LESS_FLAT
     regionLabel_.assign(regionSize, SURFACE_LESS_FLAT); 
 
-    // calculate point curvatures and reset sort indices
-    // looping through # number of neighbor points(curvatureRegion) and calculate squared difference
+    // Calculate point curvatures and reset sort indices
+    // Looping through # number of neighbor points(curvatureRegion) and calculate squared difference
     float pointWeight = -2 * feature_config_.curvatureRegion;
 
     for (size_t i = startIdx, regionIdx = 0; i <= endIdx; i++, regionIdx++)
@@ -426,7 +407,7 @@ void PointCloudFilter::setRegionBuffersFor(const size_t &startIdx, const size_t 
         regionSortIndices_[regionIdx] = i;
     }
 
-    // sort point curvatures
+    // Sort point curvatures
     for (size_t i = 1; i < regionSize; i++)
     {
         for (size_t j = i; j >= 1; j--)
@@ -441,7 +422,7 @@ void PointCloudFilter::setRegionBuffersFor(const size_t &startIdx, const size_t 
 
 void PointCloudFilter::setScanBuffersFor(const size_t &startIdx, const size_t &endIdx)
 {
-    // resize buffers
+    // Resize buffers
     size_t scanSize = endIdx - startIdx + 1;
     scanNeighborPicked_.assign(scanSize, 0);
 

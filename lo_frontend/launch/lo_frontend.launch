@@ -24,7 +24,7 @@
       <param name="b_publish_tfs" value="false"/>
 
       <!-- Topics -->
-      <remap from="~pcld" to="$(arg pc_input)"/>
+      <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
       <!-- <remap from="~ODOM_TOPIC" to="hero/lion/odom"/> -->
       <!-- <remap from="~IMU_TOPIC" to="vn100/imu"/> -->
       <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
@@ -34,9 +34,6 @@
 
       <!-- Settings -->
       <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
-
-      <!-- Rates -->
-      <rosparam file="$(find lo_frontend)/config/lo_rates.yaml"/>
 
       <!-- Frames -->
       <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
@@ -114,7 +111,7 @@
       filter_limit_min: -100
       filter_limit_max: 100
       filter_limit_negative: False
-      leaf_size: 0.075
+      leaf_size: 0.1
       output_frame: $(arg robot_namespace)/base_link
       </rosparam>
     </node>
