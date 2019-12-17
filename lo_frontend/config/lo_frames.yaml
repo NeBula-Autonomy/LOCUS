@@ -4,3 +4,6 @@ frame_id:
   imu: $(arg robot_namespace)/vn100
   odometry: $(arg robot_namespace)/base_link_blam_odometry
   artifacts_in_global: true
+
+frame_conversions: 
+  b_convert_imu_to_base_link_frame: true

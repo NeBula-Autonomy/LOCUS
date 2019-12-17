@@ -37,16 +37,21 @@
 #ifndef POINT_CLOUD_ODOMETRY_H
 #define POINT_CLOUD_ODOMETRY_H
 
-#include <geometry_utils/Transform3.h>
-#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
-
+#include <std_msgs/Float64.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_utils/Transform3.h>
 #include <pcl_ros/point_cloud.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf/transform_broadcaster.h>
-#include <tf/transform_listener.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <std_msgs/Float64.h>
+#include <pcl/registration/gicp.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl/search/impl/search.hpp>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_utils/GeometryUtilsROS.h>
+#include <parameter_utils/ParameterUtils.h>
 
 class PointCloudOdometry {
 
@@ -57,64 +62,42 @@ public:
   PointCloudOdometry();
   ~PointCloudOdometry();
 
-  // Calls LoadParameters and RegisterCallbacks. Fails on failure of either
   bool Initialize(const ros::NodeHandle& n);
 
-  // Align incoming point cloud with previous point cloud, updating odometry
-  bool UpdateEstimate(const PointCloud& points);
-
-  // Get pose estimates
+  bool SetLidar(const PointCloud& points);
+  bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
+  bool UpdateEstimate();
+  
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
   const geometry_utils::Transform3& GetIntegratedEstimate() const;
-
-  // Get the most recent point cloud that we processed
-  // Return false and warn if not initialized
-  bool GetLastPointCloud(PointCloud::Ptr& out) const;
-
-  // Pose estimates
-  geometry_utils::Transform3 integrated_estimate_;
   geometry_utils::Transform3 incremental_estimate_;
-
-  // ICP fitness score
+  geometry_utils::Transform3 integrated_estimate_;
+  
+  bool GetLastPointCloud(PointCloud::Ptr& out) const;
   double icpFitnessScore_;
 
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
- 
-  // Enable external attitude data fusion
-  void SetExternalAttitude(const geometry_msgs::Quaternion& quaternion, const ros::Time& timestamp, const bool b_in_imu_frame); 
 
 private:
 
-  // Node initialization
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
   // Use ICP between a query and reference point cloud to estimate pose
   bool UpdateICP();
-
-  // Get attitude change in yaw only
-  Eigen::Matrix3d GetExtAttYawChange();
-  Eigen::Matrix3d GetExtAttChange();
-
-  // Compute ICP Covariance Matrix
-  bool ComputeICPCovariance(const pcl::PointCloud<pcl::PointXYZI> PointCloud, const Eigen::Matrix4f T, Eigen::Matrix<double, 6, 6> covariance);
   
-  // Publish reference and query point clouds
-  void PublishPoints(const PointCloud::Ptr& points, const ros::Publisher& pub);
+  // Publish reference and query point clouds - TODO: Do we need it? 
+  void PublishPoints(const PointCloud::Ptr& points, 
+                     const ros::Publisher& pub);
 
   // Publish incremental and integrated pose estimates
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
-  // Publish timestamp difference between external attitude and Lidar data 
-  void PublishTimestampDifference(const std_msgs::Float64& timediff,
-                                  const ros::Publisher& pub);
-
-  bool LoadCalibrationFromTfTree();
-
   // The node's name
   std::string name_;
+  bool b_verbose_;
 
   // For initialization
   bool initialized_;
@@ -124,7 +107,6 @@ private:
   ros::Publisher query_pub_;
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
-  ros::Publisher timestamp_difference_pub_;
 
   // Most recent point cloud time stamp for publishers
   ros::Time stamp_;
@@ -133,63 +115,36 @@ private:
   std::string fixed_frame_id_;
   std::string odometry_frame_id_;
 
-  // Transform broadcasting to other nodes
-  tf2_ros::TransformBroadcaster tfbr_;
-
   // Point cloud containers
   PointCloud::Ptr query_;
   PointCloud::Ptr reference_;
 
-  // Parameters for filtering, and ICP
-  struct Parameters {
-    // Stop ICP if the transformation from the last iteration was this small
-    double icp_tf_epsilon;
-    // During ICP, two points won't be considered a correspondence if they are
-    // at least this far from one another
-    double icp_corr_dist;
-    // Iterate ICP this many times
-    unsigned int icp_iterations;
-  } params_;
-
-  // Maximum acceptable translation and rotation tolerances. 
+  // Maximum acceptable translation and rotation tolerances 
   // If transform_thresholding_ is set to false, 
   // neither of these thresholds are considered
   bool transform_thresholding_;
   double max_translation_;
   double max_rotation_;
 
-  // External attitude
-  Eigen::Quaterniond external_attitude_first_, 
-                     external_attitude_current_, 
-                     external_attitude_previous_, 
-                     external_attitude_change_; 
-  bool b_use_external_attitude_,
-       b_external_attitude_has_been_received_,
-       b_use_yaw_only_;
-  struct external_attitude {
-    Eigen::Quaterniond attitude;
-    ros::Time timestamp;
-  };
-  std::deque<external_attitude> external_attitude_deque_;
-  std::deque<Eigen::Quaterniond> external_attitude_change_deque_;
-  static constexpr size_t max_external_attitude_deque_size_ = 100; 
-  static constexpr size_t min_external_attitude_deque_size_ = 50;
+  // ICP
+  struct Parameters {
+    double icp_tf_epsilon;
+    double icp_corr_dist;
+    unsigned int icp_iterations;
+  } params_;
+  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  bool SetupICP();
 
-  // IMU Lidar calibration 
-  std::string base_frame_id_; 
-  std::string imu_frame_id_;  
-  tf::TransformListener imu_T_laser_listener_;
-  Eigen::Affine3d I_T_B_;    
-  Eigen::Affine3d B_T_I_; 
-  Eigen::Quaterniond I_T_B_q_;     
+  // IMU Frontend Integration
+  PointCloud points_;
+  Eigen::Quaterniond imu_quaternion_;
+  Eigen::Quaterniond imu_quaternion_previous_;
+  Eigen::Quaterniond imu_quaternion_change_;
+  Eigen::Matrix3d GetExternalAttitudeYawChange();
+  Eigen::Matrix3d GetExternalAttitudeChange();
+  bool b_use_imu_integration_;
+  bool b_use_imu_yaw_only_;
 
-  // Deactivate external attitude usage when external provider crashes at start
-  // This counter keeps track of how many time UpdateEstimate has been called.
-  // Deactivates external attitude usage after a value of 25 is reached, 
-  // Enabling code to not get stuck in a uninitialized state and continue by relying on pure ICP Lidar 
-  int number_of_calls_;   
-  int max_number_of_calls_;
-  
 };
 
 #endif

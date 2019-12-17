@@ -1,11 +1,10 @@
 <?xml version="1.0"?>
 <package format="2">
+
   <name>localizer_lo_frontend</name>
   <version>0.0.0</version>
   <description>The localizer_lo_frontend package</description>
-
   <maintainer email="benjamin.morrell@jpl.nasa.gov">Benjamin Morrell</maintainer>
-
   <license>TODO</license>
 
   <!-- Use depend as a shortcut for packages that are both build and exec dependencies -->
@@ -14,12 +13,11 @@
   <depend>point_cloud_filter</depend>
   <depend>measurement_synchronizer</depend>
 
-
   <buildtool_depend>catkin</buildtool_depend>
-
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
   <!-- Other tools can request additional information be placed here -->
   </export>
+
 </package>

@@ -1,12 +1,11 @@
 <?xml version="1.0"?>
 <package>
+
   <name>point_cloud_odometry</name>
   <version>0.0.0</version>
   <description>The point_cloud_odometry package</description>
-
   <author email="eanelson@eecs.berkeley.edu">Erik Nelson</author>
   <maintainer email="eanelson@eecs.berkeley.edu">Erik Nelson</maintainer>
-
   <license>GPLv2</license>
 
   <buildtool_depend>catkin</buildtool_depend>
