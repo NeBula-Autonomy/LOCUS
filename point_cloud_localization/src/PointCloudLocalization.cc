@@ -122,7 +122,7 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("localization/max_translation", max_translation_)) return false;
   if (!pu::Get("localization/max_rotation", max_rotation_)) return false;
-  if (!pu::Get("localization/max_power", max_power_)) return false;
+  // if (!pu::Get("localization/max_power", max_power_)) return false;
 
   pu::Get("b_publish_tfs", b_publish_tfs_);
 
@@ -388,11 +388,6 @@ bool PointCloudLocalization::ComputeICPCovariance(const pcl::PointCloud<pcl::Poi
   // The covariance matrix is a symmetric matrix, so its  singular  values  are  the absolute values of its nonzero eigenvalues
   // Condition number is the ratio of the largest and smallest eigenvalues.
   double condition_number = singular_values(0)/singular_values(5);
-  if (condition_number > 8 * exp(max_power_)) {
-    condition_number = 1;
-  } else {
-    condition_number = 0;
-  }
   PublishConditionNumber(condition_number, condition_number_pub_);
   
   return true;

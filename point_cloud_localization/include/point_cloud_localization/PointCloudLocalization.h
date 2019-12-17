@@ -164,7 +164,7 @@ private:
   bool transform_thresholding_;
   double max_translation_;
   double max_rotation_;
-  double max_power_;
+  // double max_power_;
 
   // To not publish tfs
   bool b_publish_tfs_{false};

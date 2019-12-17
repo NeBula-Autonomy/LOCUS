@@ -95,21 +95,22 @@ public:
   ros::Subscriber wheel_odom_sub_;
 
   // Publishers
-  ros::Publisher lidar_slip_amount_pub_;
+  ros::Publisher slip_detection_from_odom_;
   ros::Publisher lidar_slip_status_pub_;
-  // ros::Publisher avg_condition_number_pub_;
+  ros::Publisher slip_detection_from_cov_;
 
   void InitializePose(PoseCovStamped first_pose);
   geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose, const PoseCovStamped second_pose);
-  void PublishLidarSlipAmount(double& slip_amount, const ros::Publisher& pub);
+  void PublishLidarSlipAmount(double& slip_detection_odom, const ros::Publisher& pub);
   void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
   bool LoadParameters(const ros::NodeHandle& n);
-  // void PublishAvgConditionNumber(double& k, const ros::Publisher& pub);
+  void PublishConditionNumber(double& slip_detection_cov, const ros::Publisher& pub);
 
  private:
 
   std::string name_;
   double slip_threshold_;
+  double max_power_;
 
 };
 
