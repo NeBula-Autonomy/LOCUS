@@ -103,9 +103,12 @@ public:
   geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose, const PoseCovStamped second_pose);
   void PublishLidarSlipAmount(double& slip_amount, const ros::Publisher& pub);
   void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
+  bool LoadParameters(const ros::NodeHandle& n);
   // void PublishAvgConditionNumber(double& k, const ros::Publisher& pub);
 
  private:
+
+  double slip_threshold_;
 
 };
 

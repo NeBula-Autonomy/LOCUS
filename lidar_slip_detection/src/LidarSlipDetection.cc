@@ -64,6 +64,12 @@ bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
   return true;
 }
 
+bool LidarSlipDetection::LoadParameters(const ros::NodeHandle& n) {
+  if (!pu::Get("lidar_slip/max_power", slip_threshold_)) return false;
+  return true;
+}
+
+
 bool LidarSlipDetection::CreatePublishers(const ros::NodeHandle& n) {
   // Create a local nodehandle to manage callback subscriptions.
   ros::NodeHandle nl(n);
@@ -101,10 +107,14 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   double z = lidar_transform.translation(2);
   lidar_delta_ = std::sqrt(x * x + y * y + z * z);
   if (lidar_delta_ > 0) {
-    double slip_amount = abs(wheel_delta_ - lidar_delta_);
-    if (slip_amount > 0.1) {
-      bool slip_status = true;
-    }
+    slip_amount = abs(wheel_delta_ - lidar_delta_);
+    ROS_INFO_STREAM("slip: " << slip_amount);
+    if (slip_amount > slip_threshold_) {
+      slip_amount = 1;
+      slip_status = true;
+    } else {
+      slip_amount = 0;
+    } 
   }
   PublishLidarSlipAmount(slip_amount, lidar_slip_amount_pub_);
   PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
