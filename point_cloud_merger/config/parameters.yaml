@@ -1,16 +1,13 @@
 merging:
-  # to use the random filter or not
+  # RANDOM DOWNSAMPLE FILTER
   b_use_random_filter: false
-
   # Percentage for random filter
   decimate_percentage: 0.5
 
-  # Apply a radius filter on incoming point clouds.
+  # RADIUS OUTLIER FILTER
   b_use_radius_filter: false
-
   # Size of the radius outlier filter.
   radius: 0.1
-
   # If this number of neighbors are not found within a radius of a point, remove
   # the point.
   radius_knn: 3

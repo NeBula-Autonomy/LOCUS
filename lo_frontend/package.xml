@@ -13,7 +13,6 @@
 
   <build_depend>roscpp</build_depend>
   <build_depend>message_generation</build_depend>
-  <build_depend>measurement_synchronizer</build_depend>
   <build_depend>point_cloud_filter</build_depend>
   <build_depend>point_cloud_odometry</build_depend>
   <build_depend>point_cloud_mapper</build_depend>
@@ -28,7 +27,6 @@
 
   <run_depend>roscpp</run_depend>
   <run_depend>message_runtime</run_depend>
-  <run_depend>measurement_synchronizer</run_depend>
   <run_depend>point_cloud_filter</run_depend>
   <run_depend>point_cloud_odometry</run_depend>
   <run_depend>point_cloud_mapper</run_depend>
