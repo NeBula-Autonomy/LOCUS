@@ -108,6 +108,7 @@ public:
 
  private:
 
+  std::string name_;
   double slip_threshold_;
 
 };

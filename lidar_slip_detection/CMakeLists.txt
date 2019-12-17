@@ -29,6 +29,7 @@ catkin_package(
     geometry_utils
     parameter_utils
     geometry_msgs
+    parameter_utils
     nav_msgs
     tf2_ros
 )

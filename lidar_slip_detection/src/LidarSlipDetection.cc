@@ -50,6 +50,12 @@ LidarSlipDetection::~LidarSlipDetection() {}
 bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
   // Initialize subscribers
   ros::NodeHandle nl(n);
+
+  if (!LoadParameters(nl)) {
+    ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
+    return false;
+  }
+
   lidar_odom_sub_ = nl.subscribe(
     "lio_odom", 10, &LidarSlipDetection::LidarOdometryCallback, this);
   wheel_odom_sub_ = nl.subscribe(
@@ -65,7 +71,8 @@ bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
 }
 
 bool LidarSlipDetection::LoadParameters(const ros::NodeHandle& n) {
-  if (!pu::Get("lidar_slip/max_power", slip_threshold_)) return false;
+  if (!pu::Get("lidar_slip/slip_threshold", slip_threshold_)) return false;
+    ROS_INFO_STREAM("lidar slip param is: " << slip_threshold_);
   return true;
 }
 

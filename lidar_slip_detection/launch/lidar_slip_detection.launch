@@ -9,6 +9,8 @@
       <remap from="~lio_odom" to="lo_frontend/odometry"/>
       <remap from="~wio_odom" to="hero/wio_ekf/odom"/>
       <remap from="~condition_number" to="lo_frontend/condition_number"/>
+      <!-- Lamp parameters (loop closures on or off) -->
+      <rosparam file="$(find lidar_slip_detection)/config/parameters.yaml"/>
     </node>
   </group>
 

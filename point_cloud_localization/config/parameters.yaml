@@ -19,4 +19,4 @@ localization:
   max_rotation: 0.1
 
   # Condtion number threshod. Values larger than exp(max_power_) incidcate lidar slip.
-  max_power: 22
+  max_power: 23

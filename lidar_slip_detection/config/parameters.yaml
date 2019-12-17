@@ -1,3 +1,3 @@
 lidar_slip:
   # If the delta between LIP and WIO is larger than this value, a lidar slip is flagged.
-  slip_threshold: 0.12
+  slip_threshold: 0.13
