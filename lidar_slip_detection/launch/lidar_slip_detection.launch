@@ -1,6 +1,7 @@
 <launch>
+  <arg name="robot_namespace" default="robot"/>
+
   <group ns="$(arg robot_namespace)">
-    <arg name="robot_namespace" default="robot"/>
     <!-- Laser Loop Closure -->
     <node pkg="lidar_slip_detection"
           name="lidar_slip_detection"
