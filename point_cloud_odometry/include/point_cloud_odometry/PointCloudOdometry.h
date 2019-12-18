@@ -147,7 +147,8 @@ private:
   bool b_use_imu_integration_;
   bool b_use_imu_yaw_only_;
 
-  // ODOMETRY Frontend Integration 
+  // ODOMETRY Frontend Integration
+  bool b_use_odometry_integration_; 
   tf::Transform odometry_delta_;
 
 };

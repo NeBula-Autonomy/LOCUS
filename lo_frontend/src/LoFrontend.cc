@@ -328,7 +328,7 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const
 return true; 
 }
 
-tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) {
+tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
   tf::Transform odometry_pose;
   tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
   auto odometry_delta = odometry_pose.inverseTimes(odometry_pose_previous_);
@@ -352,7 +352,8 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
-  // TODO: Wrap these in single logic -------------------------------------------------------------------------------------------
+  // TODO: Wrap these in single logic (mutually exclusive) ----------------------------------------------------------------------
+  
   if(b_use_imu_integration_) {
     Imu imu_msg;
     if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
@@ -387,7 +388,9 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
       return;
     }
     odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
   }
+  
   // ----------------------------------------------------------------------------------------------------------------------------
   
   filter_.Filter(msg, msg_filtered_);

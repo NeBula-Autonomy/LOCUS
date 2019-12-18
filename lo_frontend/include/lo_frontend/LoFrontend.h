@@ -153,9 +153,8 @@ private:
   int odometry_max_number_of_calls_;
   bool b_odometry_has_been_received_;
   tf::Transform odometry_pose_previous_;
-  tf::Transform GetOdometryDelta(const Odometry& odometry_msg); 
+  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
   
-
   // Class objects
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
