@@ -191,6 +191,7 @@ bool PointCloudOdometry::UpdateEstimate() {
 bool PointCloudOdometry::UpdateICP() {
 
   PointCloud::Ptr query_trans( new PointCloud);
+  
   Eigen::Matrix4d imu_prior; 
   Eigen::Matrix4d odometry_prior;
 
@@ -204,8 +205,11 @@ bool PointCloudOdometry::UpdateICP() {
     }
     pcl::transformPointCloud(*query_, *query_trans, imu_prior);  
   }
+  
   if (b_use_odometry_integration_) {
-    // TODO: Fill odometry_prior and pcl::transformPointCloud(*query_, *query_trans, odometry_prior);  
+    Eigen::Matrix4f temp;
+    pcl_ros::transformAsMatrix(odometry_delta_, temp);
+    odometry_prior = temp.cast <double> ();
   }
   else {
     *query_trans = *query_;
