@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
   ros::NodeHandle n("~");
 
   LoFrontend lo_frontend_node;
-  if (!lo_frontend_node.Initialize(n, false /* online processing */)) {
+  if (!lo_frontend_node.Initialize(n, false)) {
     ROS_ERROR("%s: Failed to initialize lo_frontend_node.",
               ros::this_node::getName().c_str());
     return EXIT_FAILURE;

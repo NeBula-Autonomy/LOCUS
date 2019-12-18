@@ -37,124 +37,143 @@
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
-// Standard libraries
 #include <math.h>
-
-// ROS
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <visualization_msgs/Marker.h>
-#include <core_msgs/PoseAndScan.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <std_msgs/Time.h>
-
-// BLAM
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
 #include <parameter_utils/ParameterUtils.h>
-#include <measurement_synchronizer/MeasurementSynchronizer.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
-
-// GTSAM
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
-
-// Messages
+#include <core_msgs/PoseAndScan.h>
+#include <std_msgs/Time.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
+#include <core_msgs/PoseAndScan.h>
+#include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <tf/transform_listener.h>
 
 class LoFrontend {
 
 public:
 
-  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
+  typedef pcl::PointXYZI Point;
+  typedef pcl::PointCloud<Point> PointCloud;
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef geometry_msgs::PoseStamped PoseStamped; 
+  typedef std::map<double, Imu> ImuBuffer;       
+  typedef std::map<double, Odometry> OdometryBuffer;         
+  typedef std::map<double, PoseStamped> PoseStampedBuffer;   
+  typedef Imu::ConstPtr ImuConstPtr;
+  typedef Odometry::ConstPtr OdometryConstPtr;
+  typedef PoseStamped::ConstPtr PoseStampedConstPtr;
 
   LoFrontend();
   ~LoFrontend();
 
-  // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
-  // The from_log argument specifies whether to run SLAM online (subscribe to
-  // topics) or by loading messages from a bag file.
   bool Initialize(const ros::NodeHandle& n, bool from_log);
-  // Sensor message processing
-  void ProcessPointCloudMessage(const PointCloud::ConstPtr& msg);
-  // IMU message processing 
-  void ProcessImuMessage(const Imu::ConstPtr& msg);
-  // ODOM message processing 
-  void ProcessOdomMessage(const Odometry::ConstPtr& msg);
-  // POSE message processing 
-  void ProcessPoseMessage(const PoseStamped::ConstPtr& msg);
 
 private:
 
-  // Node initialization
+  std::string name_;
+  bool b_verbose_;
+
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n, bool from_log);
   bool RegisterLogCallbacks(const ros::NodeHandle& n);
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  // Sensor callbacks
+  void ImuCallback(const ImuConstPtr& imu_msg);
+  void OdometryCallback(const OdometryConstPtr& odometry_msg);
+  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
   void PointCloudCallback(const PointCloud::ConstPtr& msg);
-  void ImuCallback(const Imu::ConstPtr& msg);
-  void OdomCallback(const Odometry::ConstPtr& msg);
-  void PoseCallback(const PoseStamped::ConstPtr& msg);
 
-  // Timer callbacks
-  // Will run ICP and add PC on local map
-  void EstimateTimerCallback(const ros::TimerEvent& ev);
-  void VisualizationTimerCallback(const ros::TimerEvent& ev);
-
-  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
-
-  // Position when points were last added to map
-  geometry_utils::Transform3 last_keyframe_pose_; // TODO: Andrea: check if used
-  ros::Time last_pcld_stamp_;                     // TODO: Andrea: check if used
-
-  // The node's name
-  std::string name_;
-
-  // Update rates and callback timers
-  double estimate_update_rate_;
-  double visualization_update_rate_;
-  ros::Timer estimate_update_timer_;
-  ros::Timer visualization_update_timer_;
-
-  double translation_threshold_kf_;
-  double rotation_threshold_kf_;
-
-  double last_timestamp_;
-  double point_cloud_time_diff_limit_;
-  bool b_add_first_scan_to_key_;
-
-  // Subscribers
   ros::Subscriber pcld_sub_;  
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
   ros::Subscriber pose_sub_;    
 
-  // Publishers
   ros::Publisher base_frame_pcld_pub_; 
-  ros::Publisher pose_scan_pub_; 
 
-  // Names of coordinate frames
+  ImuBuffer imu_buffer_;
+  OdometryBuffer odometry_buffer_;
+  PoseStampedBuffer pose_stamped_buffer_;
+  
+  int imu_buffer_size_limit_; 
+  int odometry_buffer_size_limit_;
+  int pose_stamped_buffer_size_limit_;
+
+  template <typename T1, typename T2>
+  bool InsertMsgInBuffer(const T1& msg, T2& buffer);
+
+  template <typename T>
+  int CheckBufferSize(const T& buffer) const;
+
+  template <typename T1, typename T2>
+  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const;         
+
+  double translation_threshold_kf_;
+  double rotation_threshold_kf_;
+  bool b_add_first_scan_to_key_;
+
+  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;   
+  geometry_utils::Transform3 last_keyframe_pose_; 
+  ros::Time last_pcld_stamp_;        
+
   std::string fixed_frame_id_; 
   std::string base_frame_id_; 
+  std::string imu_frame_id_;
+  
+  bool LoadCalibrationFromTfTree();
+  tf::TransformListener imu_T_base_listener_;
+  Eigen::Affine3d I_T_B_;    
+  Eigen::Affine3d B_T_I_; 
+  Eigen::Quaterniond I_T_B_q_;   
 
-  // Class objects (LoFrontend is a composite class)
-  MeasurementSynchronizer synchronizer_;
+  // IMU Frontend Integration   
+  double ts_threshold_;
+  Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
+  bool b_convert_imu_to_base_link_frame_;
+  bool b_use_imu_integration_;
+  int imu_number_of_calls_;
+  int imu_max_number_of_calls_;
+
+  // Class objects
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
   PointCloudLocalization localization_; 
-  PointCloudMapper mapper_;             
+  PointCloudMapper mapper_;   
+
+  // Map publishment 
+  int counter_;
+  bool b_publish_map_;
+  int map_publishment_meters_;
+  
+  bool b_pcld_received_;
+  int pcld_seq_prev_;
+
+  // Storages - TODO: This can be optimized
+  PointCloud::Ptr msg_filtered_;
+  PointCloud::Ptr msg_transformed_;
+  PointCloud::Ptr msg_neighbors_;
+  PointCloud::Ptr msg_base_;
+  PointCloud::Ptr msg_fixed_;
+  PointCloud::Ptr mapper_unused_fixed_;
+  PointCloud::Ptr mapper_unused_out_;
+
+  // Load queue sizes as params 
+  int imu_queue_size_; 
+  int odom_queue_size_; 
+  int pose_queue_size_; 
+  int lidar_queue_size_; 
 
 };
 

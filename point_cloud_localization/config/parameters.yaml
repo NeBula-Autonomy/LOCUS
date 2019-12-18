@@ -11,7 +11,7 @@ localization:
   corr_dist: 0.2
 
   # Iterate ICP this many times.
-  iterations: 15 # 20 # Default from original branch is 10
+  iterations: 5 # 20 # Default from original branch is 10
 
   # Maximum acceptable incremental rotation and translation.
   transform_thresholding: false
