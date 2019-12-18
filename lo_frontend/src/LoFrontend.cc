@@ -118,9 +118,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("imu_integration/imu_max_number_of_calls", imu_max_number_of_calls_))
     return false;
-  if(!pu::Get("odom_integration/b_use_odom_integration", b_use_odom_integration_))
+  if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
     return false;
-  if(!pu::Get("odom_integration/odom_max_number_of_calls", odom_max_number_of_calls_))
+  if(!pu::Get("odometry_integration/odometry_max_number_of_calls", odometry_max_number_of_calls_))
     return false;
   if(!pu::Get("queue_sizes/imu_queue_size", imu_queue_size_))
     return false;
@@ -359,7 +359,7 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
     odometry_.SetImuQuaternion(GetImuQuaternion(imu_msg));
   }
 
-  if (b_use_odom_integration_) {
+  if (b_use_odometry_integration_) {
     ROS_INFO("To be implemented");
   }
   

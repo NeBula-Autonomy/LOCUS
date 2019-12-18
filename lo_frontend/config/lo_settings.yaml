@@ -17,9 +17,9 @@ imu_integration:
   b_use_imu_yaw_only: false
   imu_max_number_of_calls: 25
 
-odom_integration: 
-  b_use_odom_integration: true
-  odom_max_number_of_calls: 25
+odometry_integration: 
+  b_use_odometry_integration: true
+  odometry_max_number_of_calls: 25
 
 queue_sizes: 
   imu_queue_size: 100
