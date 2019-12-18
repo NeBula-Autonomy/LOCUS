@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2019, NASA Jet Propulsion Laboratory - California Institute 
- * of Technology. * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Copyright (c) 2019, NASA Jet Propulsion Laboratory - California Institute
+ * of Technology. * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following conditions
+ * are met:
  *
  *    1. Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
@@ -29,7 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Please contact the author(s) of this library if you have any questions.
- * Authors: Yun Change, Kamak Ebadi ( yunchange@mit.edu, kamak.ebadi@jpl.nasa.gov )
+ * Authors: Yun Change, Kamak Ebadi ( yunchange@mit.edu,
+ * kamak.ebadi@jpl.nasa.gov )
  */
 
 #ifndef LIDAR_SLIP_DETECTION_H
@@ -42,12 +43,12 @@
 #include <geometry_utils/Transform3.h>
 #include <parameter_utils/ParameterUtils.h>
 
-#include <std_msgs/Float64.h>
-#include <std_msgs/Bool.h>
-#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <nav_msgs/Odometry.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Float64.h>
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
@@ -65,9 +66,7 @@ typedef nav_msgs::Odometry Odometry;
 typedef geometry_msgs::PoseWithCovarianceStamped PoseCovStamped;
 
 class LidarSlipDetection {
-
-public:
-  
+ public:
   LidarSlipDetection();
   ~LidarSlipDetection();
 
@@ -76,19 +75,18 @@ public:
 
   // Odometry Callbacks
   void WheelOdometryCallback(const Odometry::ConstPtr& msg);
-  void LidarOdometryCallback(const Odometry::ConstPtr& msg); 
-  
+  void LidarOdometryCallback(const Odometry::ConstPtr& msg);
+
   // Condition Number Callback
-  void ConditionNumberCallback(const std_msgs::Float64 &condition_number);
+  void ConditionNumberCallback(const std_msgs::Float64& condition_number);
 
   PoseCovStamped lidar_last_pose_;
   PoseCovStamped wheel_last_pose_;
 
   double wheel_delta_;
   double lidar_delta_;
- 
- protected:
 
+ protected:
   // Subscribers
   ros::Subscriber condition_number_sub_;
   ros::Subscriber lidar_odom_sub_;
@@ -100,18 +98,22 @@ public:
   ros::Publisher slip_detection_from_cov_;
 
   void InitializePose(PoseCovStamped first_pose);
-  geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose, const PoseCovStamped second_pose);
-  void PublishLidarSlipAmount(double& slip_detection_odom, const ros::Publisher& pub);
+  geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose,
+                                          const PoseCovStamped second_pose);
+  void PublishLidarSlipAmount(double& slip_detection_odom,
+                              const ros::Publisher& pub);
   void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
   bool LoadParameters(const ros::NodeHandle& n);
-  void PublishConditionNumber(double& slip_detection_cov, const ros::Publisher& pub);
+  void PublishConditionNumber(double& slip_detection_cov,
+                              const ros::Publisher& pub);
 
  private:
-
   std::string name_;
   double slip_threshold_;
   double max_power_;
-
+  int filter_size_;
+  std::vector<double> last_deltas_;  // keep track of the last slip
+                                     // discrepencies (size is filter_size)
 };
 
 #endif
