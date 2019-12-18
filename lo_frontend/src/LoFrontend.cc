@@ -53,7 +53,8 @@ LoFrontend::LoFrontend():
   msg_fixed_(new PointCloud()), 
   mapper_unused_fixed_(new PointCloud()),
   mapper_unused_out_(new PointCloud()), 
-  imu_number_of_calls_(0) {}
+  imu_number_of_calls_(0), 
+  b_odometry_has_been_received_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -344,6 +345,10 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
+  /*
+  TODO: Wrap these in single logic ------------------------------------------------------------------------------------------------
+  */
+
   if(b_use_imu_integration_) {
     Imu imu_msg;
     if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
@@ -360,8 +365,29 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   }
 
   if (b_use_odometry_integration_) {
-    ROS_INFO("To be implemented");
+    Odometry odometry_msg;
+    if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
+      odometry_number_of_calls_++;
+      if (odometry_number_of_calls_ > odometry_max_number_of_calls_) {
+        // TODO: Robustify with consecutiveness-check (unified method to handle ODOMETRY crash at any time)
+        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > odometry_max_number_of_calls");
+        b_use_odometry_integration_ = false;
+      }
+      return;
+    }
+    if (!b_odometry_has_been_received_) {
+      ROS_INFO("Receiving odometry for the first time");
+      odometry_previous_ = odometry_msg;
+      b_odometry_has_been_received_= true;
+      return;
+    }
+    // odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
   }
+
+  /*
+  ---------------------------------------------------------------------------------------------------------------------------------
+  */
   
   filter_.Filter(msg, msg_filtered_);
   odometry_.SetLidar(*msg_filtered_);

@@ -146,9 +146,13 @@ private:
   int imu_number_of_calls_;
   int imu_max_number_of_calls_;
 
-  // ODOM Frontend Integration 
+  // ODOMETRY Frontend Integration 
   bool b_use_odometry_integration_;
+  int odometry_number_of_calls_;
   int odometry_max_number_of_calls_;
+  bool b_odometry_has_been_received_;
+  Odometry odometry_previous_;
+  
 
   // Class objects
   PointCloudFilter filter_;
