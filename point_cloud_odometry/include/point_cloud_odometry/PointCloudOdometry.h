@@ -52,6 +52,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <tf/transform_datatypes.h>
 
 class PointCloudOdometry {
 
@@ -66,6 +67,7 @@ public:
 
   bool SetLidar(const PointCloud& points);
   bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
+  bool SetOdometryDelta(const tf::Transform& odometry_delta);
   bool UpdateEstimate();
   
   const geometry_utils::Transform3& GetIncrementalEstimate() const;

@@ -352,10 +352,7 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
-  /*
-  TODO: Wrap these in single logic ------------------------------------------------------------------------------------------------
-  */
-
+  // TODO: Wrap these in single logic -------------------------------------------------------------------------------------------
   if(b_use_imu_integration_) {
     Imu imu_msg;
     if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
@@ -389,12 +386,9 @@ void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {
       b_odometry_has_been_received_= true;
       return;
     }
-    // odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
+    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
   }
-
-  /*
-  ---------------------------------------------------------------------------------------------------------------------------------
-  */
+  // ----------------------------------------------------------------------------------------------------------------------------
   
   filter_.Filter(msg, msg_filtered_);
   odometry_.SetLidar(*msg_filtered_);
