@@ -53,7 +53,6 @@
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <tf/transform_datatypes.h>
-#include <tf_conversions/tf_eigen.h>
 #include <pcl_ros/transforms.h>
 
 class PointCloudOdometry {
