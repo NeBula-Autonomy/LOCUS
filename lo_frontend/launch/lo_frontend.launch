@@ -69,7 +69,7 @@
     <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
           args="standalone pcl/PassThrough">
       <remap from="~input" to="velodyne_points"/>
-      <remap from="~input" to="velodyne_points_throttle"/>
+      <!-- <remap from="~input" to="velodyne_points_throttle"/> -->
       <remap from="~output" to="$(arg pc_trans_in_1)"/>
       <rosparam subst_value="true">
         filter_field_name: z
@@ -82,7 +82,7 @@
     <!-- Republish node with different frame_id -->
     <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="transform_points_base_link_front"
           args="standalone pcl/PassThrough">
-      <!--remap from="~input" to="velodyne_front/velodyne_points"/-->
+      <remap from="~input" to="velodyne_front/velodyne_points"/>
       <!-- <remap from="~input" to="velodyne_front/velodyne_points_throttle"/> -->
       <remap from="~output" to="$(arg pc_trans_in_2)"/>
       <rosparam subst_value="true">
