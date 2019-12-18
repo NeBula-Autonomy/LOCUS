@@ -1,0 +1,17 @@
+<launch>
+  <group ns="$(arg robot_namespace)">
+    <arg name="robot_namespace" default="robot"/>
+    <!-- Laser Loop Closure -->
+    <node pkg="lidar_slip_detection"
+          name="lidar_slip_detection"
+          type="lidar_slip_detection_node"
+          output="screen">
+      <remap from="~lio_odom" to="lo_frontend/odometry"/>
+      <remap from="~wio_odom" to="hero/wio_ekf/odom"/>
+      <remap from="~condition_number" to="lo_frontend/condition_number"/>
+      <!-- Lamp parameters (loop closures on or off) -->
+      <rosparam file="$(find lidar_slip_detection)/config/parameters.yaml"/>
+    </node>
+  </group>
+
+</launch>
