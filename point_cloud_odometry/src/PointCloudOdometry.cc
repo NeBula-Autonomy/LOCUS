@@ -294,6 +294,7 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
 }
 
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
-  ROS_INFO("To be implemented");
+  ROS_INFO("PointCloudOdometry - SetOdometryDelta");
+  odometry_delta_ = odometry_delta;
   return true;
 }
