@@ -152,7 +152,8 @@ private:
   int odometry_number_of_calls_;
   int odometry_max_number_of_calls_;
   bool b_odometry_has_been_received_;
-  Odometry odometry_previous_;
+  tf::Transform odometry_pose_previous_;
+  tf::Transform GetOdometryDelta(const Odometry& odometry_msg); 
   
 
   // Class objects
