@@ -123,7 +123,7 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   double y = lidar_transform.translation(1);
   double z = lidar_transform.translation(2);
   lidar_delta_ = std::sqrt(x * x + y * y + z * z);
-  slip_amount = std::fabs(wheel_delta_ - lidar_delta_);
+  slip_amount = wheel_delta_ - lidar_delta_;
   if (last_deltas_.size() < 5) {
     last_deltas_.push_back(slip_amount);
   } else {
