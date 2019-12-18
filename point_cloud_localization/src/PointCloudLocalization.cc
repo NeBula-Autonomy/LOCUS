@@ -298,7 +298,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 bool PointCloudLocalization::ComputeICPCovariance(const PointCloud pointCloud, 
                                                   const Eigen::Matrix4f T, 
                                                   Eigen::Matrix<double, 6, 6> &covariance) {
-  ROS_INFO("PointCloudLocalization - ComputeICPCovariance");
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
