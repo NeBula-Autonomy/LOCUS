@@ -210,7 +210,9 @@ bool PointCloudOdometry::UpdateICP() {
     Eigen::Matrix4f temp;
     pcl_ros::transformAsMatrix(odometry_delta_, temp);
     odometry_prior = temp.cast <double> ();
+    pcl::transformPointCloud(*query_, *query_trans, odometry_prior);
   }
+  
   else {
     *query_trans = *query_;
   }
