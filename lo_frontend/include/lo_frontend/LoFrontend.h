@@ -58,6 +58,7 @@
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
 
 class LoFrontend {
 

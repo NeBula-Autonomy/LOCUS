@@ -328,6 +328,12 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const
 return true; 
 }
 
+void GetOdometryDelta(const nav_msgs::Odometry& odometry_msg) {
+  // Under dev
+  tf::Transform tf_pose;
+  tf::poseMsgToTF(odometry_msg.pose.pose, tf_pose);
+}
+
 void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {  
   if (b_verbose_) ROS_INFO("LoFrontend - PointCloudCallback"); 
 
