@@ -82,6 +82,8 @@ class LidarSlipDetection {
 
   double wheel_delta_;
   double lidar_delta_;
+  PoseCovStamped lidar_last_pose_;
+  PoseCovStamped wheel_last_pose_;
 
  protected:
   // Subscribers

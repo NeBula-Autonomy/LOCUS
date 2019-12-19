@@ -25,9 +25,8 @@
 
       <!-- Topics -->
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
-      <!-- <remap from="~ODOM_TOPIC" to="hero/lion/odom"/> -->
-      <!-- <remap from="~IMU_TOPIC" to="vn100/imu"/> -->
-      <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
+      <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom"/>
+      <!-- <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>-->
 
       <param name="robot_name" value="$(arg robot_namespace)"/>
       <param name="tf_prefix" value="$(arg robot_namespace)"/>
@@ -69,7 +68,7 @@
     <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
           args="standalone pcl/PassThrough">
       <remap from="~input" to="velodyne_points"/>
-      <remap from="~input" to="velodyne_points_throttle"/>
+      <!-- <remap from="~input" to="velodyne_points_throttle"/> -->
       <remap from="~output" to="$(arg pc_trans_in_1)"/>
       <rosparam subst_value="true">
         filter_field_name: z
@@ -82,7 +81,7 @@
     <!-- Republish node with different frame_id -->
     <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="transform_points_base_link_front"
           args="standalone pcl/PassThrough">
-      <!--remap from="~input" to="velodyne_front/velodyne_points"/-->
+      <remap from="~input" to="velodyne_front/velodyne_points"/>
       <!-- <remap from="~input" to="velodyne_front/velodyne_points_throttle"/> -->
       <remap from="~output" to="$(arg pc_trans_in_2)"/>
       <rosparam subst_value="true">
@@ -116,6 +115,11 @@
       </rosparam>
     </node>
   </group>
+
+  <!-- Slip detector -->
+  <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
+    <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+  </include>
 
   
 </launch>

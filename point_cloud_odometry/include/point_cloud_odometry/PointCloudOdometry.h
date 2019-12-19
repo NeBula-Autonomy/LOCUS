@@ -52,6 +52,8 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <tf/transform_datatypes.h>
+#include <pcl_ros/transforms.h>
 
 class PointCloudOdometry {
 
@@ -66,6 +68,7 @@ public:
 
   bool SetLidar(const PointCloud& points);
   bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
+  bool SetOdometryDelta(const tf::Transform& odometry_delta);
   bool UpdateEstimate();
   
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
@@ -144,6 +147,10 @@ private:
   Eigen::Matrix3d GetExternalAttitudeChange();
   bool b_use_imu_integration_;
   bool b_use_imu_yaw_only_;
+
+  // ODOMETRY Frontend Integration
+  bool b_use_odometry_integration_; 
+  tf::Transform odometry_delta_;
 
 };
 
