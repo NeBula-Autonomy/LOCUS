@@ -112,10 +112,9 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("localization/transform_thresholding", transform_thresholding_))
     return false;
-  if (!pu::Get("localization/max_translation", max_translation_)) 
-    return false;
-  if (!pu::Get("localization/max_rotation", max_rotation_)) 
-    return false;
+  if (!pu::Get("localization/max_translation", max_translation_)) return false;
+  if (!pu::Get("localization/max_rotation", max_rotation_)) return false;
+  // if (!pu::Get("localization/max_power", max_power_)) return false;
 
   pu::Get("b_publish_tfs", b_publish_tfs_);
 
@@ -298,7 +297,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 bool PointCloudLocalization::ComputeICPCovariance(const PointCloud pointCloud, 
                                                   const Eigen::Matrix4f T, 
                                                   Eigen::Matrix<double, 6, 6> &covariance) {
-  ROS_INFO("PointCloudLocalization - ComputeICPCovariance");
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
@@ -369,6 +367,7 @@ bool PointCloudLocalization::ComputeICPCovariance(const PointCloud pointCloud,
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  // Eigen::JacobiSVD<Eigen::MatrixXd> svd( covariance, Eigen::ComputeFullV | Eigen::ComputeFullU);
 
   //Extract the singular values from SVD
   auto singular_values = svd.singularValues();
@@ -376,7 +375,7 @@ bool PointCloudLocalization::ComputeICPCovariance(const PointCloud pointCloud,
   // Condition number is the ratio of the largest and smallest eigenvalues.
   double condition_number = singular_values(0)/singular_values(5);
   PublishConditionNumber(condition_number, condition_number_pub_);
-   
+  
   return true;
 }
 

@@ -116,5 +116,10 @@
     </node>
   </group>
 
+  <!-- Slip detector -->
+  <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
+    <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+  </include>
+
   
 </launch>
