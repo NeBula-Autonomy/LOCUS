@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(point_cloud_filter)
+project(lidar_slip_detection)
 
 #IF(NOT CMAKE_BUILD_TYPE)
 #  SET(CMAKE_BUILD_TYPE Release)
@@ -7,10 +7,18 @@ project(point_cloud_filter)
 
 SET(CMAKE_BUILD_TYPE Release)
 
+find_package(PCL REQUIRED COMPONENTS common filters features registration)
+if(NOT PCL_FOUND)
+  message(FATAL_ERROR "This program requires the PCL library.")
+endif(NOT PCL_FOUND)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  geometry_utils
   parameter_utils
-  pcl_ros
+  geometry_msgs
+  nav_msgs
+  tf2_ros
 )
 
 catkin_package(
@@ -18,8 +26,12 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
+    geometry_utils
     parameter_utils
-    pcl_ros
+    geometry_msgs
+    parameter_utils
+    nav_msgs
+    tf2_ros
 )
 
 find_package(PCL 1.7 REQUIRED)
@@ -38,7 +50,7 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/PointCloudFilter.cc)
+add_library(${PROJECT_NAME} src/LidarSlipDetection.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
@@ -48,4 +60,5 @@ add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
 )
