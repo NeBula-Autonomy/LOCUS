@@ -106,8 +106,19 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
   double x = wheel_transform.translation(0);
   double y = wheel_transform.translation(1);
   double z = wheel_transform.translation(2);
-  wheel_delta_ = std::sqrt(x * x + y * y + z * z);
+  double wheel_delta = std::sqrt(x * x + y * y + z * z);
   wheel_last_pose_ = wheel_current_pose;
+  // WIO publishes at 50Hz (5 times faster than LO)
+  if (wio_last_deltas_.size() < 5 * filter_size_) {
+    wio_last_deltas_.push_back(wheel_delta);
+  } else {
+    // pop element from front
+    wio_last_deltas_.erase(wio_last_deltas_.begin());
+    wio_last_deltas_.push_back(wheel_delta);
+  }
+  // find average slipe amount
+  avg_wheel_delta_ =
+      std::accumulate(wio_last_deltas_.begin(), wio_last_deltas_.end(), 0.0);
 }
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
@@ -122,30 +133,31 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   double x = lidar_transform.translation(0);
   double y = lidar_transform.translation(1);
   double z = lidar_transform.translation(2);
-  lidar_delta_ = std::sqrt(x * x + y * y + z * z);
-  slip_amount = wheel_delta_ - lidar_delta_;
-  if (last_deltas_.size() < 5) {
-    last_deltas_.push_back(slip_amount);
+  double lidar_delta = std::sqrt(x * x + y * y + z * z);
+  lidar_last_pose_ = lidar_current_pose;
+  // WIO publishes at 50Hz (5 times faster than LO)
+  if (lo_last_deltas_.size() < filter_size_) {
+    lo_last_deltas_.push_back(lidar_delta);
   } else {
     // pop element from front
-    last_deltas_.erase(last_deltas_.begin());
-    last_deltas_.push_back(slip_amount);
+    lo_last_deltas_.erase(lo_last_deltas_.begin());
+    lo_last_deltas_.push_back(lidar_delta);
   }
   // find average slipe amount
-  double avg_slip_amount =
-      std::accumulate(last_deltas_.begin(), last_deltas_.end(), 0.0) /
-      last_deltas_.size();
-  PublishLidarSlipAmount(avg_slip_amount, slip_detection_from_odom_);
-  if (avg_slip_amount > slip_threshold_) slip_status = true;
+  avg_lidar_delta_ =
+      std::accumulate(lo_last_deltas_.begin(), lo_last_deltas_.end(), 0.0);
+  slip_amount = avg_wheel_delta_ - avg_lidar_delta_;
+
+  PublishLidarSlipAmount(slip_amount, slip_detection_from_odom_);
+  if (slip_amount > slip_threshold_) slip_status = true;
   PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
-  lidar_last_pose_ = lidar_current_pose;
 }
 
 void LidarSlipDetection::ConditionNumberCallback(
     const std_msgs::Float64& condition_number) {
   // Callback function for condition number
   double k = condition_number.data;
-  if (k > 8 * exp(max_power_) && wheel_delta_ > 0.05) {
+  if (k > 8 * exp(max_power_) && avg_wheel_delta_ > 0.05) {
     k = 1;
   } else {
     k = 0;
