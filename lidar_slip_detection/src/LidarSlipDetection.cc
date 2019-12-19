@@ -100,8 +100,9 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
   last_wo_poses_.push_back(wheel_current_pose);
 
   // If first entry in last poses more than 1 sec ago
-  if (wheel_current_pose.header.stamp - last_wo_poses_[0].header.stamp >
-      ros::Duration(1.0)) {
+  ros::Duration delta_t =
+      wheel_current_pose.header.stamp - last_wo_poses_[0].header.stamp;
+  if (delta_t > ros::Duration(1.0)) {
     last_wo_poses_.erase(last_wo_poses_.begin());
   }
   geometry_utils::Transform3 wheel_transform =
@@ -109,7 +110,10 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
   double x = wheel_transform.translation(0);
   double y = wheel_transform.translation(1);
   double z = wheel_transform.translation(2);
-  wheel_delta_ = std::sqrt(x * x + y * y + z * z);
+  if (delta_t.toSec() == 0)
+    wheel_delta_ = 0.0;
+  else
+    wheel_delta_ = std::sqrt(x * x + y * y + z * z) / delta_t.toSec();
 }
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
@@ -122,8 +126,9 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   last_lo_poses_.push_back(lidar_current_pose);
 
   // If first entry in last poses more than 1 sec ago
-  if (lidar_current_pose.header.stamp - last_lo_poses_[0].header.stamp >
-      ros::Duration(1.0)) {
+  ros::Duration delta_t =
+      lidar_current_pose.header.stamp - last_lo_poses_[0].header.stamp;
+  if (delta_t > ros::Duration(1.0)) {
     last_lo_poses_.erase(last_lo_poses_.begin());
   }
   geometry_utils::Transform3 lidar_transform =
@@ -131,7 +136,10 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   double x = lidar_transform.translation(0);
   double y = lidar_transform.translation(1);
   double z = lidar_transform.translation(2);
-  lidar_delta_ = std::sqrt(x * x + y * y + z * z);
+  if (delta_t.toSec() == 0)
+    lidar_delta_ = 0.0;
+  else
+    lidar_delta_ = std::sqrt(x * x + y * y + z * z) / delta_t.toSec();
 
   // Calculate slip
   slip_amount = wheel_delta_ - lidar_delta_;
