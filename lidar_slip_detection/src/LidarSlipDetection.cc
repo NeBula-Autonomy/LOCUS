@@ -117,9 +117,8 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
     wio_last_deltas_.push_back(wheel_delta);
   }
   // find average slipe amount
-  avg_lidar_delta_ =
-      std::accumulate(wio_last_deltas_.begin(), wio_last_deltas_.end(), 0.0) /
-      wio_last_deltas_.size();
+  avg_wheel_delta_ =
+      std::accumulate(wio_last_deltas_.begin(), wio_last_deltas_.end(), 0.0);
 }
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
@@ -146,8 +145,7 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   }
   // find average slipe amount
   avg_lidar_delta_ =
-      std::accumulate(lo_last_deltas_.begin(), lo_last_deltas_.end(), 0.0) /
-      lo_last_deltas_.size();
+      std::accumulate(lo_last_deltas_.begin(), lo_last_deltas_.end(), 0.0);
   slip_amount = avg_wheel_delta_ - avg_lidar_delta_;
 
   PublishLidarSlipAmount(slip_amount, slip_detection_from_odom_);
