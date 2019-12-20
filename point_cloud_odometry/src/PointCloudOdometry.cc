@@ -168,6 +168,9 @@ bool PointCloudOdometry::SetImuQuaternion(const Eigen::Quaterniond& imu_quaterni
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
   ROS_INFO("PointCloudOdometry - SetOdometryDelta");
   // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
+  std::cout << "Odometry Delta Translation X: " << odometry_delta_.getOrigin().getX() << std::endl;
+  std::cout << "Odometry Delta Translation Y: " << odometry_delta_.getOrigin().getY() << std::endl;
+  std::cout << "Odometry Delta Translation Z: " << odometry_delta_.getOrigin().getZ() << std::endl;
   odometry_delta_ = odometry_delta;
   return true;
 }
