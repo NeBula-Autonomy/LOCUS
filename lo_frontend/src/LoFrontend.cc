@@ -331,7 +331,7 @@ return true;
 tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
   tf::Transform odometry_pose;
   tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-  auto odometry_delta = odometry_pose.inverseTimes(odometry_pose_previous_);
+  auto odometry_delta = odometry_pose_previous_.inverseTimes(odometry_pose);
   return odometry_delta;
 }
 
