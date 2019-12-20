@@ -45,9 +45,7 @@ using pcl::PointCloud;
 using pcl::PointXYZI;
 
 PointCloudOdometry::PointCloudOdometry() : 
-  initialized_(false),
-  b_use_imu_integration_(true), 
-  b_use_odometry_integration_(false) {
+  initialized_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
 }
@@ -131,7 +129,11 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
+  if(!pu::Get("imu_integration/b_use_imu_integration", b_use_imu_integration_))
+    return false;
   if(!pu::Get("imu_integration/b_use_imu_yaw_only", b_use_imu_yaw_only_))
+    return false;
+  if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
     return false;
 
   return true;
@@ -168,9 +170,6 @@ bool PointCloudOdometry::SetImuQuaternion(const Eigen::Quaterniond& imu_quaterni
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
   ROS_INFO("PointCloudOdometry - SetOdometryDelta");
   // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
-  std::cout << "Odometry Delta Translation X: " << odometry_delta_.getOrigin().getX() << std::endl;
-  std::cout << "Odometry Delta Translation Y: " << odometry_delta_.getOrigin().getY() << std::endl;
-  std::cout << "Odometry Delta Translation Z: " << odometry_delta_.getOrigin().getZ() << std::endl;
   odometry_delta_ = odometry_delta;
   return true;
 }
