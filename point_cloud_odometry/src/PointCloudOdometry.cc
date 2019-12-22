@@ -45,9 +45,7 @@ using pcl::PointCloud;
 using pcl::PointXYZI;
 
 PointCloudOdometry::PointCloudOdometry() : 
-  initialized_(false),
-  b_use_imu_integration_(true), 
-  b_use_odometry_integration_(false) {
+  initialized_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
 }
@@ -131,7 +129,11 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
+  if(!pu::Get("imu_integration/b_use_imu_integration", b_use_imu_integration_))
+    return false;
   if(!pu::Get("imu_integration/b_use_imu_yaw_only", b_use_imu_yaw_only_))
+    return false;
+  if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
     return false;
 
   return true;
