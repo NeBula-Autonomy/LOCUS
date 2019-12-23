@@ -13,12 +13,12 @@ syncing:
   ts_threshold: 0.1
 
 imu_integration: 
-  b_use_imu_integration: false
+  b_use_imu_integration: true
   b_use_imu_yaw_only: false
   imu_max_number_of_calls: 25
 
 odometry_integration: 
-  b_use_odometry_integration: true
+  b_use_odometry_integration: false
   odometry_max_number_of_calls: 25
 
 queue_sizes: 
