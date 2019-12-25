@@ -1,10 +1,31 @@
+b_verbose: false
+b_publish_map: true
 
-# Translation before adding point cloud to the map
-# TODO - see if setting this lower helps
-# TODO - later - remove old parts of the point cloud to only keep a local map...
-translation_threshold_kf: 1.0 # 1.0
-# Tune this to be larger to avoid delays - map update and publishis expensive 
-rotation_threshold_kf: 0.3 #0.3 # radians. 45 deg = 0.79
+translation_threshold_kf: 1.0 
+rotation_threshold_kf: 0.3 
 
-# Limit to print warning for time diff between point clouds
-point_cloud_time_diff_limit: 0.11
+buffers: 
+  imu_buffer_size_limit: 1000
+  odometry_buffer_size_limit: 1000
+  pose_stamped_buffer_size_limit: 1000
+
+syncing: 
+  ts_threshold: 0.1
+
+imu_integration: 
+  b_use_imu_integration: true
+  b_use_imu_yaw_only: false
+  imu_max_number_of_calls: 25
+
+odometry_integration: 
+  b_use_odometry_integration: false
+  odometry_max_number_of_calls: 25
+
+queue_sizes: 
+  imu_queue_size: 100
+  odom_queue_size: 100 
+  pose_queue_size: 100
+  lidar_queue_size: 5
+
+map_publishment: 
+  meters: 20

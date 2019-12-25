@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016, The Regents of the University of California (Regents).
- * All rights reserved.
+ * Copyright (c) 2019, NASA Jet Propulsion Laboratory - California 
+ * Institute of Technology - All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,19 +31,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Please contact the author(s) of this library if you have any questions.
- * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
+ * Authors: Yun Change, Kamak Ebadi ( yunchange@mit.edu, kamak.ebadi@jpl.nasa.gov )
  */
 
 #include <ros/ros.h>
-#include <lo_frontend/LoFrontend.h>
+#include <lidar_slip_detection/LidarSlipDetection.h>
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "lo_frontend_node");
+  ros::init(argc, argv, "lidar_slip_detection");
   ros::NodeHandle n("~");
 
-  LoFrontend lo_frontend_node;
-  if (!lo_frontend_node.Initialize(n, false)) {
-    ROS_ERROR("%s: Failed to initialize lo_frontend_node.",
+  LidarSlipDetection lsd;
+  if (!lsd.Initialize(n)) {
+    ROS_ERROR("%s: Failed to initialize lidar slip detection.",
               ros::this_node::getName().c_str());
     return EXIT_FAILURE;
   }

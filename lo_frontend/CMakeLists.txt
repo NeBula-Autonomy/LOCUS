@@ -25,11 +25,11 @@ FIND_PACKAGE(Boost REQUIRED
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  measurement_synchronizer
   point_cloud_filter
   point_cloud_odometry
   point_cloud_localization
   point_cloud_mapper
+  lidar_slip_detection
   geometry_utils
   parameter_utils
   pcl_ros
@@ -46,11 +46,11 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     message_runtime
-    measurement_synchronizer
     point_cloud_filter
     point_cloud_odometry
     point_cloud_localization
     point_cloud_mapper
+    lidar_slip_detection
     geometry_utils
     parameter_utils
     pcl_ros
