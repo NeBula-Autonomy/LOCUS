@@ -58,6 +58,7 @@
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
 
 class LoFrontend {
 
@@ -146,6 +147,14 @@ private:
   int imu_number_of_calls_;
   int imu_max_number_of_calls_;
 
+  // ODOMETRY Frontend Integration 
+  bool b_use_odometry_integration_;
+  int odometry_number_of_calls_;
+  int odometry_max_number_of_calls_;
+  bool b_odometry_has_been_received_;
+  tf::Transform odometry_pose_previous_;
+  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+  
   // Class objects
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
