@@ -84,8 +84,10 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (!RegisterCallbacks(n, from_log)) {
     ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
     return false;
+  }
+  if (b_convert_imu_to_base_link_frame_) {
+    LoadCalibrationFromTfTree();
   }  
-  LoadCalibrationFromTfTree();
   return true;  
 }
 
