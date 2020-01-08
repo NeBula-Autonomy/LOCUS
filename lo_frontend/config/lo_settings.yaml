@@ -21,6 +21,9 @@ odometry_integration:
   b_use_odometry_integration: false
   odometry_max_number_of_calls: 25
 
+pose_stamped_integration:
+  b_use_pose_stamped_integration: false
+
 queue_sizes: 
   imu_queue_size: 100
   odom_queue_size: 100 
