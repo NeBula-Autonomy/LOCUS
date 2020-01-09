@@ -125,6 +125,10 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("odometry_integration/odometry_max_number_of_calls", odometry_max_number_of_calls_))
     return false;
+  if(!pu::Get("pose_stamped_integration/b_use_pose_stamped_integration", b_use_pose_stamped_integration_))
+    return false;
+  if(!pu::Get("pose_stamped_integration/pose_stamped_max_number_of_calls", pose_stamped_max_number_of_calls_))
+    return false;
   if(!pu::Get("queue_sizes/imu_queue_size", imu_queue_size_))
     return false;
   if(!pu::Get("queue_sizes/odom_queue_size", odom_queue_size_))

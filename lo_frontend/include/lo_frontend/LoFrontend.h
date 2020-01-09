@@ -154,6 +154,10 @@ private:
   bool b_odometry_has_been_received_;
   tf::Transform odometry_pose_previous_;
   tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+
+  // POSE_STAMPED Frontend Integration 
+  bool b_use_pose_stamped_integration_;
+  int pose_stamped_max_number_of_calls_;
   
   // Class objects
   PointCloudFilter filter_;
