@@ -3,7 +3,6 @@
 
   <arg name="b_use_two_pc" default="true"/>
 
-
   <arg if="$(arg b_use_two_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
   <arg unless="$(arg b_use_two_pc)" name="pc_input" value="velodyne_points/transformed"/>
 
@@ -121,6 +120,5 @@
   <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
     <arg name="robot_namespace" value="$(arg robot_namespace)"/>
   </include>
-
   
 </launch>
