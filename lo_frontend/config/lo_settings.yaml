@@ -26,10 +26,10 @@ pose_stamped_integration:
   pose_stamped_max_number_of_calls: 25
 
 queue_sizes: 
-  imu_queue_size: 100
-  odom_queue_size: 100 
-  pose_queue_size: 100
-  lidar_queue_size: 5
+  imu_queue_size: 10000
+  odom_queue_size: 1000 
+  pose_queue_size: 1000
+  lidar_queue_size: 1
 
 map_publishment: 
   meters: 20
