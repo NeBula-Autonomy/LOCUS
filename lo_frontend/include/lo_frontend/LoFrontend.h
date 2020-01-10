@@ -139,6 +139,8 @@ private:
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;   
 
+  bool CheckDataIntegration();
+
   // IMU Frontend Integration   
   double ts_threshold_;
   void CheckImuFrame(const ImuConstPtr& imu_msg); 

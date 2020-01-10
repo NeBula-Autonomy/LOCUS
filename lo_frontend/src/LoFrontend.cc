@@ -80,7 +80,11 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
-  }  
+  }
+  if (!CheckDataIntegration()) {
+    ROS_ERROR("Failed to check data integration");
+    return false;
+  }
   if (!RegisterCallbacks(n, from_log)) {
     ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
     return false;
@@ -140,6 +144,32 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if(!pu::Get("map_publishment/meters", map_publishment_meters_))
     return false;
   return true;
+}
+
+bool LoFrontend::CheckDataIntegration() {  
+  ROS_INFO("LoFrontend - CheckDataIntegration");  
+  int n = 0;
+  if (b_use_imu_integration_) n++; 
+  if (b_use_odometry_integration_) n++; 
+  if (b_use_pose_stamped_integration_) n++;  
+  if (n==0) {
+    ROS_INFO("No data integration is requested"); 
+    return true;
+  }
+  if (n==1) {
+    ROS_INFO("One data integration is requested"); 
+    return true;
+  }
+  if (n>1) {
+    ROS_WARN("Data integration is requested for more than one input. Privileging odometry");
+    b_use_imu_integration_ = false;
+    b_use_odometry_integration_ = true;
+    b_use_pose_stamped_integration_ = false; 
+    if (!b_use_imu_integration_ && b_use_odometry_integration_ && !b_use_pose_stamped_integration_) 
+      return true;
+    else 
+      return false;
+  } 
 }
 
 bool LoFrontend::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
@@ -391,16 +421,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
-
-  // TODO: Wrap these in single logic (mutually exclusive) ----------------------------------------------------------------------
-  
+   
   if(b_use_imu_integration_) {
     Imu imu_msg;
     if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
       ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar timestamp");
       imu_number_of_calls_++;
       if (imu_number_of_calls_ > imu_max_number_of_calls_) {
-        // TODO: Robustify with consecutiveness-check (unified method to handle IMU crash at any time)
+        // TODO: Robustify with consecutiveness-check
         ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > imu_max_number_of_calls");
         b_use_imu_integration_ = false;
       }
@@ -408,14 +436,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
     odometry_.SetImuQuaternion(GetImuQuaternion(imu_msg));
   }
-
-  if (b_use_odometry_integration_) {
+  else if (b_use_odometry_integration_) {
     Odometry odometry_msg;
     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
       odometry_number_of_calls_++;
       if (odometry_number_of_calls_ > odometry_max_number_of_calls_) {
-        // TODO: Robustify with consecutiveness-check (unified method to handle ODOMETRY crash at any time)
+        // TODO: Robustify with consecutiveness-check
         ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > odometry_max_number_of_calls");
         b_use_odometry_integration_ = false;
       }
@@ -429,9 +456,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
     odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+  }  
+  else if (b_use_pose_stamped_integration_) {
+    ROS_INFO("To be implemented"); 
   }
-  
-  // ----------------------------------------------------------------------------------------------------------------------------
   
   filter_.Filter(msg, msg_filtered_);
   odometry_.SetLidar(*msg_filtered_);
