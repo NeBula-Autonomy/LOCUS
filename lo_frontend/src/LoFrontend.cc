@@ -41,10 +41,7 @@ namespace gu = geometry_utils;
 
 LoFrontend::LoFrontend(): 
   b_add_first_scan_to_key_(true),
-  translation_threshold_kf_(1.0),
-  rotation_threshold_kf_(1.0), 
   counter_(0), 
-  b_verbose_(false),
   b_pcld_received_(false),
   msg_filtered_(new PointCloud()),
   msg_transformed_(new PointCloud()),
