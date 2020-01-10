@@ -157,6 +157,7 @@ private:
 
   // POSE_STAMPED Frontend Integration 
   bool b_use_pose_stamped_integration_;
+  int pose_stamped_number_of_calls_;
   int pose_stamped_max_number_of_calls_;
   
   // Class objects

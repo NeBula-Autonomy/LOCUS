@@ -50,7 +50,9 @@ LoFrontend::LoFrontend():
   msg_fixed_(new PointCloud()), 
   mapper_unused_fixed_(new PointCloud()),
   mapper_unused_out_(new PointCloud()), 
-  imu_number_of_calls_(0), 
+  imu_number_of_calls_(0),
+  odometry_number_of_calls_(0), 
+  pose_stamped_number_of_calls_(0), 
   b_odometry_has_been_received_(false) {}
 
 LoFrontend::~LoFrontend() {}
