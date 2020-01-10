@@ -294,16 +294,6 @@ Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeYawChange() {
   rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
   return rot_yaw_mat;
 }
-
-void PointCloudOdometry::PublishPoints(const PointCloud::Ptr& points,
-                                       const ros::Publisher& pub) {
-  if (pub.getNumSubscribers() > 0) {
-    PointCloud out;
-    out = *points;
-    out.header.frame_id = odometry_frame_id_;
-    pub.publish(out);
-  }
-}
  
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
                                      const ros::Publisher& pub) {

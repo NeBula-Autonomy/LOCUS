@@ -173,7 +173,7 @@ private:
   bool b_pcld_received_;
   int pcld_seq_prev_;
 
-  // Storages - TODO: This can be optimized
+  // Storages
   PointCloud::Ptr msg_filtered_;
   PointCloud::Ptr msg_transformed_;
   PointCloud::Ptr msg_neighbors_;
@@ -182,7 +182,7 @@ private:
   PointCloud::Ptr mapper_unused_fixed_;
   PointCloud::Ptr mapper_unused_out_;
 
-  // Load queue sizes as params 
+  // Queue sizes
   int imu_queue_size_; 
   int odom_queue_size_; 
   int pose_queue_size_; 

@@ -89,10 +89,6 @@ private:
 
   // Use ICP between a query and reference point cloud to estimate pose
   bool UpdateICP();
-  
-  // Publish reference and query point clouds - TODO: Do we need it? 
-  void PublishPoints(const PointCloud::Ptr& points, 
-                     const ros::Publisher& pub);
 
   // Publish incremental and integrated pose estimates
   void PublishPose(const geometry_utils::Transform3& pose,
