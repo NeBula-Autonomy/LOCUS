@@ -126,13 +126,13 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("pose_stamped_integration/pose_stamped_max_number_of_calls", pose_stamped_max_number_of_calls_))
     return false;
+  if(!pu::Get("queue_sizes/lidar_queue_size", lidar_queue_size_))
+    return false;
   if(!pu::Get("queue_sizes/imu_queue_size", imu_queue_size_))
     return false;
   if(!pu::Get("queue_sizes/odom_queue_size", odom_queue_size_))
     return false;
   if(!pu::Get("queue_sizes/pose_queue_size", pose_queue_size_))
-    return false;
-  if(!pu::Get("queue_sizes/lidar_queue_size", lidar_queue_size_))
     return false;
   if(!pu::Get("map_publishment/meters", map_publishment_meters_))
     return false;
@@ -158,7 +158,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - RegisterOnlineCallbacks");  
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
   ros::NodeHandle nl(n);  
-  pcld_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::PointCloudCallback, this);
+  lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
   if (b_use_imu_integration_) {
     ROS_INFO("Registering ImuCallback");
     imu_sub_ = nl.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
@@ -347,8 +347,8 @@ tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
   return odometry_delta;
 }
 
-void LoFrontend::PointCloudCallback(const PointCloud::ConstPtr& msg) {  
-  if (b_verbose_) ROS_INFO("LoFrontend - PointCloudCallback"); 
+void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
+  if (b_verbose_) ROS_INFO("LoFrontend - LidarCallback"); 
 
   if(!b_pcld_received_) {
     pcld_seq_prev_ = msg->header.seq;

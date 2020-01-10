@@ -95,9 +95,9 @@ private:
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
   void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
-  void PointCloudCallback(const PointCloud::ConstPtr& msg);
+  void LidarCallback(const PointCloud::ConstPtr& msg);
 
-  ros::Subscriber pcld_sub_;  
+  ros::Subscriber lidar_sub_;  
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
   ros::Subscriber pose_sub_;    
