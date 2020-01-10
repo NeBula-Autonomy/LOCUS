@@ -148,6 +148,9 @@ private:
   bool b_use_odometry_integration_; 
   tf::Transform odometry_delta_;
 
+  // POSE_STAMPED Frontend Integration 
+  bool b_use_pose_stamped_integration_;
+
 };
 
 #endif

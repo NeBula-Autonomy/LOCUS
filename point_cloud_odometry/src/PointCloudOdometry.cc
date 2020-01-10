@@ -135,6 +135,8 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
     return false;
+  if(!pu::Get("pose_stamped_integration/b_use_pose_stamped_integration", b_use_pose_stamped_integration_))
+    return false;
 
   return true;
 }
@@ -196,6 +198,7 @@ bool PointCloudOdometry::UpdateICP() {
   
   Eigen::Matrix4d imu_prior; 
   Eigen::Matrix4d odometry_prior;
+  Eigen::Matrix4d pose_stamped_prior;
 
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
@@ -212,6 +215,10 @@ bool PointCloudOdometry::UpdateICP() {
     pcl_ros::transformAsMatrix(odometry_delta_, temp);
     odometry_prior = temp.cast <double> ();
     pcl::transformPointCloud(*query_, *query_trans, odometry_prior);
+  }
+  else if (b_use_pose_stamped_integration_) {
+    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
+    return false;
   }  
   else {
     *query_trans = *query_;
@@ -229,9 +236,12 @@ bool PointCloudOdometry::UpdateICP() {
   if (b_use_imu_integration_) { 
     T = T * imu_prior;
   }
-
-  if (b_use_odometry_integration_) {
+  else if (b_use_odometry_integration_) {
     T = T * odometry_prior;
+  }
+  else if (b_use_pose_stamped_integration_) {
+    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
+    return false;
   }
   
   incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));

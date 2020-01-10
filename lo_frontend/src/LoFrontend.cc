@@ -458,7 +458,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
   }  
   else if (b_use_pose_stamped_integration_) {
-    ROS_INFO("To be implemented"); 
+    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_"); 
+    return;
   }
   
   filter_.Filter(msg, msg_filtered_);
