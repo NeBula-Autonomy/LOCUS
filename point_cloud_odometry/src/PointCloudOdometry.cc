@@ -70,6 +70,7 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
+  ROS_INFO("PointCloudOdometry - LoadParameters");
 
   if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
@@ -142,6 +143,7 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
 }
 
 bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
+  ROS_INFO("PointCloudOdometry - RegisterCallbacks");
   ros::NodeHandle nl(n);
   query_pub_ = nl.advertise<PointCloud>("odometry_query_points", 10, false);
   reference_pub_ = nl.advertise<PointCloud>("odometry_reference_points", 10, false);
@@ -151,6 +153,7 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
 }
 
 bool PointCloudOdometry::SetupICP() {
+  ROS_INFO("PointCloudOdometry - SetupICP");
   icp_.setTransformationEpsilon(params_.icp_tf_epsilon);
   icp_.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp_.setMaximumIterations(params_.icp_iterations);
@@ -170,7 +173,6 @@ bool PointCloudOdometry::SetImuQuaternion(const Eigen::Quaterniond& imu_quaterni
 }
 
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
-  ROS_INFO("PointCloudOdometry - SetOdometryDelta");
   // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
   odometry_delta_ = odometry_delta;
   return true;
