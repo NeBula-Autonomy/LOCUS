@@ -120,10 +120,6 @@ private:
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
-  // Publish reference, query, and aligned query point clouds
-  void PublishPoints(const PointCloud& points,
-                     const ros::Publisher& pub) const;
-
   // Publish incremental and integrated pose estimates
   void PublishPose(const geometry_utils::Transform3& pose,
                    const Eigen::Matrix<double, 6, 6>& covariance,
