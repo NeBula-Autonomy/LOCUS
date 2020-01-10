@@ -141,8 +141,10 @@ private:
 
   // IMU Frontend Integration   
   double ts_threshold_;
+  void CheckImuFrame(const ImuConstPtr& imu_msg); 
   Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
   bool b_convert_imu_to_base_link_frame_;
+  bool b_imu_frame_is_correct_;
   bool b_use_imu_integration_;
   int imu_number_of_calls_;
   int imu_max_number_of_calls_;

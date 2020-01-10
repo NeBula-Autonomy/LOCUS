@@ -53,7 +53,8 @@ LoFrontend::LoFrontend():
   imu_number_of_calls_(0),
   odometry_number_of_calls_(0), 
   pose_stamped_number_of_calls_(0), 
-  b_odometry_has_been_received_(false) {}
+  b_odometry_has_been_received_(false), 
+  b_imu_frame_is_correct_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -185,6 +186,7 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
 
 void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
   if (b_verbose_) ROS_INFO("LoFrontend - ImuCallback"); 
+  if (!b_imu_frame_is_correct_) CheckImuFrame(imu_msg);  
   if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
       imu_buffer_.erase(imu_buffer_.begin());
   }   
@@ -210,6 +212,30 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
   }   
   if (!InsertMsgInBuffer(pose_stamped_msg, pose_stamped_buffer_)) {
       ROS_WARN("LoFrontend - PoseStampedCallback - Unable to store message in buffer");
+  }
+}
+
+void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
+  if (b_verbose_) ROS_INFO_STREAM("LoFrontend - CheckImuFrame");                           
+  if (b_convert_imu_to_base_link_frame_) {    
+    if (imu_msg->header.frame_id.find("vn100") != std::string::npos) {
+      ROS_INFO("Received imu_msg is correctly expressed in imu frame");
+      b_imu_frame_is_correct_ = true;
+    }
+    else {
+      ROS_ERROR("Received imu_msg is not expressed in imu frame, but an imu to base_link conversion is enabled");
+      return;
+    }
+  }
+  else {
+    if (imu_msg->header.frame_id.find("base_link") != std::string::npos) {
+      ROS_INFO("Received imu_msg is correctly expressed in base_link frame");
+      b_imu_frame_is_correct_ = true;
+    }
+    else {
+      ROS_ERROR("Received imu_msg is not expressed in base_link frame, but an imu to base_link conversion is disabled");
+      return;
+    }    
   }
 }
 
