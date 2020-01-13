@@ -139,22 +139,22 @@ private:
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;   
 
-  bool CheckDataIntegration();
+  int data_integration_mode_;
+  bool SetDataIntegrationMode();
+  int max_number_of_calls_;
 
   // IMU Frontend Integration   
-  double ts_threshold_;
   void CheckImuFrame(const ImuConstPtr& imu_msg); 
   Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
   bool b_convert_imu_to_base_link_frame_;
   bool b_imu_frame_is_correct_;
   bool b_use_imu_integration_;
+  bool b_use_imu_yaw_integration_;
   int imu_number_of_calls_;
-  int imu_max_number_of_calls_;
 
   // ODOMETRY Frontend Integration 
   bool b_use_odometry_integration_;
   int odometry_number_of_calls_;
-  int odometry_max_number_of_calls_;
   bool b_odometry_has_been_received_;
   tf::Transform odometry_pose_previous_;
   tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
@@ -162,7 +162,6 @@ private:
   // POSE_STAMPED Frontend Integration 
   bool b_use_pose_stamped_integration_;
   int pose_stamped_number_of_calls_;
-  int pose_stamped_max_number_of_calls_;
   
   // Class objects
   PointCloudFilter filter_;
