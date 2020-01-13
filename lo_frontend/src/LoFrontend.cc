@@ -498,7 +498,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     if(b_publish_map_) {
       counter_++;   
       if (counter_==map_publishment_meters_) { 
-        ROS_INFO("Publishing map");
         mapper_.PublishMap();
         counter_ = 0;
       }
