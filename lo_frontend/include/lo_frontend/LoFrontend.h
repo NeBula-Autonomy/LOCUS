@@ -104,6 +104,12 @@ private:
 
   ros::Publisher base_frame_pcld_pub_; 
 
+   // Queue sizes
+  int lidar_queue_size_; 
+  int imu_queue_size_; 
+  int odom_queue_size_; 
+  int pose_queue_size_; 
+
   ImuBuffer imu_buffer_;
   OdometryBuffer odometry_buffer_;
   PoseStampedBuffer pose_stamped_buffer_;
@@ -126,8 +132,7 @@ private:
   bool b_add_first_scan_to_key_;
 
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;   
-  geometry_utils::Transform3 last_keyframe_pose_; 
-  ros::Time last_pcld_stamp_;        
+  geometry_utils::Transform3 last_keyframe_pose_;      
 
   std::string fixed_frame_id_; 
   std::string base_frame_id_; 
@@ -185,12 +190,6 @@ private:
   PointCloud::Ptr msg_fixed_;
   PointCloud::Ptr mapper_unused_fixed_;
   PointCloud::Ptr mapper_unused_out_;
-
-  // Queue sizes
-  int imu_queue_size_; 
-  int odom_queue_size_; 
-  int pose_queue_size_; 
-  int lidar_queue_size_; 
 
 };
 

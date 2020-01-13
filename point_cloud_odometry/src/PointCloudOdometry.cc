@@ -45,7 +45,11 @@ using pcl::PointCloud;
 using pcl::PointXYZI;
 
 PointCloudOdometry::PointCloudOdometry() : 
-  initialized_(false) {
+  initialized_(false), 
+  b_use_imu_integration_(false), 
+  b_use_imu_yaw_integration_(false),
+  b_use_odometry_integration_(false), 
+  b_use_pose_stamped_integration_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
 }
@@ -130,14 +134,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
-  if(!pu::Get("imu_integration/b_use_imu_integration", b_use_imu_integration_))
-    return false;
-  if(!pu::Get("imu_integration/b_use_imu_yaw_only", b_use_imu_yaw_only_))
-    return false;
-  if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
-    return false;
-  if(!pu::Get("pose_stamped_integration/b_use_pose_stamped_integration", b_use_pose_stamped_integration_))
-    return false;
 
   return true;
 }
@@ -159,6 +155,23 @@ bool PointCloudOdometry::SetupICP() {
   icp_.setMaximumIterations(params_.icp_iterations);
   icp_.setRANSACIterations(0);
   return true;
+}
+
+void PointCloudOdometry::EnableImuIntegration() {
+  b_use_imu_integration_ = true;
+}
+
+void PointCloudOdometry::EnableImuYawIntegration() {
+  b_use_imu_integration_ = true;
+  b_use_imu_yaw_integration_ = true;
+}
+
+void PointCloudOdometry::EnableOdometryIntegration() {
+  b_use_odometry_integration_ = true;
+}
+
+void PointCloudOdometry::EnablePoseStampedIntegration() {
+  b_use_pose_stamped_integration_ = true;
 }
 
 bool PointCloudOdometry::SetLidar(const PointCloud& points) {
@@ -204,7 +217,7 @@ bool PointCloudOdometry::UpdateICP() {
 
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    if(b_use_imu_yaw_only_) {
+    if(b_use_imu_yaw_integration_) {
       imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeYawChange();
     }
     else {

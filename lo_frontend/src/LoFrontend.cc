@@ -145,28 +145,27 @@ bool LoFrontend::SetDataIntegrationMode() {
   switch (data_integration_mode_) {
     case 0:
       ROS_INFO("No integration requested");
-      // TODO: set no integration in Odometry
       break;
     case 1: 
       ROS_INFO("Imu integration requested");
       b_use_imu_integration_ = true;
-      // TODO: set imu integration in Odometry
+      odometry_.EnableImuIntegration();
       break;
     case 2: 
       ROS_INFO("Imu yaw integration requested");
       b_use_imu_integration_ = true; 
       b_use_imu_yaw_integration_ = true; 
-      // TODO: set imu_yaw integration in Odometry
+      odometry_.EnableImuYawIntegration();
       break;
     case 3: 
       ROS_INFO("Odometry integration requested");
       b_use_odometry_integration_ = true;
-      // TODO: set odometry integration in Odometry
+      odometry_.EnableOdometryIntegration();
       break;
     case 4: 
       ROS_INFO("PoseStamped integration requested");
       b_use_pose_stamped_integration_ = true;
-      // TODO: Set pose_stamped integration in Odometry
+      odometry_.EnablePoseStampedIntegration();
       break;    
     default:
       ROS_ERROR("Default case to be handled");
