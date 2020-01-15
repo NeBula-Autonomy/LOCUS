@@ -3,7 +3,6 @@
 
   <arg name="b_use_two_pc" default="true"/>
 
-
   <arg if="$(arg b_use_two_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
   <arg unless="$(arg b_use_two_pc)" name="pc_input" value="velodyne_points/transformed"/>
 
@@ -27,6 +26,7 @@
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
       <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
       <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom"/>
+      <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
       <param name="robot_name" value="$(arg robot_namespace)"/>
       <param name="tf_prefix" value="$(arg robot_namespace)"/>
@@ -120,6 +120,5 @@
   <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
     <arg name="robot_namespace" value="$(arg robot_namespace)"/>
   </include>
-
   
 </launch>

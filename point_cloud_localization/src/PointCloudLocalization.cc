@@ -379,17 +379,6 @@ bool PointCloudLocalization::ComputeICPCovariance(const PointCloud pointCloud,
   return true;
 }
 
-void PointCloudLocalization::PublishPoints(const PointCloud& points,
-                                           const ros::Publisher& pub) const {
-  // Check for subscribers before doing any work
-  if (pub.getNumSubscribers() > 0) {
-    PointCloud out;
-    out = points;
-    out.header.frame_id = base_frame_id_;
-    pub.publish(out);
-  }
-}
-
 void PointCloudLocalization::PublishPose(const geometry_utils::Transform3& pose,
                                          const Eigen::Matrix<double, 6, 6>& covariance,
                                          const ros::Publisher& pub){

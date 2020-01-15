@@ -95,14 +95,20 @@ private:
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
   void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
-  void PointCloudCallback(const PointCloud::ConstPtr& msg);
+  void LidarCallback(const PointCloud::ConstPtr& msg);
 
-  ros::Subscriber pcld_sub_;  
+  ros::Subscriber lidar_sub_;  
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
   ros::Subscriber pose_sub_;    
 
   ros::Publisher base_frame_pcld_pub_; 
+
+   // Queue sizes
+  int lidar_queue_size_; 
+  int imu_queue_size_; 
+  int odom_queue_size_; 
+  int pose_queue_size_; 
 
   ImuBuffer imu_buffer_;
   OdometryBuffer odometry_buffer_;
@@ -126,8 +132,7 @@ private:
   bool b_add_first_scan_to_key_;
 
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;   
-  geometry_utils::Transform3 last_keyframe_pose_; 
-  ros::Time last_pcld_stamp_;        
+  geometry_utils::Transform3 last_keyframe_pose_;      
 
   std::string fixed_frame_id_; 
   std::string base_frame_id_; 
@@ -139,21 +144,29 @@ private:
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;   
 
+  int data_integration_mode_;
+  bool SetDataIntegrationMode();
+  int max_number_of_calls_;
+
   // IMU Frontend Integration   
-  double ts_threshold_;
+  void CheckImuFrame(const ImuConstPtr& imu_msg); 
   Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
   bool b_convert_imu_to_base_link_frame_;
+  bool b_imu_frame_is_correct_;
   bool b_use_imu_integration_;
+  bool b_use_imu_yaw_integration_;
   int imu_number_of_calls_;
-  int imu_max_number_of_calls_;
 
   // ODOMETRY Frontend Integration 
   bool b_use_odometry_integration_;
   int odometry_number_of_calls_;
-  int odometry_max_number_of_calls_;
   bool b_odometry_has_been_received_;
   tf::Transform odometry_pose_previous_;
   tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+
+  // POSE_STAMPED Frontend Integration 
+  bool b_use_pose_stamped_integration_;
+  int pose_stamped_number_of_calls_;
   
   // Class objects
   PointCloudFilter filter_;
@@ -169,7 +182,7 @@ private:
   bool b_pcld_received_;
   int pcld_seq_prev_;
 
-  // Storages - TODO: This can be optimized
+  // Storages
   PointCloud::Ptr msg_filtered_;
   PointCloud::Ptr msg_transformed_;
   PointCloud::Ptr msg_neighbors_;
@@ -177,12 +190,6 @@ private:
   PointCloud::Ptr msg_fixed_;
   PointCloud::Ptr mapper_unused_fixed_;
   PointCloud::Ptr mapper_unused_out_;
-
-  // Load queue sizes as params 
-  int imu_queue_size_; 
-  int odom_queue_size_; 
-  int pose_queue_size_; 
-  int lidar_queue_size_; 
 
 };
 

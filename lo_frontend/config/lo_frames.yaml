@@ -6,4 +6,4 @@ frame_id:
   artifacts_in_global: true
 
 frame_conversions: 
-  b_convert_imu_to_base_link_frame: true
+  b_convert_imu_to_base_link_frame: false

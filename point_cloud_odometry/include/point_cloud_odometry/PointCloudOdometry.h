@@ -82,6 +82,11 @@ public:
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
 
+  void EnableImuIntegration();
+  void EnableImuYawIntegration();
+  void EnableOdometryIntegration();
+  void EnablePoseStampedIntegration();
+
 private:
 
   bool LoadParameters(const ros::NodeHandle& n);
@@ -89,20 +94,13 @@ private:
 
   // Use ICP between a query and reference point cloud to estimate pose
   bool UpdateICP();
-  
-  // Publish reference and query point clouds - TODO: Do we need it? 
-  void PublishPoints(const PointCloud::Ptr& points, 
-                     const ros::Publisher& pub);
 
   // Publish incremental and integrated pose estimates
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
-  // The node's name
   std::string name_;
   bool b_verbose_;
-
-  // For initialization
   bool initialized_;
 
   // Publishers
@@ -146,11 +144,14 @@ private:
   Eigen::Matrix3d GetExternalAttitudeYawChange();
   Eigen::Matrix3d GetExternalAttitudeChange();
   bool b_use_imu_integration_;
-  bool b_use_imu_yaw_only_;
+  bool b_use_imu_yaw_integration_;
 
   // ODOMETRY Frontend Integration
   bool b_use_odometry_integration_; 
   tf::Transform odometry_delta_;
+
+  // POSE_STAMPED Frontend Integration 
+  bool b_use_pose_stamped_integration_;
 
 };
 
