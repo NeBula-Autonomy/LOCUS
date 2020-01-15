@@ -191,12 +191,6 @@ private:
   PointCloud::Ptr mapper_unused_fixed_;
   PointCloud::Ptr mapper_unused_out_;
 
-  // Load queue sizes as params 
-  int imu_queue_size_; 
-  int odom_queue_size_; 
-  int pose_queue_size_; 
-  int lidar_queue_size_; 
-
   // Check IMU for NANS
   bool CheckNans(const Imu &msg);
 };
