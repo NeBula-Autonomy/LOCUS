@@ -222,7 +222,11 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
   if (!b_imu_frame_is_correct_) CheckImuFrame(imu_msg);  
   if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
       imu_buffer_.erase(imu_buffer_.begin());
-  }   
+  }
+  if (CheckNans(*imu_msg)) {
+      ROS_WARN("LoFrontend - ImuCallback - Message contains NANS. Throwing the message.");
+      return;
+  }
   if (!InsertMsgInBuffer(imu_msg, imu_buffer_)) {
       ROS_WARN("LoFrontend - ImuCallback - Unable to store message in buffer");
   }
@@ -511,4 +515,17 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }  
   
+}
+
+bool LoFrontend::CheckNans(const Imu &imu_msg) {
+  return (std::isnan(imu_msg.orientation.x) || 
+          std::isnan(imu_msg.orientation.y) || 
+          std::isnan(imu_msg.orientation.z) || 
+          std::isnan(imu_msg.orientation.w) || 
+          std::isnan(imu_msg.angular_velocity.x) || 
+          std::isnan(imu_msg.angular_velocity.y) || 
+          std::isnan(imu_msg.angular_velocity.z) ||
+          std::isnan(imu_msg.linear_acceleration.x) || 
+          std::isnan(imu_msg.linear_acceleration.y) || 
+          std::isnan(imu_msg.linear_acceleration.z));
 }
