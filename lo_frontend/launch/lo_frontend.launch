@@ -14,7 +14,8 @@
   <group ns="$(arg robot_namespace)">
   
     <!-- Laser-Odometry -->
-    <node pkg="lo_frontend"
+    <node launch-prefix="gdb -ex run --args"
+          pkg="lo_frontend"
           name="lo_frontend"
           type="lo_frontend_node"
           output="screen">
