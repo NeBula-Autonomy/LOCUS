@@ -440,8 +440,22 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       }
       return;
     }
-    odometry_.SetImuQuaternion(GetImuQuaternion(imu_msg));
-  }
+    auto imu_quaternion = GetImuQuaternion(imu_msg);
+    if (!b_imu_has_been_received_) {
+      ROS_INFO("Receiving imu for the first time");
+      imu_quaternion_previous_ = imu_quaternion;
+      b_imu_has_been_received_= true;
+      return;
+    }
+    auto imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion;
+    if (b_use_imu_yaw_integration_) {
+      odometry_.SetImuDelta(GetImuYawDelta());
+    }
+    else {
+      odometry_.SetImuDelta(GetImuDelta());
+    }
+    imu_quaternion_previous_ = imu_quaternion;
+  }  
   else if (b_use_odometry_integration_) {
     Odometry odometry_msg;
     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
@@ -462,7 +476,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
     odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-  }  
+  }
   else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_"); 
     return;
@@ -528,4 +542,24 @@ bool LoFrontend::CheckNans(const Imu &imu_msg) {
           std::isnan(imu_msg.linear_acceleration.x) || 
           std::isnan(imu_msg.linear_acceleration.y) || 
           std::isnan(imu_msg.linear_acceleration.z));
+}
+
+Eigen::Matrix3d LoFrontend::GetImuDelta() {
+  return imu_quaternion_change_.normalized().toRotationMatrix();
+}
+
+Eigen::Matrix3d LoFrontend::GetImuYawDelta() {
+  Eigen::Matrix3d rot_yaw_mat;
+  double roll, pitch, yaw;
+  tf::Quaternion q(imu_quaternion_change_.x(),
+                   imu_quaternion_change_.y(),
+                   imu_quaternion_change_.z(),
+                   imu_quaternion_change_.w());
+  tf::Matrix3x3 m(q);
+  m.getRPY(roll, pitch, yaw);
+  ROS_INFO_STREAM("LoFrontend - GetImuYawDelta - Yaw delta from IMU is " 
+                  << yaw*180.0/M_PI << " deg");
+  rot_yaw_mat = Eigen::Matrix3d();
+  rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
+  return rot_yaw_mat;
 }

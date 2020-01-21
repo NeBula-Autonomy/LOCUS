@@ -155,7 +155,13 @@ private:
   bool b_imu_frame_is_correct_;
   bool b_use_imu_integration_;
   bool b_use_imu_yaw_integration_;
+  bool b_imu_has_been_received_;
   int imu_number_of_calls_;
+  Eigen::Quaterniond imu_quaternion_previous_;
+  Eigen::Quaterniond imu_quaternion_change_;
+  Eigen::Matrix3d GetImuDelta();
+  Eigen::Matrix3d GetImuYawDelta();
+
 
   // ODOMETRY Frontend Integration 
   bool b_use_odometry_integration_;

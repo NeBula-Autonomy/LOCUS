@@ -68,6 +68,7 @@ public:
 
   bool SetLidar(const PointCloud& points);
   bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
+  bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
   bool UpdateEstimate();
   
@@ -141,10 +142,9 @@ private:
   Eigen::Quaterniond imu_quaternion_;
   Eigen::Quaterniond imu_quaternion_previous_;
   Eigen::Quaterniond imu_quaternion_change_;
-  Eigen::Matrix3d GetExternalAttitudeYawChange();
-  Eigen::Matrix3d GetExternalAttitudeChange();
   bool b_use_imu_integration_;
   bool b_use_imu_yaw_integration_;
+
 
   // ODOMETRY Frontend Integration
   bool b_use_odometry_integration_; 

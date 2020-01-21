@@ -218,10 +218,12 @@ bool PointCloudOdometry::UpdateICP() {
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
     if(b_use_imu_yaw_integration_) {
-      imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeYawChange();
+      // imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeYawChange();
+      // TODO: Work with deltas
     }
     else {
-      imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeChange();
+      // imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeChange();
+      // TODO: Work with deltas
     }
     pcl::transformPointCloud(*query_, *query_trans, imu_prior);  
   }
@@ -299,26 +301,6 @@ bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
   out = query_;
   return true;
 }
-
-Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeChange() {
-  return imu_quaternion_change_.normalized().toRotationMatrix();
-}
-
-Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeYawChange() {
-  Eigen::Matrix3d rot_yaw_mat;
-  double roll, pitch, yaw;
-  tf::Quaternion q(imu_quaternion_change_.x(),
-                   imu_quaternion_change_.y(),
-                   imu_quaternion_change_.z(),
-                   imu_quaternion_change_.w());
-  tf::Matrix3x3 m(q);
-  m.getRPY(roll, pitch, yaw);
-  ROS_INFO_STREAM("PointCloudOdometry - GetExtAttYawChange - Yaw delta from IMU is " 
-                  << yaw*180.0/M_PI << " deg");
-  rot_yaw_mat = Eigen::Matrix3d();
-  rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
-  return rot_yaw_mat;
-}
  
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
                                      const ros::Publisher& pub) {
@@ -328,4 +310,9 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
   ros_pose.header.frame_id = fixed_frame_id_;
   ros_pose.header.stamp = stamp_;
   pub.publish(ros_pose);
+}
+
+bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
+  ROS_INFO("To be implemented");
+  return true;
 }
