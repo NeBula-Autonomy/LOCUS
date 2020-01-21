@@ -313,6 +313,6 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
 }
 
 bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
-  ROS_INFO("To be implemented");
+  imu_delta_ = imu_delta;
   return true;
 }

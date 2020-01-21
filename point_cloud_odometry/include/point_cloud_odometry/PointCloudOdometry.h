@@ -144,7 +144,7 @@ private:
   Eigen::Quaterniond imu_quaternion_change_;
   bool b_use_imu_integration_;
   bool b_use_imu_yaw_integration_;
-
+  Eigen::Matrix3d imu_delta_;
 
   // ODOMETRY Frontend Integration
   bool b_use_odometry_integration_; 
