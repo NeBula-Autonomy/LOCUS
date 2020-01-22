@@ -60,7 +60,8 @@ LoFrontend::LoFrontend():
   b_imu_has_been_received_(false), 
   b_odometry_has_been_received_(false),
   b_pose_stamped_has_been_received_(false),  
-  b_imu_frame_is_correct_(false) {}
+  b_imu_frame_is_correct_(false), 
+  b_is_open_space_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -434,9 +435,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   // Open space detector [number_of_points_profiler]
+  auto number_of_points = msg->width;
   std_msgs::Float64 number_of_points_msg;
-  number_of_points_msg.data = float(msg->width);
+  number_of_points_msg.data = number_of_points;
   number_of_points_pub_.publish(number_of_points_msg);
+  if (number_of_points>11000) {
+    ROS_INFO("Open space detected");
+    b_is_open_space_ = true;
+  }
 
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
