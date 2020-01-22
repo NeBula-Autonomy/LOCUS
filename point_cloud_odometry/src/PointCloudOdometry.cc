@@ -47,7 +47,6 @@ using pcl::PointXYZI;
 PointCloudOdometry::PointCloudOdometry() : 
   initialized_(false), 
   b_use_imu_integration_(false), 
-  b_use_imu_yaw_integration_(false),
   b_use_odometry_integration_(false), 
   b_use_pose_stamped_integration_(false) {
   query_.reset(new PointCloud);
@@ -159,11 +158,6 @@ bool PointCloudOdometry::SetupICP() {
 
 void PointCloudOdometry::EnableImuIntegration() {
   b_use_imu_integration_ = true;
-}
-
-void PointCloudOdometry::EnableImuYawIntegration() {
-  b_use_imu_integration_ = true;
-  b_use_imu_yaw_integration_ = true;
 }
 
 void PointCloudOdometry::EnableOdometryIntegration() {

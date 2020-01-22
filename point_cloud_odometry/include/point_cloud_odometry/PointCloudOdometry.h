@@ -84,7 +84,6 @@ public:
   PointCloud icpAlignedPointsOdometry_;
 
   void EnableImuIntegration();
-  void EnableImuYawIntegration();
   void EnableOdometryIntegration();
   void EnablePoseStampedIntegration();
 
@@ -143,7 +142,6 @@ private:
   Eigen::Quaterniond imu_quaternion_previous_;
   Eigen::Quaterniond imu_quaternion_change_;
   bool b_use_imu_integration_;
-  bool b_use_imu_yaw_integration_;
   Eigen::Matrix3d imu_delta_;
 
   // ODOMETRY Frontend Integration

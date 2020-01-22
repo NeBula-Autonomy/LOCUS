@@ -155,7 +155,7 @@ bool LoFrontend::SetDataIntegrationMode() {
       ROS_INFO("Imu yaw integration requested");
       b_use_imu_integration_ = true; 
       b_use_imu_yaw_integration_ = true; 
-      odometry_.EnableImuYawIntegration();
+      odometry_.EnableImuIntegration();
       break;
     case 3: 
       ROS_INFO("Odometry integration requested");
