@@ -116,6 +116,7 @@ private:
   std::string odometry_frame_id_;
 
   // Point cloud containers
+  PointCloud points_;
   PointCloud::Ptr query_;
   PointCloud::Ptr reference_;
 
@@ -136,10 +137,6 @@ private:
   bool SetupICP();
 
   // IMU Frontend Integration
-  PointCloud points_;
-  Eigen::Quaterniond imu_quaternion_;
-  Eigen::Quaterniond imu_quaternion_previous_;
-  Eigen::Quaterniond imu_quaternion_change_;
   bool b_use_imu_integration_;
   Eigen::Matrix3d imu_delta_;
 

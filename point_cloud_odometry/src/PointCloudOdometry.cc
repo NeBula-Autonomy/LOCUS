@@ -183,15 +183,12 @@ bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
 bool PointCloudOdometry::UpdateEstimate() {
   if (!initialized_) {
     copyPointCloud(points_, *query_);
-    imu_quaternion_previous_ = imu_quaternion_;
     initialized_ = true;
     return false;
   }
   else {
     copyPointCloud(*query_, *reference_);
     copyPointCloud(points_, *query_); 
-    imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion_;
-    imu_quaternion_previous_ = imu_quaternion_;
     return UpdateICP();
   } 
 } 
