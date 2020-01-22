@@ -218,12 +218,10 @@ bool PointCloudOdometry::UpdateICP() {
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
     if(b_use_imu_yaw_integration_) {
-      // imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeYawChange();
-      // TODO: Work with deltas
+      imu_prior.block(0, 0, 3, 3) = imu_delta_;
     }
     else {
-      // imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeChange();
-      // TODO: Work with deltas
+      imu_prior.block(0, 0, 3, 3) = imu_delta_;
     }
     pcl::transformPointCloud(*query_, *query_trans, imu_prior);  
   }
