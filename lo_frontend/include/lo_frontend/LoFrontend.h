@@ -37,6 +37,7 @@
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
+#include <chrono>
 #include <math.h>
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
@@ -201,9 +202,9 @@ private:
   /*-----------------
   Open space detector
   ------------------*/
-  
-  ros::Publisher number_of_points_pub_; 
 
+  ros::Publisher number_of_points_pub_; 
+  ros::Publisher processing_time_pub_;
 };
 
 #endif 

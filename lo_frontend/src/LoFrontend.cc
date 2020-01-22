@@ -217,6 +217,7 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);  
   base_frame_pcld_pub_ = nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
   number_of_points_pub_ = nl.advertise<std_msgs::Float64>("number_of_points", 10, false);
+  processing_time_pub_ = nl.advertise<std_msgs::Float64>("processing_time", 10, false);
   return true;
 }
 
@@ -415,6 +416,10 @@ tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
+
+  // Open space detector [time_profiler START]
+  auto start = std::chrono::system_clock::now();
+
   if (b_verbose_) ROS_INFO("LoFrontend - LidarCallback"); 
 
   if(!b_pcld_received_) {
@@ -428,7 +433,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;
   }
 
-  // Open space detector
+  // Open space detector [number_of_points_profiler]
   std_msgs::Float64 number_of_points_msg;
   number_of_points_msg.data = float(msg->width);
   number_of_points_pub_.publish(number_of_points_msg);
@@ -534,6 +539,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }  
+
+  // Open space detector [time_profiler END]
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> processing_time = end-start;
+  std_msgs::Float64 processing_time_msg;
+  processing_time_msg.data = processing_time.count();
+  processing_time_pub_.publish(processing_time_msg);
   
 }
 
