@@ -216,6 +216,7 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - CreatePublishers");  
   ros::NodeHandle nl(n);  
   base_frame_pcld_pub_ = nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
+  number_of_points_pub_ = nl.advertise<std_msgs::Float64>("number_of_points", 10, false);
   return true;
 }
 
@@ -427,9 +428,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;
   }
 
-  // CHECK INPUT POINTCLOUD PROPERTIES
-  ROS_INFO_STREAM("msg->height: " << msg->height);
-  ROS_INFO_STREAM("msg->width: " << msg->width);
+  // Open space detector
+  std_msgs::Float64 number_of_points_msg;
+  number_of_points_msg.data = float(msg->width);
+  number_of_points_pub_.publish(number_of_points_msg);
 
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);

@@ -198,6 +198,12 @@ private:
   bool b_pose_stamped_has_been_received_;
   int pose_stamped_number_of_calls_;
 
+  /*-----------------
+  Open space detector
+  ------------------*/
+  
+  ros::Publisher number_of_points_pub_; 
+
 };
 
 #endif 
