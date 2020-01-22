@@ -174,9 +174,18 @@ bool PointCloudOdometry::SetLidar(const PointCloud& points) {
   return true;
 }
 
+bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
+  imu_delta_ = imu_delta;
+  return true;
+}
+
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
-  // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
   odometry_delta_ = odometry_delta;
+  return true;
+}
+
+bool PointCloudOdometry::SetPoseStampedDelta(const tf::Transform& pose_stamped_delta) {
+  pose_stamped_delta_ = pose_stamped_delta;
   return true;
 }
 
@@ -289,9 +298,4 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
   ros_pose.header.frame_id = fixed_frame_id_;
   ros_pose.header.stamp = stamp_;
   pub.publish(ros_pose);
-}
-
-bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
-  imu_delta_ = imu_delta;
-  return true;
 }

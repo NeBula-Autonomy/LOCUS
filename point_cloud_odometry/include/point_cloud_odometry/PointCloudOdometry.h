@@ -67,8 +67,11 @@ public:
   bool Initialize(const ros::NodeHandle& n);
 
   bool SetLidar(const PointCloud& points);
+
   bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
+  bool SetPoseStampedDelta(const tf::Transform& pose_stamped_delta);
+
   bool UpdateEstimate();
   
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
@@ -136,16 +139,21 @@ private:
   pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
-  // IMU Frontend Integration
+  /*--------------
+  Data integration 
+  --------------*/
+
+  // Imu
   bool b_use_imu_integration_;
   Eigen::Matrix3d imu_delta_;
 
-  // ODOMETRY Frontend Integration
+  // Odometry
   bool b_use_odometry_integration_; 
   tf::Transform odometry_delta_;
 
-  // POSE_STAMPED Frontend Integration 
+  // PoseStamped
   bool b_use_pose_stamped_integration_;
+  tf::Transform pose_stamped_delta_;
 
 };
 
