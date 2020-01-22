@@ -57,7 +57,9 @@ LoFrontend::LoFrontend():
   imu_number_of_calls_(0),
   odometry_number_of_calls_(0), 
   pose_stamped_number_of_calls_(0), 
-  b_odometry_has_been_received_(false), 
+  b_imu_has_been_received_(false), 
+  b_odometry_has_been_received_(false),
+  b_pose_stamped_has_been_received_(false),  
   b_imu_frame_is_correct_(false) {}
 
 LoFrontend::~LoFrontend() {}
@@ -446,7 +448,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       b_imu_has_been_received_= true;
       return;
     }
-    auto imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion;
+    imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion;
     if (b_use_imu_yaw_integration_) {
       odometry_.SetImuDelta(GetImuYawDelta());
     }

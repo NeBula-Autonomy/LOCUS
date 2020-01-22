@@ -188,13 +188,14 @@ private:
 
   // Odometry
   bool b_use_odometry_integration_;
-  int odometry_number_of_calls_;
   bool b_odometry_has_been_received_;
+  int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
   tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
 
   // PoseStamped 
   bool b_use_pose_stamped_integration_;
+  bool b_pose_stamped_has_been_received_;
   int pose_stamped_number_of_calls_;
 
 };
