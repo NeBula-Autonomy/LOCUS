@@ -499,7 +499,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     return;
   }
   
-  filter_.Filter(msg, msg_filtered_);
+  filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
   
   if (!odometry_.UpdateEstimate()) {

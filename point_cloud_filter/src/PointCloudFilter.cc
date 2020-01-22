@@ -79,7 +79,8 @@ bool PointCloudFilter::LoadParameters(const ros::NodeHandle& n) {
 }
 
 bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
-                              PointCloud::Ptr points_filtered) {
+                              PointCloud::Ptr points_filtered, 
+                              const bool b_is_open_space) {
   if (points_filtered == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
     return false;
