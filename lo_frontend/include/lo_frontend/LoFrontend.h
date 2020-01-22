@@ -92,11 +92,6 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  void ImuCallback(const ImuConstPtr& imu_msg);
-  void OdometryCallback(const OdometryConstPtr& odometry_msg);
-  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
-  void LidarCallback(const PointCloud::ConstPtr& msg);
-
   ros::Subscriber lidar_sub_;  
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
@@ -104,7 +99,11 @@ private:
 
   ros::Publisher base_frame_pcld_pub_; 
 
-   // Queue sizes
+  void LidarCallback(const PointCloud::ConstPtr& msg);
+  void ImuCallback(const ImuConstPtr& imu_msg);
+  void OdometryCallback(const OdometryConstPtr& odometry_msg);
+  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
+
   int lidar_queue_size_; 
   int imu_queue_size_; 
   int odom_queue_size_; 
@@ -143,13 +142,38 @@ private:
   Eigen::Affine3d I_T_B_;    
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;   
+  
+  PointCloudFilter filter_;
+  PointCloudOdometry odometry_;
+  PointCloudLocalization localization_; 
+  PointCloudMapper mapper_;   
 
-  int data_integration_mode_;
+  bool b_publish_map_;
+  int counter_;
+  int map_publishment_meters_;
+  
+  bool b_pcld_received_;
+  int pcld_seq_prev_;
+
+  PointCloud::Ptr msg_filtered_;
+  PointCloud::Ptr msg_transformed_;
+  PointCloud::Ptr msg_neighbors_;
+  PointCloud::Ptr msg_base_;
+  PointCloud::Ptr msg_fixed_;
+  PointCloud::Ptr mapper_unused_fixed_;
+  PointCloud::Ptr mapper_unused_out_;
+
+  /*--------------
+  Data integration 
+  --------------*/
+
   bool SetDataIntegrationMode();
+  int data_integration_mode_;
   int max_number_of_calls_;
 
-  // IMU Frontend Integration   
+  // Imu  
   void CheckImuFrame(const ImuConstPtr& imu_msg); 
+  bool CheckNans(const Imu &msg);
   Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
   bool b_convert_imu_to_base_link_frame_;
   bool b_imu_frame_is_correct_;
@@ -162,43 +186,17 @@ private:
   Eigen::Matrix3d GetImuDelta();
   Eigen::Matrix3d GetImuYawDelta();
 
-
-  // ODOMETRY Frontend Integration 
+  // Odometry
   bool b_use_odometry_integration_;
   int odometry_number_of_calls_;
   bool b_odometry_has_been_received_;
   tf::Transform odometry_pose_previous_;
   tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
 
-  // POSE_STAMPED Frontend Integration 
+  // PoseStamped 
   bool b_use_pose_stamped_integration_;
   int pose_stamped_number_of_calls_;
-  
-  // Class objects
-  PointCloudFilter filter_;
-  PointCloudOdometry odometry_;
-  PointCloudLocalization localization_; 
-  PointCloudMapper mapper_;   
 
-  // Map publishment 
-  int counter_;
-  bool b_publish_map_;
-  int map_publishment_meters_;
-  
-  bool b_pcld_received_;
-  int pcld_seq_prev_;
-
-  // Storages
-  PointCloud::Ptr msg_filtered_;
-  PointCloud::Ptr msg_transformed_;
-  PointCloud::Ptr msg_neighbors_;
-  PointCloud::Ptr msg_base_;
-  PointCloud::Ptr msg_fixed_;
-  PointCloud::Ptr mapper_unused_fixed_;
-  PointCloud::Ptr mapper_unused_out_;
-
-  // Check IMU for NANS
-  bool CheckNans(const Imu &msg);
 };
 
 #endif 
