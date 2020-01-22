@@ -67,7 +67,6 @@ public:
   bool Initialize(const ros::NodeHandle& n);
 
   bool SetLidar(const PointCloud& points);
-  bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
   bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
   bool UpdateEstimate();

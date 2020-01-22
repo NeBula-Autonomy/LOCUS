@@ -174,11 +174,6 @@ bool PointCloudOdometry::SetLidar(const PointCloud& points) {
   return true;
 }
 
-bool PointCloudOdometry::SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion) {
-  imu_quaternion_ = imu_quaternion;
-  return true;
-}
-
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
   // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
   odometry_delta_ = odometry_delta;
