@@ -427,6 +427,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;
   }
 
+  // CHECK INPUT POINTCLOUD PROPERTIES
+  ROS_INFO_STREAM("msg->height: " << msg->height);
+  ROS_INFO_STREAM("msg->width: " << msg->width);
+
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
    
