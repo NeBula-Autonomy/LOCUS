@@ -440,9 +440,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   number_of_points_msg.data = number_of_points;
   number_of_points_pub_.publish(number_of_points_msg);
   if (number_of_points>11000) {
-    ROS_INFO("Open space detected");
+    ROS_INFO("Open space");
     b_is_open_space_ = true;
   }
+  else {
+    ROS_INFO("Closed space");
+    b_is_open_space_ = false;
+  }
+  
 
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);

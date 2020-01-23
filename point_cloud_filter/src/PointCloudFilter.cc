@@ -89,6 +89,7 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
   // Copy input points
   *points_filtered = *points; 
   if (!params_.extract_features) {
+    
     // Apply a random downsampling filter to the incoming point cloud
     if (params_.random_filter) {
       const int n_points = static_cast<int>((1.0 - params_.decimate_percentage) *
