@@ -92,8 +92,21 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
     
     // Apply a random downsampling filter to the incoming point cloud
     if (params_.random_filter) {
-      const int n_points = static_cast<int>((1.0 - params_.decimate_percentage) *
-                                            points_filtered->size());
+
+      /*-----------------
+      Open space detector
+      TODO: do not overwrite + load as param
+      NOTE: this would take place only if random_filter is enabled in yaml
+      ------------------*/
+      
+      int n_points;
+      if (b_is_open_space) {
+        n_points = static_cast<int>((1.0 - 0.97) * points_filtered->size());
+      }
+      else {
+        n_points = static_cast<int>((1.0 - params_.decimate_percentage) * points_filtered->size());
+      }     
+
       pcl::RandomSample<pcl::PointXYZI> random_filter;
       random_filter.setSample(n_points);
       random_filter.setInputCloud(points_filtered);
