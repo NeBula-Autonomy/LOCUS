@@ -80,7 +80,7 @@ class PointCloudFilter {
   // Filter an incoming point cloud
   bool Filter(const PointCloud::ConstPtr& points,
               PointCloud::Ptr points_filtered, 
-              const bool b_is_open_space);
+              const bool b_is_open_space = true);
 
   // VLP16 characteristics
   const float lowerBound_ = -15;
