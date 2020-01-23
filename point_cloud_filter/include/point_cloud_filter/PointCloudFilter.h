@@ -174,6 +174,8 @@ class PointCloudFilter {
     bool random_filter;
     // Percentage of points to discard. Must be between 0.0 and 1.0;
     double decimate_percentage;
+    // Percentage of points to discard when in open space. Must be between 0.0 and 1.0;
+    double decimate_percentage_open_space;
     // Apply a statistical outlier filter.
     bool outlier_filter;
     // Standard deviation threshold in distance to neighbors for outlier

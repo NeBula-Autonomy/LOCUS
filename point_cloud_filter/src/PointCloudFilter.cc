@@ -59,6 +59,8 @@ bool PointCloudFilter::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("filtering/decimate_percentage", params_.decimate_percentage))
     return false;
+  if (!pu::Get("filtering/decimate_percentage_open_space", params_.decimate_percentage_open_space))
+    return false;
   if (!pu::Get("filtering/outlier_filter", params_.outlier_filter)) 
     return false;
   if (!pu::Get("filtering/outlier_std", params_.outlier_std)) 
@@ -98,10 +100,10 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
       TODO: do not overwrite + load as param
       NOTE: this would take place only if random_filter is enabled in yaml
       ------------------*/
-      
+
       int n_points;
       if (b_is_open_space) {
-        n_points = static_cast<int>((1.0 - 0.97) * points_filtered->size());
+        n_points = static_cast<int>((1.0 - params_.decimate_percentage_open_space) * points_filtered->size());
       }
       else {
         n_points = static_cast<int>((1.0 - params_.decimate_percentage) * points_filtered->size());
