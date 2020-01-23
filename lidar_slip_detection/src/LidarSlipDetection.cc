@@ -74,6 +74,7 @@ bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
 bool LidarSlipDetection::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("lidar_slip/slip_threshold", slip_threshold_)) return false;
   if (!pu::Get("lidar_slip/max_power", max_power_)) return false;
+  if (!pu::Get("lidar_slip/filter_size", filter_size_)) return false;
   // ROS_INFO_STREAM("lidar slip param is: " << slip_threshold_);
   return true;
 }
@@ -102,9 +103,6 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
   // If first entry in last poses more than 1 sec ago
   ros::Duration delta_t =
       wheel_current_pose.header.stamp - last_wo_poses_[0].header.stamp;
-  if (delta_t > ros::Duration(1.0)) {
-    last_wo_poses_.erase(last_wo_poses_.begin());
-  }
   geometry_utils::Transform3 wheel_transform =
       GetTransform(last_wo_poses_[0], wheel_current_pose);
   double x = wheel_transform.translation(0);
@@ -114,6 +112,11 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
     wheel_delta_ = 0.0;
   else
     wheel_delta_ = std::sqrt(x * x + y * y + z * z) / delta_t.toSec();
+
+  // manage filter size (by duration as defined by filter_size_)
+  if (delta_t > ros::Duration(filter_size_)) {
+    last_wo_poses_.erase(last_wo_poses_.begin());
+  }
 }
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
@@ -128,9 +131,6 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   // If first entry in last poses more than 1 sec ago
   ros::Duration delta_t =
       lidar_current_pose.header.stamp - last_lo_poses_[0].header.stamp;
-  if (delta_t > ros::Duration(1.0)) {
-    last_lo_poses_.erase(last_lo_poses_.begin());
-  }
   geometry_utils::Transform3 lidar_transform =
       GetTransform(last_lo_poses_[0], lidar_current_pose);
   double x = lidar_transform.translation(0);
@@ -142,22 +142,27 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
     lidar_delta_ = std::sqrt(x * x + y * y + z * z) / delta_t.toSec();
 
   // Calculate slip
-  slip_amount = wheel_delta_ - lidar_delta_;
-  PublishLidarSlipAmount(slip_amount, slip_detection_from_odom_);
-  if (slip_amount > slip_threshold_) slip_status = true;
-  PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
+  slip_amount_from_odom_ = wheel_delta_ - lidar_delta_;
+
+  // manage filter size (by duration as defined by filter_size_)
+  if (delta_t > ros::Duration(filter_size_)) {
+    last_lo_poses_.erase(last_lo_poses_.begin());
+  }
 }
 
 void LidarSlipDetection::ConditionNumberCallback(
     const std_msgs::Float64& condition_number) {
   // Callback function for condition number
   double k = condition_number.data;
-  if (k > 8 * exp(max_power_) && wheel_delta_ > 0.05) {
-    k = 1;
-  } else {
-    k = 0;
-  }
+
   PublishConditionNumber(k, slip_detection_from_cov_);
+  PublishLidarSlipAmount(slip_amount_from_odom_, slip_detection_from_odom_);
+
+  // Check for slippage
+  bool slip_status;
+  if (slip_amount_from_odom_ > slip_threshold_ && k > 8 * exp(max_power_))
+    slip_status = true;
+  PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
 }
 
 geometry_utils::Transform3 LidarSlipDetection::GetTransform(

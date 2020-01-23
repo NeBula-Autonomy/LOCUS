@@ -108,9 +108,10 @@ class LidarSlipDetection {
 
  private:
   std::string name_;
+  double slip_amount_from_odom_;
   double slip_threshold_;
   double max_power_;
-  int filter_size_;
+  double filter_size_;
   std::vector<PoseCovStamped> last_lo_poses_;
   std::vector<PoseCovStamped> last_wo_poses_;
 };
