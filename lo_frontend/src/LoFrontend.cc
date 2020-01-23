@@ -57,7 +57,9 @@ LoFrontend::LoFrontend():
   imu_number_of_calls_(0),
   odometry_number_of_calls_(0), 
   pose_stamped_number_of_calls_(0), 
-  b_odometry_has_been_received_(false), 
+  b_imu_has_been_received_(false), 
+  b_odometry_has_been_received_(false),
+  b_pose_stamped_has_been_received_(false),  
   b_imu_frame_is_correct_(false) {}
 
 LoFrontend::~LoFrontend() {}
@@ -155,7 +157,7 @@ bool LoFrontend::SetDataIntegrationMode() {
       ROS_INFO("Imu yaw integration requested");
       b_use_imu_integration_ = true; 
       b_use_imu_yaw_integration_ = true; 
-      odometry_.EnableImuYawIntegration();
+      odometry_.EnableImuIntegration();
       break;
     case 3: 
       ROS_INFO("Odometry integration requested");
@@ -434,22 +436,34 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar timestamp");
       imu_number_of_calls_++;
       if (imu_number_of_calls_ > max_number_of_calls_) {
-        // TODO: Robustify with consecutiveness-check
-        ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls");
+        ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
         b_use_imu_integration_ = false;
       }
       return;
     }
-    odometry_.SetImuQuaternion(GetImuQuaternion(imu_msg));
-  }
+    auto imu_quaternion = GetImuQuaternion(imu_msg);
+    if (!b_imu_has_been_received_) {
+      ROS_INFO("Receiving imu for the first time");
+      imu_quaternion_previous_ = imu_quaternion;
+      b_imu_has_been_received_= true;
+      return;
+    }
+    imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion;
+    if (b_use_imu_yaw_integration_) {
+      odometry_.SetImuDelta(GetImuYawDelta());
+    }
+    else {
+      odometry_.SetImuDelta(GetImuDelta());
+    }
+    imu_quaternion_previous_ = imu_quaternion;
+  }  
   else if (b_use_odometry_integration_) {
     Odometry odometry_msg;
     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
       odometry_number_of_calls_++;
       if (odometry_number_of_calls_ > max_number_of_calls_) {
-        // TODO: Robustify with consecutiveness-check
-        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls");
+        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
         b_use_odometry_integration_ = false;
       }
       return;
@@ -462,7 +476,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
     odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-  }  
+  }
   else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_"); 
     return;
@@ -528,4 +542,24 @@ bool LoFrontend::CheckNans(const Imu &imu_msg) {
           std::isnan(imu_msg.linear_acceleration.x) || 
           std::isnan(imu_msg.linear_acceleration.y) || 
           std::isnan(imu_msg.linear_acceleration.z));
+}
+
+Eigen::Matrix3d LoFrontend::GetImuDelta() {
+  return imu_quaternion_change_.normalized().toRotationMatrix();
+}
+
+Eigen::Matrix3d LoFrontend::GetImuYawDelta() {
+  Eigen::Matrix3d rot_yaw_mat;
+  double roll, pitch, yaw;
+  tf::Quaternion q(imu_quaternion_change_.x(),
+                   imu_quaternion_change_.y(),
+                   imu_quaternion_change_.z(),
+                   imu_quaternion_change_.w());
+  tf::Matrix3x3 m(q);
+  m.getRPY(roll, pitch, yaw);
+  ROS_INFO_STREAM("LoFrontend - GetImuYawDelta - Yaw delta from IMU is " 
+                  << yaw*180.0/M_PI << " deg");
+  rot_yaw_mat = Eigen::Matrix3d();
+  rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
+  return rot_yaw_mat;
 }

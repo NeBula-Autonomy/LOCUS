@@ -67,8 +67,10 @@ public:
   bool Initialize(const ros::NodeHandle& n);
 
   bool SetLidar(const PointCloud& points);
-  bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
+  bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
+  bool SetPoseStampedDelta(const tf::Transform& pose_stamped_delta);
+
   bool UpdateEstimate();
   
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
@@ -83,7 +85,6 @@ public:
   PointCloud icpAlignedPointsOdometry_;
 
   void EnableImuIntegration();
-  void EnableImuYawIntegration();
   void EnableOdometryIntegration();
   void EnablePoseStampedIntegration();
 
@@ -117,6 +118,7 @@ private:
   std::string odometry_frame_id_;
 
   // Point cloud containers
+  PointCloud points_;
   PointCloud::Ptr query_;
   PointCloud::Ptr reference_;
 
@@ -136,22 +138,21 @@ private:
   pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
-  // IMU Frontend Integration
-  PointCloud points_;
-  Eigen::Quaterniond imu_quaternion_;
-  Eigen::Quaterniond imu_quaternion_previous_;
-  Eigen::Quaterniond imu_quaternion_change_;
-  Eigen::Matrix3d GetExternalAttitudeYawChange();
-  Eigen::Matrix3d GetExternalAttitudeChange();
-  bool b_use_imu_integration_;
-  bool b_use_imu_yaw_integration_;
+  /*--------------
+  Data integration 
+  --------------*/
 
-  // ODOMETRY Frontend Integration
+  // Imu
+  bool b_use_imu_integration_;
+  Eigen::Matrix3d imu_delta_;
+
+  // Odometry
   bool b_use_odometry_integration_; 
   tf::Transform odometry_delta_;
 
-  // POSE_STAMPED Frontend Integration 
+  // PoseStamped
   bool b_use_pose_stamped_integration_;
+  tf::Transform pose_stamped_delta_;
 
 };
 
