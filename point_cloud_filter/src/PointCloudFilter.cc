@@ -101,11 +101,9 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
       ------------------*/
       int n_points;
       if (b_is_open_space) {
-        ROS_INFO("Open space filtering");
         n_points = static_cast<int>((1.0 - params_.decimate_percentage_open_space) * points_filtered->size());
       }
       else {
-        ROS_INFO("Closed space filtering");
         n_points = static_cast<int>((1.0 - params_.decimate_percentage) * points_filtered->size());
       }     
 
