@@ -80,11 +80,10 @@ class LidarSlipDetection {
   // Condition Number Callback
   void ConditionNumberCallback(const std_msgs::Float64& condition_number);
 
+  double wheel_delta_;
+  double lidar_delta_;
   PoseCovStamped lidar_last_pose_;
   PoseCovStamped wheel_last_pose_;
-
-  double avg_wheel_delta_;
-  double avg_lidar_delta_;
 
  protected:
   // Subscribers
@@ -112,11 +111,8 @@ class LidarSlipDetection {
   double slip_threshold_;
   double max_power_;
   int filter_size_;
-
-  // keep track of the last slip, discrepencies (size is filter_size)
-  std::vector<double> wio_last_deltas_;  
-  std::vector<double> lo_last_deltas_;
-                                     
+  std::vector<PoseCovStamped> last_lo_poses_;
+  std::vector<PoseCovStamped> last_wo_poses_;
 };
 
 #endif
