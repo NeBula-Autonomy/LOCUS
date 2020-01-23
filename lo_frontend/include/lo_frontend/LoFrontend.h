@@ -206,7 +206,8 @@ private:
   ros::Publisher number_of_points_pub_; 
   ros::Publisher processing_time_pub_;
   bool b_is_open_space_;
-  
+  int number_of_points_open_space_;
+
 };
 
 #endif 

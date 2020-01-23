@@ -110,6 +110,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("rotation_threshold_kf", rotation_threshold_kf_))
     return false;
+  if (!pu::Get("number_of_points_open_space", number_of_points_open_space_))
+    return false;
   if(!pu::Get("map_publishment/meters", map_publishment_meters_))
     return false;
   if (!pu::Get("map_publishment/b_publish_map", b_publish_map_))
@@ -439,7 +441,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   std_msgs::Float64 number_of_points_msg;
   number_of_points_msg.data = number_of_points;
   number_of_points_pub_.publish(number_of_points_msg);
-  if (number_of_points>11000) {
+  if (number_of_points>number_of_points_open_space_) {
     ROS_INFO("Open space");
     b_is_open_space_ = true;
   }
@@ -448,7 +450,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_is_open_space_ = false;
   }
   
-
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
    

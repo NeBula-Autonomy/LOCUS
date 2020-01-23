@@ -3,6 +3,8 @@ b_verbose: false
 translation_threshold_kf: 1.0 
 rotation_threshold_kf: 0.3 
 
+number_of_points_open_space: 11000
+
 map_publishment: 
   b_publish_map: true
   meters: 1

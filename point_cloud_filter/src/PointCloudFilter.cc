@@ -97,7 +97,6 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
 
       /*-----------------
       Open space detector
-      TODO: do not overwrite + load as param
       NOTE: this would take place only if random_filter is enabled in yaml
       ------------------*/
 
