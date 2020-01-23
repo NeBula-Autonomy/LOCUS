@@ -60,7 +60,8 @@ LoFrontend::LoFrontend():
   b_imu_has_been_received_(false), 
   b_odometry_has_been_received_(false),
   b_pose_stamped_has_been_received_(false),  
-  b_imu_frame_is_correct_(false) {}
+  b_imu_frame_is_correct_(false), 
+  b_is_open_space_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -108,6 +109,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("translation_threshold_kf", translation_threshold_kf_))
     return false;
   if (!pu::Get("rotation_threshold_kf", rotation_threshold_kf_))
+    return false;
+  if (!pu::Get("number_of_points_open_space", number_of_points_open_space_))
     return false;
   if(!pu::Get("map_publishment/meters", map_publishment_meters_))
     return false;
@@ -427,6 +430,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;
   }
 
+  auto number_of_points = msg->width;
+  if (number_of_points > number_of_points_open_space_) b_is_open_space_ = true;
+  else b_is_open_space_ = false;  
+  
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
    
@@ -482,7 +489,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     return;
   }
   
-  filter_.Filter(msg, msg_filtered_);
+  filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
   
   if (!odometry_.UpdateEstimate()) {
