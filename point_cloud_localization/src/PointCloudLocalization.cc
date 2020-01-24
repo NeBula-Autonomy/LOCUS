@@ -134,8 +134,10 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
           "localization_integrated_estimate", 10, false);
   condition_number_pub_ =
       nl.advertise<std_msgs::Float64>("condition_number", 10, false);
-  observability_directions_pub_ = nl.advertise<visualization_msgs::MarkerArray>(
-      "observability_directions", 10, false);
+  observability_viz_pub_ = nl.advertise<visualization_msgs::MarkerArray>(
+      "observability_marker", 10, false);
+  observability_vector_pub_ =
+      nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
   return true;
 }
 
@@ -514,74 +516,91 @@ void PointCloudLocalization::PublishConditionNumber(double& k,
 
 void PointCloudLocalization::PublishObservableDirections(
     const Eigen::Matrix<double, 6, 6>& A) {
-  // For visualization, plot only translation (not coupling between rotation and
-  // translation)
-  Eigen::Matrix<double, 3, 1> eigenvalues3;
-  Eigen::Matrix<double, 3, 3> eigenvectors3;
-  Eigen::Matrix<double, 3, 3> A_translation = A.block(3, 3, 3, 3);
-  doEigenDecomp3x3(A_translation, eigenvalues3, eigenvectors3);
+  if (observability_vector_pub_.getNumSubscribers() > 0 ||
+      observability_viz_pub_.getNumSubscribers() > 0) {
+    // For visualization, plot only translation (not coupling between rotation
+    // and translation)
+    Eigen::Matrix<double, 3, 1> eigenvalues3;
+    Eigen::Matrix<double, 3, 3> eigenvectors3;
+    Eigen::Matrix<double, 3, 3> A_translation = A.block(3, 3, 3, 3);
+    doEigenDecomp3x3(A_translation, eigenvalues3, eigenvectors3);
 
-  // Find Eigenvector with highest component in z
-  Eigen::MatrixXf::Index maxRow_z, maxCol_z;
-  (eigenvectors3.row(2))
-      .cwiseAbs()
-      .maxCoeff(&maxRow_z, &maxCol_z);  // Find which one is z
+    // Find Eigenvector with highest component in z
+    Eigen::MatrixXf::Index maxRow_z, maxCol_z;
+    (eigenvectors3.row(2))
+        .cwiseAbs()
+        .maxCoeff(&maxRow_z, &maxCol_z);  // Find which one is z
 
-  // Eigen::Matrix<double, 3, 1> eigenvector_z = eigenvectors3.col(maxCol_z);
+    // Eigen::Matrix<double, 3, 1> eigenvector_z = eigenvectors3.col(maxCol_z);
 
-  visualization_msgs::MarkerArray observability_directions;
+    visualization_msgs::MarkerArray observability_directions;
+    geometry_msgs::Vector3 observability_vector;
+    observability_vector.x = 0;
+    observability_vector.y = 0;
+    observability_vector.z = 0;
 
-  Eigen::Matrix<double, 3, 1> eigenvalues_normalized =
-      eigenvalues3 / (eigenvalues3.maxCoeff());
+    Eigen::Matrix<double, 3, 1> eigenvalues_normalized =
+        eigenvalues3 / (eigenvalues3.maxCoeff());
+    for (int i = 0; i < eigenvalues3.rows(); i++) {
+      double eigenvalue_normalized = eigenvalues_normalized(i);
+      Eigen::Vector3d direction(
+          eigenvectors3(0, i),
+          eigenvectors3(1, i),
+          eigenvectors3(
+              2,
+              i));  // LAST three coordinates = translation coordinates
 
-  for (int i = 0; i < eigenvalues3.rows(); i++) {
-    double eigenvalue_normalized = eigenvalues_normalized(i);
-    Eigen::Vector3d direction(
-        eigenvectors3(0, i),
-        eigenvectors3(1, i),
-        eigenvectors3(2,
-                      i));  // LAST three coordinates = translation coordinates
+      int sign = (direction(1) > 0) ? 1 : -1;
+      direction = sign * direction;  // To keep consistency when plotting (v and
+                                     // -v are two valids eigenvectors)
 
-    int sign = (direction(1) > 0) ? 1 : -1;
-    direction = sign * direction;  // To keep consistency when plotting (v and
-                                   // -v are two valids eigenvectors)
+      // Ensure Eigenvector z is poiting up
+      // Eigen::MatrixXf::Index maxRow, maxCol;
+      // eigenvalues_normalized.maxCoeff(&maxRow, &maxCol); //Find which one is
+      // z
 
-    // Ensure Eigenvector z is poiting up
-    // Eigen::MatrixXf::Index maxRow, maxCol;
-    // eigenvalues_normalized.maxCoeff(&maxRow, &maxCol); //Find which one is z
+      if (i == maxCol_z) {
+        int sign_z = (direction(2) > 0) ? 1 : -1;
+        direction = sign_z * direction;
+      }
 
-    if (i == maxCol_z) {
-      int sign_z = (direction(2) > 0) ? 1 : -1;
-      direction = sign_z * direction;
+      visualization_msgs::Marker marker;
+      // marker.header = pclptr_normals->header;
+      marker.header.frame_id = base_frame_id_;
+      marker.id = i + 5000;
+      marker.type = visualization_msgs::Marker::ARROW;
+      marker.action = visualization_msgs::Marker::ADD;
+      geometry_msgs::Point point_init, point_end;
+      point_init.x = 0.0;
+      point_init.y = 0.0;
+      point_init.z = 0.0;
+      marker.points.push_back(point_init);
+
+      point_end.x = point_init.x + eigenvalue_normalized * direction(0) / 0.16;
+      point_end.y = point_init.y + eigenvalue_normalized * direction(1) / 0.16;
+      point_end.z = point_init.z + eigenvalue_normalized * direction(2) / 0.16;
+      marker.points.push_back(point_end);
+      marker.scale.x = 0.13;
+      marker.scale.y = 0.25;
+      marker.scale.z = 0;
+      marker.color.r = 1;
+      marker.color.g = 0;
+      marker.color.b = 0;
+      marker.color.a = 1.0;
+      marker.header.stamp = ros::Time::now();
+      observability_directions.markers.push_back(marker);
+
+      observability_vector.x += eigenvalue_normalized * direction(0);
+      observability_vector.y += eigenvalue_normalized * direction(1);
+      observability_vector.z += eigenvalue_normalized * direction(2);
     }
-
-    visualization_msgs::Marker marker;
-    // marker.header = pclptr_normals->header;
-    marker.header.frame_id = base_frame_id_;
-    marker.id = i + 5000;
-    marker.type = visualization_msgs::Marker::ARROW;
-    marker.action = visualization_msgs::Marker::ADD;
-    geometry_msgs::Point point_init, point_end;
-    point_init.x = 0.0;
-    point_init.y = 0.0;
-    point_init.z = 0.0;
-    marker.points.push_back(point_init);
-
-    point_end.x = point_init.x + eigenvalue_normalized * direction(0) / 0.16;
-    point_end.y = point_init.y + eigenvalue_normalized * direction(1) / 0.16;
-    point_end.z = point_init.z + eigenvalue_normalized * direction(2) / 0.16;
-    marker.points.push_back(point_end);
-    marker.scale.x = 0.13;
-    marker.scale.y = 0.25;
-    marker.scale.z = 0;
-    marker.color.r = 1;
-    marker.color.g = 0;
-    marker.color.b = 0;
-    marker.color.a = 1.0;
-    marker.header.stamp = ros::Time::now();
-    observability_directions.markers.push_back(marker);
+    if (observability_viz_pub_.getNumSubscribers() > 0) {
+      observability_viz_pub_.publish(observability_directions);
+    }
+    if (observability_vector_pub_.getNumSubscribers() > 0) {
+      observability_vector_pub_.publish(observability_vector);
+    }
   }
-  observability_directions_pub_.publish(observability_directions);
 }
 
 void PointCloudLocalization::UpdateTimestamp(ros::Time& stamp) {

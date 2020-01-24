@@ -40,6 +40,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
 #include <parameter_utils/ParameterUtils.h>
@@ -150,7 +151,8 @@ private:
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
   ros::Publisher condition_number_pub_;
-  ros::Publisher observability_directions_pub_;
+  ros::Publisher observability_viz_pub_;
+  ros::Publisher observability_vector_pub_;
 
   // Most recent point cloud time stamp for publishers
   ros::Time stamp_;

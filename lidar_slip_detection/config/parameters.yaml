@@ -1,7 +1,7 @@
 lidar_slip:
   # If the delta between LIP and WIO is larger than this value, a lidar slip is flagged.
-  slip_threshold: 0.17
+  slip_threshold: 0.13
   filter_size: 1.0 # filter size in seconds 
-
+  observability_threshold: 0.25 # minimum observability (if lower, classify as slip) 
   # Condtion number threshod. Values larger than exp(max_power_) incidcate lidar slip.
   max_power: 23

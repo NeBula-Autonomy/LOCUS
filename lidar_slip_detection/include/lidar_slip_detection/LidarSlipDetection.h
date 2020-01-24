@@ -80,6 +80,9 @@ class LidarSlipDetection {
   // Condition Number Callback
   void ConditionNumberCallback(const std_msgs::Float64& condition_number);
 
+  // Observability Vector Callback
+  void ObservabilityVectorCallback(const geometry_msgs::Vector3::ConstPtr& msg);
+
   double wheel_delta_;
   double lidar_delta_;
   PoseCovStamped lidar_last_pose_;
@@ -90,6 +93,7 @@ class LidarSlipDetection {
   ros::Subscriber condition_number_sub_;
   ros::Subscriber lidar_odom_sub_;
   ros::Subscriber wheel_odom_sub_;
+  ros::Subscriber observability_sub_;
 
   // Publishers
   ros::Publisher slip_detection_from_odom_;
@@ -112,6 +116,9 @@ class LidarSlipDetection {
   double slip_threshold_;
   double max_power_;
   double filter_size_;
+  double observability_;
+  double condition_number_;
+  double observability_threshold_;
   std::vector<PoseCovStamped> last_lo_poses_;
   std::vector<PoseCovStamped> last_wo_poses_;
 };

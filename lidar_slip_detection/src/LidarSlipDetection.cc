@@ -66,6 +66,11 @@ bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
                    10,
                    &LidarSlipDetection::ConditionNumberCallback,
                    this);
+  observability_sub_ =
+      nl.subscribe("observability_vector",
+                   10,
+                   &LidarSlipDetection::ObservabilityVectorCallback,
+                   this);
   // Initialize publishers
   CreatePublishers(nl);
   return true;
@@ -75,6 +80,8 @@ bool LidarSlipDetection::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("lidar_slip/slip_threshold", slip_threshold_)) return false;
   if (!pu::Get("lidar_slip/max_power", max_power_)) return false;
   if (!pu::Get("lidar_slip/filter_size", filter_size_)) return false;
+  if (!pu::Get("lidar_slip/observability_threshold", observability_threshold_))
+    return false;
   // ROS_INFO_STREAM("lidar slip param is: " << slip_threshold_);
   return true;
 }
@@ -148,19 +155,27 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   if (delta_t > ros::Duration(filter_size_)) {
     last_lo_poses_.erase(last_lo_poses_.begin());
   }
+
+  PublishLidarSlipAmount(slip_amount_from_odom_, slip_detection_from_odom_);
 }
 
 void LidarSlipDetection::ConditionNumberCallback(
     const std_msgs::Float64& condition_number) {
   // Callback function for condition number
-  double k = condition_number.data;
+  condition_number_ = condition_number.data;
 
-  PublishConditionNumber(k, slip_detection_from_cov_);
-  PublishLidarSlipAmount(slip_amount_from_odom_, slip_detection_from_odom_);
+  PublishConditionNumber(condition_number_, slip_detection_from_cov_);
+}
+
+void LidarSlipDetection::ObservabilityVectorCallback(
+    const geometry_msgs::Vector3::ConstPtr& msg) {
+  observability_ = abs(msg->x);  // Interested in the slip so forward direction
 
   // Check for slippage
   bool slip_status;
-  if (slip_amount_from_odom_ > slip_threshold_ && k > 8 * exp(max_power_))
+  if (slip_amount_from_odom_ > slip_threshold_ &&
+      condition_number_ > 8 * exp(max_power_) &&
+      observability_ < observability_threshold_)
     slip_status = true;
   PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
 }
