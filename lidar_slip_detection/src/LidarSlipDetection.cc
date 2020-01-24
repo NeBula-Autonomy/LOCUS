@@ -160,9 +160,9 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
 }
 
 void LidarSlipDetection::ConditionNumberCallback(
-    const std_msgs::Float64& condition_number) {
+    const std_msgs::Float64::ConstPtr& condition_number) {
   // Callback function for condition number
-  condition_number_ = condition_number.data;
+  condition_number_ = condition_number->data;
 
   PublishConditionNumber(condition_number_, slip_detection_from_cov_);
 }
@@ -190,15 +190,16 @@ geometry_utils::Transform3 LidarSlipDetection::GetTransform(
   return pose_delta;
 }
 
-void LidarSlipDetection::PublishLidarSlipAmount(double& slip_detection_odom,
-                                                const ros::Publisher& pub) {
+void LidarSlipDetection::PublishLidarSlipAmount(
+    const double& slip_detection_odom,
+    const ros::Publisher& pub) {
   // Convert slipage value value to ROS format and publish.
   std_msgs::Float64 slip_detection_from_odom;
   slip_detection_from_odom.data = slip_detection_odom;
   pub.publish(slip_detection_from_odom);
 }
 
-void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status,
+void LidarSlipDetection::PublishLidarSlipStatus(const bool& slip_status,
                                                 const ros::Publisher& pub) {
   // Convert condition number value to ROS format and publish.
   std_msgs::Bool lidar_slip_status;
@@ -206,8 +207,9 @@ void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status,
   pub.publish(lidar_slip_status);
 }
 
-void LidarSlipDetection::PublishConditionNumber(double& slip_detection_cov,
-                                                const ros::Publisher& pub) {
+void LidarSlipDetection::PublishConditionNumber(
+    const double& slip_detection_cov,
+    const ros::Publisher& pub) {
   // Convert condition number value to ROS format and publish.
   std_msgs::Float64 slip_detection_from_cov;
   slip_detection_from_cov.data = slip_detection_cov;

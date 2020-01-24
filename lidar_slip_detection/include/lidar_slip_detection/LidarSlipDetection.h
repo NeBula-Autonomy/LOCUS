@@ -78,7 +78,8 @@ class LidarSlipDetection {
   void LidarOdometryCallback(const Odometry::ConstPtr& msg);
 
   // Condition Number Callback
-  void ConditionNumberCallback(const std_msgs::Float64& condition_number);
+  void ConditionNumberCallback(
+      const std_msgs::Float64::ConstPtr& condition_number);
 
   // Observability Vector Callback
   void ObservabilityVectorCallback(const geometry_msgs::Vector3::ConstPtr& msg);
@@ -103,11 +104,12 @@ class LidarSlipDetection {
   void InitializePose(PoseCovStamped first_pose);
   geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose,
                                           const PoseCovStamped second_pose);
-  void PublishLidarSlipAmount(double& slip_detection_odom,
+  void PublishLidarSlipAmount(const double& slip_detection_odom,
                               const ros::Publisher& pub);
-  void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
+  void PublishLidarSlipStatus(const bool& slip_status,
+                              const ros::Publisher& pub);
   bool LoadParameters(const ros::NodeHandle& n);
-  void PublishConditionNumber(double& slip_detection_cov,
+  void PublishConditionNumber(const double& slip_detection_cov,
                               const ros::Publisher& pub);
 
  private:
