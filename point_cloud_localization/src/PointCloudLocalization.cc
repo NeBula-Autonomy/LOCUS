@@ -35,6 +35,7 @@
  */
 
 #include <point_cloud_localization/PointCloudLocalization.h>
+#include <chrono>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -220,6 +221,8 @@ bool PointCloudLocalization::SetupICP() {
   icp_.setMaximumIterations(params_.iterations);
   icp_.setRANSACIterations(0);
   icp_.setMaximumOptimizerIterations(50);
+  icp_.setNumThreads(2);
+  icp_.enableTimingOutput(true);
   return true;
 }
 
@@ -236,7 +239,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   icp_.setInputSource(query);
   icp_.setInputTarget(reference);
-
   PointCloud icpAlignedPointsLocalization_;
   icp_.align(icpAlignedPointsLocalization_);
   icpFitnessScore_ = icp_.getFitnessScore();

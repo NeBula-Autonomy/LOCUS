@@ -44,7 +44,7 @@ using pcl::copyPointCloud;
 using pcl::PointCloud;
 using pcl::PointXYZI;
 
-PointCloudOdometry::PointCloudOdometry() : 
+PointCloudOdometry::PointCloudOdometry() :
   initialized_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
@@ -158,6 +158,8 @@ bool PointCloudOdometry::SetupICP() {
   icp_.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp_.setMaximumIterations(params_.icp_iterations);
   icp_.setRANSACIterations(0);
+  icp_.setNumThreads(2);
+  icp_.enableTimingOutput(false);
   return true;
 }
 

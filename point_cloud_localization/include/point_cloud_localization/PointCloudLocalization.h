@@ -48,7 +48,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <pcl/search/impl/search.hpp>
-#include <pcl/registration/gicp.h>
+#include <multithreaded_gicp/gicp.h>
 
 using pcl::PointCloud;
 using pcl::PointXYZI;
@@ -174,7 +174,7 @@ private:
   bool b_publish_tfs_{false};
 
   // ICP
-  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
 };

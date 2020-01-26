@@ -12,6 +12,13 @@ if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
 endif(NOT PCL_FOUND)
 
+find_package(OpenMP)
+# if (OpenMP_FOUND)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+# endif()
+
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   geometry_utils
@@ -21,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   tf2_ros
   eigen_conversions
+  multithreaded_gicp
 )
 
 catkin_package(
@@ -35,6 +43,7 @@ catkin_package(
     pcl_ros
     tf2_ros
     eigen_conversions
+    multithreaded_gicp
 )
 
 find_package(PCL 1.7 REQUIRED)
