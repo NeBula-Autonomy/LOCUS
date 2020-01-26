@@ -60,19 +60,16 @@ template <typename PointSource, typename PointTarget>
 template<typename PointT> void
 pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeCovariances(typename pcl::PointCloud<PointT>::ConstPtr cloud,
                                                                                     const typename pcl::search::KdTree<PointT>::Ptr kdtree,
-                                                                                    MatricesVector& cloud_covariances)
-{  
-  if (k_correspondences_ > int (cloud->size ()))
-  {
+                                                                                    MatricesVector& cloud_covariances) {  
+  if (k_correspondences_ > int (cloud->size ())) {
     PCL_ERROR ("[pcl::MultithreadedGeneralizedIterativeClosestPoint::computeCovariances] Number or points in cloud (%lu) is less than k_correspondences_ (%lu)!\n", cloud->size (), k_correspondences_);
     return;
   }
 
   // TODO cloud->points.size() vs cloud->size() ? any difference?
-  
-  // We should never get there but who knows
-  if(cloud_covariances.size () < cloud->size ())
-    cloud_covariances.resize (cloud->size ());
+  if(cloud_covariances.size() < cloud->size()) {
+    cloud_covariances.resize (cloud->size());
+  }
 
   int enable_omp = (1 < k_num_threads_);
   #pragma omp parallel for schedule(dynamic, 1) if (enable_omp)
@@ -83,17 +80,11 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
       }
     }
 
-    // typename pcl::PointCloud<PointT>::const_iterator points_iterator = cloud->begin ();
-    // MatricesVector::iterator matrices_iterator = cloud_covariances.begin ();
     Eigen::Vector3d mean;
-    //std::vector<int> nn_indices; nn_indices.reserve (k_correspondences_);
-    //std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_correspondences_);
     std::vector<int> nn_indices(k_correspondences_);
     std::vector<float> nn_dist_sq(k_correspondences_);
-
     const PointT &query_point = cloud->points[i];
-    // const PointT &query_point = *points_iterator;
-    Eigen::Matrix3d &cov = cloud_covariances[i]; // *matrices_iterator;
+    Eigen::Matrix3d &cov = cloud_covariances[i]; 
     // Zero out the cov and mean
     cov.setZero ();
     mean.setZero ();
@@ -121,13 +112,13 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
 
     mean /= static_cast<double> (k_correspondences_);
     // Get the actual covariance
-    for (int k = 0; k < 3; k++)
-      for (int l = 0; l <= k; l++)
-      {
+    for (int k = 0; k < 3; k++) {
+      for (int l = 0; l <= k; l++) {
         cov(k,l) /= static_cast<double> (k_correspondences_);
         cov(k,l) -= mean[k]*mean[l];
         cov(l,k) = cov(k,l);
       }
+    }
 
     // Compute the SVD (covariance matrix is symmetric so U = V')
     Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
@@ -137,9 +128,10 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
     for(int k = 0; k < 3; k++) {
       Eigen::Vector3d col = U.col(k);
       double v = 1.; // biggest 2 singular values replaced by 1
-      if(k == 2)   // smallest singular value replaced by gicp_epsilon
+      if(k == 2) {  // smallest singular value replaced by gicp_epsilon
         v = gicp_epsilon_;
-      cov+= v * col * col.transpose();
+      }
+      cov += v * col * col.transpose();
     }
 
   }  
@@ -147,8 +139,7 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
 
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> void
-pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeRDerivative(const Vector6d &x, const Eigen::Matrix3d &R, Vector6d& g) const
-{
+pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeRDerivative(const Vector6d &x, const Eigen::Matrix3d &R, Vector6d& g) const {
   Eigen::Matrix3d dR_dPhi;
   Eigen::Matrix3d dR_dTheta;
   Eigen::Matrix3d dR_dPsi;
@@ -206,10 +197,8 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::es
                                                                                                   const std::vector<int> &indices_src,
                                                                                                   const PointCloudTarget &cloud_tgt,
                                                                                                   const std::vector<int> &indices_tgt,
-                                                                                                  Eigen::Matrix4f &transformation_matrix)
-{
-  if (indices_src.size () < 4)     // need at least 4 samples
-  {
+                                                                                                  Eigen::Matrix4f &transformation_matrix) {
+  if (indices_src.size () < 4) {    // need at least 4 samples
     PCL_THROW_EXCEPTION (NotEnoughPointsException,
                          "[pcl::MultithreadedGeneralizedIterativeClosestPoint::estimateRigidTransformationBFGS] Need at least 4 points to estimate a transform! Source and target have " << indices_src.size () << " points!");
     return;
@@ -243,38 +232,34 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::es
   int inner_iterations_ = 0;
   int result = bfgs.minimizeInit (x);
   result = BFGSSpace::Running;
-  do
-  {
+  do {
     inner_iterations_++;
     result = bfgs.minimizeOneStep (x);
-    if(result)
-    {
+    if(result) {
       break;
     }
     result = bfgs.testGradient(gradient_tol);
   } while(result == BFGSSpace::Running && inner_iterations_ < max_inner_iterations_);
-  if(result == BFGSSpace::NoProgress || result == BFGSSpace::Success || inner_iterations_ == max_inner_iterations_)
-  {
+  if(result == BFGSSpace::NoProgress || result == BFGSSpace::Success || inner_iterations_ == max_inner_iterations_) {
     PCL_DEBUG ("[pcl::registration::TransformationEstimationBFGS::estimateRigidTransformation]");
     PCL_DEBUG ("BFGS solver finished with exit code %i \n", result);
     transformation_matrix.setIdentity();
     applyState(transformation_matrix, x);
   }
-  else
+  else {
     PCL_THROW_EXCEPTION(SolverDidntConvergeException,
                         "[pcl::" << getClassName () << "::TransformationEstimationBFGS::estimateRigidTransformation] BFGS solver didn't converge!");
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> inline double
-pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::OptimizationFunctorWithIndices::operator() (const Vector6d& x)
-{
+pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::OptimizationFunctorWithIndices::operator() (const Vector6d& x) {
   Eigen::Matrix4f transformation_matrix = gicp_->base_transformation_;
   gicp_->applyState(transformation_matrix, x);
   double f = 0;
   int m = static_cast<int> (gicp_->tmp_idx_src_->size ());
-  for (int i = 0; i < m; ++i)
-  {
+  for (int i = 0; i < m; ++i) {
     // The last coordinate, p_src[3] is guaranteed to be set to 1.0 in registration.hpp
     Vector4fMapConst p_src = gicp_->tmp_src_->points[(*gicp_->tmp_idx_src_)[i]].getVector4fMap ();
     // The last coordinate, p_tgt[3] is guaranteed to be set to 1.0 in registration.hpp
@@ -285,24 +270,22 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::Op
     Eigen::Vector3d res(pp[0] - p_tgt[0], pp[1] - p_tgt[1], pp[2] - p_tgt[2]);
     Eigen::Vector3d temp (gicp_->mahalanobis((*gicp_->tmp_idx_src_)[i]) * res);
     //increment= res'*temp/num_matches = temp'*M*temp/num_matches (we postpone 1/num_matches after the loop closes)
-    f+= double(res.transpose() * temp);
+    f += double(res.transpose() * temp);
   }
   return f/m;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> inline void
-pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::OptimizationFunctorWithIndices::df (const Vector6d& x, Vector6d& g)
-{
+pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::OptimizationFunctorWithIndices::df (const Vector6d& x, Vector6d& g) {
   Eigen::Matrix4f transformation_matrix = gicp_->base_transformation_;
   gicp_->applyState(transformation_matrix, x);
   //Zero out g
-  g.setZero ();
+  g.setZero();
   //Eigen::Vector3d g_t = g.head<3> ();
   Eigen::Matrix3d R = Eigen::Matrix3d::Zero ();
   int m = static_cast<int> (gicp_->tmp_idx_src_->size ());
-  for (int i = 0; i < m; ++i)
-  {
+  for (int i = 0; i < m; ++i) {
     // The last coordinate, p_src[3] is guaranteed to be set to 1.0 in registration.hpp
     Vector4fMapConst p_src = gicp_->tmp_src_->points[(*gicp_->tmp_idx_src_)[i]].getVector4fMap ();
     // The last coordinate, p_tgt[3] is guaranteed to be set to 1.0 in registration.hpp
@@ -315,29 +298,27 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::Op
     Eigen::Vector3d temp (gicp_->mahalanobis ((*gicp_->tmp_idx_src_)[i]) * res);
     // Increment translation gradient
     // g.head<3> ()+= 2*M*res/num_matches (we postpone 2/num_matches after the loop closes)
-    g.head<3> ()+= temp;
+    g.head<3>() += temp;
     // Increment rotation gradient
     pp = gicp_->base_transformation_ * p_src;
     Eigen::Vector3d p_src3 (pp[0], pp[1], pp[2]);
-    R+= p_src3 * temp.transpose();
+    R += p_src3 * temp.transpose();
   }
-  g.head<3> ()*= 2.0/m;
-  R*= 2.0/m;
+  g.head<3>() *= 2.0/m;
+  R *= 2.0/m;
   gicp_->computeRDerivative(x, R, g);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> inline void
-pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::OptimizationFunctorWithIndices::fdf (const Vector6d& x, double& f, Vector6d& g)
-{
+pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::OptimizationFunctorWithIndices::fdf (const Vector6d& x, double& f, Vector6d& g) {
   Eigen::Matrix4f transformation_matrix = gicp_->base_transformation_;
   gicp_->applyState(transformation_matrix, x);
   f = 0;
   g.setZero ();
   Eigen::Matrix3d R = Eigen::Matrix3d::Zero ();
   const int m = static_cast<const int> (gicp_->tmp_idx_src_->size ());
-  for (int i = 0; i < m; ++i)
-  {
+  for (int i = 0; i < m; ++i) {
     // The last coordinate, p_src[3] is guaranteed to be set to 1.0 in registration.hpp
     Vector4fMapConst p_src = gicp_->tmp_src_->points[(*gicp_->tmp_idx_src_)[i]].getVector4fMap ();
     // The last coordinate, p_tgt[3] is guaranteed to be set to 1.0 in registration.hpp
@@ -348,25 +329,24 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::Op
     // temp = M*res
     Eigen::Vector3d temp (gicp_->mahalanobis((*gicp_->tmp_idx_src_)[i]) * res);
     // Increment total error
-    f+= double(res.transpose() * temp);
+    f += double(res.transpose() * temp);
     // Increment translation gradient
     // g.head<3> ()+= 2*M*res/num_matches (we postpone 2/num_matches after the loop closes)
-    g.head<3> ()+= temp;
+    g.head<3>() += temp;
     pp = gicp_->base_transformation_ * p_src;
     Eigen::Vector3d p_src3 (pp[0], pp[1], pp[2]);
     // Increment rotation gradient
-    R+= p_src3 * temp.transpose();
+    R += p_src3 * temp.transpose();
   }
-  f/= double(m);
-  g.head<3> ()*= double(2.0/m);
-  R*= 2.0/m;
+  f /= double(m);
+  g.head<3>() *= double(2.0/m);
+  R *= 2.0/m;
   gicp_->computeRDerivative(x, R, g);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> inline void
-pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeTransformation (PointCloudSource &output, const Eigen::Matrix4f& guess)
-{
+pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeTransformation (PointCloudSource &output, const Eigen::Matrix4f& guess) {
   auto start_gicp = std::chrono::steady_clock::now();
   
   pcl::IterativeClosestPoint<PointSource, PointTarget>::initComputeReciprocal ();
@@ -379,14 +359,12 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
 
   // Compute target cloud covariance matrices
   auto start_covariances = std::chrono::steady_clock::now();  
-  if ((!target_covariances_) || (target_covariances_->empty ()))
-  {
+  if ((!target_covariances_) || (target_covariances_->empty ())) {
     target_covariances_.reset (new MatricesVector);  
     computeCovariances<PointTarget> (target_, tree_, *target_covariances_);
   }
   // Compute input cloud covariance matrices
-  if ((!input_covariances_) || (input_covariances_->empty ()))
-  {
+  if ((!input_covariances_) || (input_covariances_->empty ())) {
     input_covariances_.reset (new MatricesVector);
     computeCovariances<PointSource> (input_, tree_reciprocal_, *input_covariances_);
   }
@@ -402,20 +380,21 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
   double delta = 0.;
 
   auto start_iterations = std::chrono::steady_clock::now();
-  while(!converged_)
-  {
+  while(!converged_) {
     std::vector<int> source_indices (indices_->size (), -1);
     std::vector<int> target_indices (indices_->size (), -1);
 
     // guess corresponds to base_t and transformation_ to t
     Eigen::Matrix4d transform_R = Eigen::Matrix4d::Zero ();
-    for(size_t i = 0; i < 4; i++)
-      for(size_t j = 0; j < 4; j++)
-        for(size_t k = 0; k < 4; k++)
-          transform_R(i,j)+= double(transformation_(i,k)) * double(guess(k,j));
+    for(size_t i = 0; i < 4; i++) {
+      for(size_t j = 0; j < 4; j++) {
+        for(size_t k = 0; k < 4; k++) {
+          transform_R(i,j) += double(transformation_(i,k)) * double(guess(k,j));
+        }
+      }
+    }
 
-    Eigen::Matrix3d R = transform_R.topLeftCorner<3,3> ();
-
+    const Eigen::Matrix3d R = transform_R.topLeftCorner<3,3> ();
     int failure = 0;
     auto start_lookups = std::chrono::steady_clock::now();
     int enable_omp = (1 < k_num_threads_);
@@ -471,13 +450,16 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
       for(int k = 0; k < 4; k++) {
         for(int l = 0; l < 4; l++) {
           double ratio = 1;
-          if(k < 3 && l < 3) // rotation part of the transform
+          if(k < 3 && l < 3) { // rotation part of the transform
             ratio = 1./rotation_epsilon_;
-          else
+          }
+          else {
             ratio = 1./transformation_epsilon_;
+          }
           double c_delta = ratio*fabs(previous_transformation_(k,l) - transformation_(k,l));
-          if(c_delta > delta)
+          if(c_delta > delta) {
             delta = c_delta;
+          }
         }
       }
     }
@@ -520,8 +502,7 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::co
 }
 
 template <typename PointSource, typename PointTarget> void
-pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::applyState(Eigen::Matrix4f &t, const Vector6d& x) const
-{
+pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::applyState(Eigen::Matrix4f &t, const Vector6d& x) const {
   // !!! CAUTION Stanford GICP uses the Z Y X euler angles convention
   Eigen::Matrix3f R;
   R = Eigen::AngleAxisf (static_cast<float> (x[5]), Eigen::Vector3f::UnitZ ())
@@ -529,7 +510,7 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::ap
     * Eigen::AngleAxisf (static_cast<float> (x[3]), Eigen::Vector3f::UnitX ());
   t.topLeftCorner<3,3> ().matrix () = R * t.topLeftCorner<3,3> ().matrix ();
   Eigen::Vector4f T (static_cast<float> (x[0]), static_cast<float> (x[1]), static_cast<float> (x[2]), 0.0f);
-  t.col (3) += T;
+  t.col(3) += T;
 }
 
 #endif //IMPL_MULTITHREADED_GICP_HPP_
