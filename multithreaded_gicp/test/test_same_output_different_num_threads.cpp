@@ -20,8 +20,8 @@ int main(int argc, char **argv) {
     return -1;
   }
   
-  // Test gicp with num threads = 1, 2, 3 ,4
-  for (int i = 1; i < 5; i++) {
+  // Test gicp with num threads = 1 to 8
+  for (int i = 1; i < 9; i++) {
     pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp; // (i, true);
     icp.setTransformationEpsilon(0.0000000001);
     icp.setMaxCorrespondenceDistance(0.2);

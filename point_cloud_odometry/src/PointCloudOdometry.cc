@@ -128,6 +128,10 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
+  if (!pu::Get("icp/num_threads", params_.num_threads)) 
+    return false;
+  if (!pu::Get("icp/enable_timing_output", params_.enable_timing_output)) 
+    return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
   if(!pu::Get("imu_integration/b_use_imu_integration", b_use_imu_integration_))
@@ -158,8 +162,8 @@ bool PointCloudOdometry::SetupICP() {
   icp_.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp_.setMaximumIterations(params_.icp_iterations);
   icp_.setRANSACIterations(0);
-  icp_.setNumThreads(2);
-  icp_.enableTimingOutput(false);
+  icp_.setNumThreads(params_.num_threads);
+  icp_.enableTimingOutput(params_.enable_timing_output);
   return true;
 }
 

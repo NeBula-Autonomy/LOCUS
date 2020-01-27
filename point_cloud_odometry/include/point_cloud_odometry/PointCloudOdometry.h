@@ -130,6 +130,10 @@ private:
     double icp_tf_epsilon;
     double icp_corr_dist;
     unsigned int icp_iterations;
+    // Number of threads GICP is allowed to use
+    int num_threads;
+    // Enable GICP timing information print logs
+    bool enable_timing_output;
   } params_;
   pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();

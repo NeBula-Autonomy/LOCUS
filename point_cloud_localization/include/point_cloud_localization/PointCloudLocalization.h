@@ -160,6 +160,10 @@ private:
     double corr_dist;
     // Iterate ICP this many times
     unsigned int iterations;
+    // Number of threads GICP is allowed to use
+    int num_threads;
+    // Enable GICP timing information print logs
+    bool enable_timing_output;
   } params_;
 
   // Maximum acceptable translation and rotation tolerances.

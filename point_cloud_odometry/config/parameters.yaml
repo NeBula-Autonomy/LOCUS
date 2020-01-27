@@ -13,3 +13,9 @@ icp:
   transform_thresholding: false
   max_translation: 0.09
   max_rotation: 0.1
+
+  # Number of threads GICP can use (3 threads ~ 3x speedup)
+  num_threads: 2
+
+  # Enable GICP timing output
+  enable_timing_output: true

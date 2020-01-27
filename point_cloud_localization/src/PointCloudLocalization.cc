@@ -113,6 +113,10 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("localization/transform_thresholding", transform_thresholding_))
     return false;
+  if (!pu::Get("localization/num_threads", params_.num_threads)) 
+    return false;
+  if (!pu::Get("localization/enable_timing_output", params_.enable_timing_output)) 
+    return false;
   if (!pu::Get("localization/max_translation", max_translation_)) return false;
   if (!pu::Get("localization/max_rotation", max_rotation_)) return false;
   // if (!pu::Get("localization/max_power", max_power_)) return false;
@@ -221,8 +225,8 @@ bool PointCloudLocalization::SetupICP() {
   icp_.setMaximumIterations(params_.iterations);
   icp_.setRANSACIterations(0);
   icp_.setMaximumOptimizerIterations(50);
-  icp_.setNumThreads(2);
-  icp_.enableTimingOutput(true);
+  icp_.setNumThreads(params_.num_threads);
+  icp_.enableTimingOutput(params_.enable_timing_output);
   return true;
 }
 
