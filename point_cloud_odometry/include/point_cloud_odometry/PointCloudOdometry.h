@@ -45,7 +45,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf/transform_broadcaster.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <pcl/registration/gicp.h>
+#include <multithreaded_gicp/gicp.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/search/impl/search.hpp>
 #include <geometry_msgs/PoseStamped.h>
@@ -134,8 +134,12 @@ private:
     double icp_tf_epsilon;
     double icp_corr_dist;
     unsigned int icp_iterations;
+    // Number of threads GICP is allowed to use
+    int num_threads;
+    // Enable GICP timing information print logs
+    bool enable_timing_output;
   } params_;
-  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
   /*--------------

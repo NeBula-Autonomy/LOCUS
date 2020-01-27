@@ -11,9 +11,16 @@ localization:
   corr_dist: 0.2
 
   # Iterate ICP this many times.
-  iterations: 5 # 20 # Default from original branch is 10
+  iterations: 20 # 20 # Default from original branch is 10
 
   # Maximum acceptable incremental rotation and translation.
   transform_thresholding: false
   max_translation: 0.1 # 0.05
   max_rotation: 0.1
+
+  # Number of threads GICP can use (3 threads ~ 3x speedup)
+  num_threads: 2
+
+  # Enable GICP timing output
+  enable_timing_output: true
+  

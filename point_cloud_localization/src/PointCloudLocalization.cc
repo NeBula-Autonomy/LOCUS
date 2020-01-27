@@ -35,6 +35,7 @@
  */
 
 #include <point_cloud_localization/PointCloudLocalization.h>
+#include <chrono>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -111,6 +112,10 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("localization/iterations", params_.iterations)) 
     return false;
   if (!pu::Get("localization/transform_thresholding", transform_thresholding_))
+    return false;
+  if (!pu::Get("localization/num_threads", params_.num_threads)) 
+    return false;
+  if (!pu::Get("localization/enable_timing_output", params_.enable_timing_output)) 
     return false;
   if (!pu::Get("localization/max_translation", max_translation_)) return false;
   if (!pu::Get("localization/max_rotation", max_rotation_)) return false;
@@ -220,6 +225,8 @@ bool PointCloudLocalization::SetupICP() {
   icp_.setMaximumIterations(params_.iterations);
   icp_.setRANSACIterations(0);
   icp_.setMaximumOptimizerIterations(50);
+  icp_.setNumThreads(params_.num_threads);
+  icp_.enableTimingOutput(params_.enable_timing_output);
   return true;
 }
 
@@ -236,7 +243,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   icp_.setInputSource(query);
   icp_.setInputTarget(reference);
-
   PointCloud icpAlignedPointsLocalization_;
   icp_.align(icpAlignedPointsLocalization_);
   icpFitnessScore_ = icp_.getFitnessScore();

@@ -48,7 +48,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <pcl/search/impl/search.hpp>
-#include <pcl/registration/gicp.h>
+#include <multithreaded_gicp/gicp.h>
 
 using pcl::PointCloud;
 using pcl::PointXYZI;
@@ -160,6 +160,10 @@ private:
     double corr_dist;
     // Iterate ICP this many times
     unsigned int iterations;
+    // Number of threads GICP is allowed to use
+    int num_threads;
+    // Enable GICP timing information print logs
+    bool enable_timing_output;
   } params_;
 
   // Maximum acceptable translation and rotation tolerances.
@@ -174,7 +178,7 @@ private:
   bool b_publish_tfs_{false};
 
   // ICP
-  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
 };
