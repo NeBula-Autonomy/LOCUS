@@ -44,8 +44,11 @@ using pcl::copyPointCloud;
 using pcl::PointCloud;
 using pcl::PointXYZI;
 
-PointCloudOdometry::PointCloudOdometry() :
-  initialized_(false) {
+PointCloudOdometry::PointCloudOdometry() : 
+  initialized_(false), 
+  b_use_imu_integration_(false), 
+  b_use_odometry_integration_(false), 
+  b_use_pose_stamped_integration_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
 }
@@ -134,14 +137,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
-  if(!pu::Get("imu_integration/b_use_imu_integration", b_use_imu_integration_))
-    return false;
-  if(!pu::Get("imu_integration/b_use_imu_yaw_only", b_use_imu_yaw_only_))
-    return false;
-  if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
-    return false;
-  if(!pu::Get("pose_stamped_integration/b_use_pose_stamped_integration", b_use_pose_stamped_integration_))
-    return false;
 
   return true;
 }
@@ -167,35 +162,48 @@ bool PointCloudOdometry::SetupICP() {
   return true;
 }
 
+void PointCloudOdometry::EnableImuIntegration() {
+  b_use_imu_integration_ = true;
+}
+
+void PointCloudOdometry::EnableOdometryIntegration() {
+  b_use_odometry_integration_ = true;
+}
+
+void PointCloudOdometry::EnablePoseStampedIntegration() {
+  b_use_pose_stamped_integration_ = true;
+}
+
 bool PointCloudOdometry::SetLidar(const PointCloud& points) {
   stamp_.fromNSec(points.header.stamp * 1e3);
   points_ = points;
   return true;
 }
 
-bool PointCloudOdometry::SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion) {
-  imu_quaternion_ = imu_quaternion;
+bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
+  imu_delta_ = imu_delta;
   return true;
 }
 
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
-  // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
   odometry_delta_ = odometry_delta;
+  return true;
+}
+
+bool PointCloudOdometry::SetPoseStampedDelta(const tf::Transform& pose_stamped_delta) {
+  pose_stamped_delta_ = pose_stamped_delta;
   return true;
 }
 
 bool PointCloudOdometry::UpdateEstimate() {
   if (!initialized_) {
     copyPointCloud(points_, *query_);
-    imu_quaternion_previous_ = imu_quaternion_;
     initialized_ = true;
     return false;
   }
   else {
     copyPointCloud(*query_, *reference_);
     copyPointCloud(points_, *query_); 
-    imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion_;
-    imu_quaternion_previous_ = imu_quaternion_;
     return UpdateICP();
   } 
 } 
@@ -210,12 +218,7 @@ bool PointCloudOdometry::UpdateICP() {
 
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    if(b_use_imu_yaw_only_) {
-      imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeYawChange();
-    }
-    else {
-      imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeChange();
-    }
+    imu_prior.block(0, 0, 3, 3) = imu_delta_;   
     pcl::transformPointCloud(*query_, *query_trans, imu_prior);  
   }
   else if (b_use_odometry_integration_) {
@@ -291,26 +294,6 @@ bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
   }
   out = query_;
   return true;
-}
-
-Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeChange() {
-  return imu_quaternion_change_.normalized().toRotationMatrix();
-}
-
-Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeYawChange() {
-  Eigen::Matrix3d rot_yaw_mat;
-  double roll, pitch, yaw;
-  tf::Quaternion q(imu_quaternion_change_.x(),
-                   imu_quaternion_change_.y(),
-                   imu_quaternion_change_.z(),
-                   imu_quaternion_change_.w());
-  tf::Matrix3x3 m(q);
-  m.getRPY(roll, pitch, yaw);
-  ROS_INFO_STREAM("PointCloudOdometry - GetExtAttYawChange - Yaw delta from IMU is " 
-                  << yaw*180.0/M_PI << " deg");
-  rot_yaw_mat = Eigen::Matrix3d();
-  rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
-  return rot_yaw_mat;
 }
  
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,

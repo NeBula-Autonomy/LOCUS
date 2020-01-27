@@ -1,35 +1,32 @@
 b_verbose: false
-b_publish_map: true
 
 translation_threshold_kf: 1.0 
 rotation_threshold_kf: 0.3 
+
+number_of_points_open_space: 9999999 # Dsiabled - baseline to use is: 11000
+
+map_publishment: 
+  b_publish_map: true
+  meters: 1
+
+queues: 
+  lidar_queue_size: 1
+  imu_queue_size: 10000
+  odom_queue_size: 1000 
+  pose_queue_size: 1000
 
 buffers: 
   imu_buffer_size_limit: 1000
   odometry_buffer_size_limit: 1000
   pose_stamped_buffer_size_limit: 1000
 
-syncing: 
-  ts_threshold: 0.1
+# DATA INTEGRATION 
+  # 0   ---> no integration 
+  # 1   ---> imu integration 
+  # 2   ---> imu yaw integration
+  # 3   ---> odometry integration 
+  # 4   ---> pose_stamped integration
 
-imu_integration: 
-  b_use_imu_integration: true
-  b_use_imu_yaw_only: false
-  imu_max_number_of_calls: 25
-
-odometry_integration: 
-  b_use_odometry_integration: false
-  odometry_max_number_of_calls: 25
-
-pose_stamped_integration:
-  b_use_pose_stamped_integration: false
-  pose_stamped_max_number_of_calls: 25
-
-queue_sizes: 
-  imu_queue_size: 10000
-  odom_queue_size: 1000 
-  pose_queue_size: 1000
-  lidar_queue_size: 1
-
-map_publishment: 
-  meters: 1
+data_integration: 
+  mode: 3
+  max_number_of_calls: 25
