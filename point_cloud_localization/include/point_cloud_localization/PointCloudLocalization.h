@@ -168,6 +168,8 @@ private:
   struct Parameters {    
     // Compute ICP covariance and condition number
     bool compute_icp_covariance;
+    // Compute ICP observability 
+    bool compute_icp_observability;
     // Stop ICP if the transformation from the last iteration was this small
     double tf_epsilon;
     // During ICP, two points won't be considered a correspondence if they are

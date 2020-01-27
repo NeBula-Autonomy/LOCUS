@@ -103,6 +103,9 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("localization/compute_icp_covariance",
                params_.compute_icp_covariance))
     return false;
+  if (!pu::Get("localization/compute_icp_observability",
+               params_.compute_icp_observability))
+    return false;
   if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) return false;
   if (!pu::Get("localization/corr_dist", params_.corr_dist)) return false;
   if (!pu::Get("localization/iterations", params_.iterations)) return false;
@@ -282,14 +285,15 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   Eigen::Matrix<double, 6, 6> icp_covariance;
   icp_covariance = Eigen::Matrix<double, 6, 6>::Zero();
-
-  // Compute ICP obersvability (for lidar slip detection)
-  Eigen::Matrix<double, 6, 6> eigenvectors_new;
-  Eigen::Matrix<double, 6, 1> eigenvalues_new;
-  Eigen::Matrix<double, 6, 6> A;
-  ComputeIcpObservability(
-      query, reference, &eigenvectors_new, &eigenvalues_new, &A);
-  PublishObservableDirections(A);
+  if (params_.compute_icp_observability) {
+    // Compute ICP obersvability (for lidar slip detection)
+    Eigen::Matrix<double, 6, 6> eigenvectors_new;
+    Eigen::Matrix<double, 6, 1> eigenvalues_new;
+    Eigen::Matrix<double, 6, 6> A;
+    ComputeIcpObservability(
+        query, reference, &eigenvectors_new, &eigenvalues_new, &A);
+    PublishObservableDirections(A);
+  }
 
   if (params_.compute_icp_covariance) {
     // Compute the covariance matrix for the estimated transform
