@@ -1,0 +1,5 @@
+<launch>
+  <test test-name="test_lo_frontend"
+        pkg="lo_frontend"
+        type="test_lo_frontend"/>
+</launch>
