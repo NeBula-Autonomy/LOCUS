@@ -95,3 +95,14 @@ target_link_libraries(${PROJECT_NAME}_node
   ${Boost_LIBRARIES}
   gtsam
 )
+
+#############
+## Testing ##
+#############
+if (CATKIN_ENABLE_TESTING)
+find_package(rostest REQUIRED)
+  # add_subdirectory(test)
+  ## Add gtest based cpp test target and link libraries
+  add_rostest_gtest(test_lo_frontend test/test_lo_frontend.test test/test_lo_frontend.cc)
+  target_link_libraries(test_lo_frontend ${PROJECT_NAME} ${catkin_LIBRARIES})
+endif()
