@@ -41,6 +41,8 @@
 #ifndef MULTITHREADED_GICP_H_
 #define MULTITHREADED_GICP_H_
 
+#include <omp.h>
+
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/bfgs.h>
