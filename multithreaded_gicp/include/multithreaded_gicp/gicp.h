@@ -45,6 +45,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/bfgs.h>
 #include <ros/ros.h>
+#include <omp.h>
 
 namespace pcl {
   /** \brief GeneralizedIterativeClosestPoint is an ICP variant that implements the 
