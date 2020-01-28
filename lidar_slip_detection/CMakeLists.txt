@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   tf2_ros
+  tf
 )
 
 catkin_package(
@@ -32,6 +33,7 @@ catkin_package(
     parameter_utils
     nav_msgs
     tf2_ros
+    tf
 )
 
 include_directories(
