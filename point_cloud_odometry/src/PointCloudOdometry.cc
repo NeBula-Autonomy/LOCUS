@@ -239,8 +239,6 @@ bool PointCloudOdometry::UpdateICP() {
   icp_.setInputTarget(reference_);
   icp_.align(icpAlignedPointsOdometry_);
   icpFitnessScore_ = icp_.getFitnessScore();
-  PointCloud unused_result;
-  icp_.align(unused_result);
   Eigen::Matrix4d T; 
   T = icp_.getFinalTransformation().cast<double>();
 
