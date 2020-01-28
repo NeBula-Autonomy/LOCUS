@@ -66,11 +66,13 @@ bool LidarSlipDetection::Initialize(const ros::NodeHandle& n) {
                    10,
                    &LidarSlipDetection::ConditionNumberCallback,
                    this);
+  observability_sub_ =
+      nl.subscribe("observability_vector",
+                   10,
+                   &LidarSlipDetection::ObservabilityVectorCallback,
+                   this);
   // Initialize publishers
   CreatePublishers(nl);
-  // Initialize wheel and lidar poses to zero
-  InitializePose(lidar_last_pose_);
-  InitializePose(wheel_last_pose_);
   return true;
 }
 
@@ -78,7 +80,20 @@ bool LidarSlipDetection::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("lidar_slip/slip_threshold", slip_threshold_)) return false;
   if (!pu::Get("lidar_slip/max_power", max_power_)) return false;
   if (!pu::Get("lidar_slip/filter_size", filter_size_)) return false;
+  if (!pu::Get("lidar_slip/observability_threshold", observability_threshold_))
+    return false;
+  if (!pu::Get("lidar_slip/b_use_wio_check", b_use_wio_check_)) return false;
+  if (!pu::Get("lidar_slip/b_use_condition_number_check",
+               b_use_condition_number_check_))
+    return false;
+  if (!pu::Get("lidar_slip/b_use_observability_check",
+               b_use_observability_check_))
+    return false;
   // ROS_INFO_STREAM("lidar slip param is: " << slip_threshold_);
+  slip_amount_from_odom_ = 0;  // set to no slip at init (0 slip)
+  condition_number_ = 0;       // set to no slip at init (small cond number)
+  observability_ = observability_threshold_ * 2;
+  // set to no slip (high observability)
   return true;
 }
 
@@ -101,79 +116,91 @@ void LidarSlipDetection::WheelOdometryCallback(const Odometry::ConstPtr& msg) {
   PoseCovStamped wheel_current_pose;
   wheel_current_pose.header = msg->header;
   wheel_current_pose.pose = msg->pose;
+  last_wo_poses_.push_back(wheel_current_pose);
+
+  // If first entry in last poses more than 1 sec ago
+  ros::Duration delta_t =
+      wheel_current_pose.header.stamp - last_wo_poses_[0].header.stamp;
   geometry_utils::Transform3 wheel_transform =
-      GetTransform(wheel_last_pose_, wheel_current_pose);
+      GetTransform(last_wo_poses_[0], wheel_current_pose);
   double x = wheel_transform.translation(0);
   double y = wheel_transform.translation(1);
   double z = wheel_transform.translation(2);
-  double wheel_delta = std::sqrt(x * x + y * y + z * z);
-  wheel_last_pose_ = wheel_current_pose;
-  // WIO publishes at 50Hz (5 times faster than LO)
-  if (wio_last_deltas_.size() < 5 * filter_size_) {
-    wio_last_deltas_.push_back(wheel_delta);
-  } else {
-    // pop element from front
-    wio_last_deltas_.erase(wio_last_deltas_.begin());
-    wio_last_deltas_.push_back(wheel_delta);
+  if (delta_t.toSec() == 0)
+    wheel_delta_ = 0.0;
+  else
+    wheel_delta_ = std::sqrt(x * x + y * y + z * z) / delta_t.toSec();
+
+  // manage filter size (by duration as defined by filter_size_)
+  if (delta_t > ros::Duration(filter_size_)) {
+    last_wo_poses_.erase(last_wo_poses_.begin());
   }
-  // find average slipe amount
-  avg_wheel_delta_ =
-      std::accumulate(wio_last_deltas_.begin(), wio_last_deltas_.end(), 0.0);
 }
 
 void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   // Callback function for lidar odometry
-  double slip_amount = 0.0;
+  double slip_amount;
   bool slip_status = false;
   PoseCovStamped lidar_current_pose;
   lidar_current_pose.header = msg->header;
   lidar_current_pose.pose = msg->pose;
+  last_lo_poses_.push_back(lidar_current_pose);
+
+  // If first entry in last poses more than 1 sec ago
+  ros::Duration delta_t =
+      lidar_current_pose.header.stamp - last_lo_poses_[0].header.stamp;
   geometry_utils::Transform3 lidar_transform =
-      GetTransform(lidar_last_pose_, lidar_current_pose);
+      GetTransform(last_lo_poses_[0], lidar_current_pose);
   double x = lidar_transform.translation(0);
   double y = lidar_transform.translation(1);
   double z = lidar_transform.translation(2);
-  double lidar_delta = std::sqrt(x * x + y * y + z * z);
-  lidar_last_pose_ = lidar_current_pose;
-  // WIO publishes at 50Hz (5 times faster than LO)
-  if (lo_last_deltas_.size() < filter_size_) {
-    lo_last_deltas_.push_back(lidar_delta);
-  } else {
-    // pop element from front
-    lo_last_deltas_.erase(lo_last_deltas_.begin());
-    lo_last_deltas_.push_back(lidar_delta);
-  }
-  // find average slipe amount
-  avg_lidar_delta_ =
-      std::accumulate(lo_last_deltas_.begin(), lo_last_deltas_.end(), 0.0);
-  slip_amount = avg_wheel_delta_ - avg_lidar_delta_;
+  if (delta_t.toSec() == 0)
+    lidar_delta_ = 0.0;
+  else
+    lidar_delta_ = std::sqrt(x * x + y * y + z * z) / delta_t.toSec();
 
-  PublishLidarSlipAmount(slip_amount, slip_detection_from_odom_);
-  if (slip_amount > slip_threshold_) slip_status = true;
+  // Calculate slip
+  slip_amount_from_odom_ = wheel_delta_ - lidar_delta_;
+
+  // manage filter size (by duration as defined by filter_size_)
+  if (delta_t > ros::Duration(filter_size_)) {
+    last_lo_poses_.erase(last_lo_poses_.begin());
+  }
+  PublishLidarSlipAmount(slip_amount_from_odom_, slip_detection_from_odom_);
+
+  // Check for slippage
+  bool slip_status_from_wio = true;
+  bool slip_status_from_cond_number = true;
+  bool slip_status_from_observability = true;
+
+  if (b_use_wio_check_) {
+    if (slip_amount_from_odom_ < slip_threshold_) slip_status_from_wio = false;
+  }
+  if (b_use_condition_number_check_) {
+    if (condition_number_ < 8 * exp(max_power_))
+      slip_status_from_cond_number = false;
+  }
+  if (b_use_observability_check_) {
+    if (observability_ > observability_threshold_)
+      slip_status_from_observability = false;
+  }
+  if (slip_status_from_wio && slip_status_from_cond_number &&
+      slip_status_from_wio)
+    slip_status = true;
   PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
 }
 
 void LidarSlipDetection::ConditionNumberCallback(
-    const std_msgs::Float64& condition_number) {
+    const std_msgs::Float64::ConstPtr& condition_number) {
   // Callback function for condition number
-  double k = condition_number.data;
-  if (k > 8 * exp(max_power_) && avg_wheel_delta_ > 0.05) {
-    k = 1;
-  } else {
-    k = 0;
-  }
-  PublishConditionNumber(k, slip_detection_from_cov_);
+  condition_number_ = condition_number->data;
+
+  PublishConditionNumber(condition_number_, slip_detection_from_cov_);
 }
 
-void LidarSlipDetection::InitializePose(PoseCovStamped pose) {
-  pose.header.stamp = ros::Time::now();
-  pose.pose.pose.position.x = 0;
-  pose.pose.pose.position.y = 0;
-  pose.pose.pose.position.z = 0;
-  pose.pose.pose.orientation.x = 0;
-  pose.pose.pose.orientation.y = 0;
-  pose.pose.pose.orientation.z = 0;
-  pose.pose.pose.orientation.w = 1;
+void LidarSlipDetection::ObservabilityVectorCallback(
+    const geometry_msgs::Vector3::ConstPtr& msg) {
+  observability_ = abs(msg->x);  // Interested in the slip so forward direction
 }
 
 geometry_utils::Transform3 LidarSlipDetection::GetTransform(
@@ -186,15 +213,16 @@ geometry_utils::Transform3 LidarSlipDetection::GetTransform(
   return pose_delta;
 }
 
-void LidarSlipDetection::PublishLidarSlipAmount(double& slip_detection_odom,
-                                                const ros::Publisher& pub) {
+void LidarSlipDetection::PublishLidarSlipAmount(
+    const double& slip_detection_odom,
+    const ros::Publisher& pub) {
   // Convert slipage value value to ROS format and publish.
   std_msgs::Float64 slip_detection_from_odom;
   slip_detection_from_odom.data = slip_detection_odom;
   pub.publish(slip_detection_from_odom);
 }
 
-void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status,
+void LidarSlipDetection::PublishLidarSlipStatus(const bool& slip_status,
                                                 const ros::Publisher& pub) {
   // Convert condition number value to ROS format and publish.
   std_msgs::Bool lidar_slip_status;
@@ -202,8 +230,9 @@ void LidarSlipDetection::PublishLidarSlipStatus(bool& slip_status,
   pub.publish(lidar_slip_status);
 }
 
-void LidarSlipDetection::PublishConditionNumber(double& slip_detection_cov,
-                                                const ros::Publisher& pub) {
+void LidarSlipDetection::PublishConditionNumber(
+    const double& slip_detection_cov,
+    const ros::Publisher& pub) {
   // Convert condition number value to ROS format and publish.
   std_msgs::Float64 slip_detection_from_cov;
   slip_detection_from_cov.data = slip_detection_cov;

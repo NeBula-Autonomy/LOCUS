@@ -40,6 +40,7 @@ catkin_package(
     roscpp
     geometry_utils
     parameter_utils
+    visualization_msgs
     tf2_ros
     pcl_ros
 )
@@ -55,7 +56,7 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/PointCloudLocalization.cc)
+add_library(${PROJECT_NAME} src/PointCloudLocalization.cc src/utils.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}

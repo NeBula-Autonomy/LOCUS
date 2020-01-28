@@ -3,6 +3,9 @@ localization:
   # Compute ICP covariance and condition number
   compute_icp_covariance: true
 
+  # Compute ICP observability 
+  compute_icp_observability: true
+
   # Stop ICP if the transformation from the last iteration was this small.
   tf_epsilon: 0.0000000001
 
@@ -24,3 +27,5 @@ localization:
   # Enable GICP timing output
   enable_timing_output: true
   
+  # Radius for normal search
+  normal_search_radius: 10

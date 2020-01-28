@@ -37,18 +37,22 @@
 #ifndef POINT_CLOUD_LOCALIZATION_H
 #define POINT_CLOUD_LOCALIZATION_H
 
-#include <ros/ros.h>
-#include <geometry_utils/Transform3.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <pcl_ros/point_cloud.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <std_msgs/Float64.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3.h>
 #include <geometry_utils/GeometryUtilsROS.h>
+#include <geometry_utils/Transform3.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <pcl/search/impl/search.hpp>
 #include <multithreaded_gicp/gicp.h>
+#include <pcl_ros/point_cloud.h>
+#include <ros/ros.h>
+#include <std_msgs/Float64.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <visualization_msgs/MarkerArray.h>
 
 using pcl::PointCloud;
 using pcl::PointXYZI;
@@ -59,6 +63,7 @@ class PointCloudLocalization {
  public:
 
   typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
+  typedef pcl::PointCloud<pcl::PointNormal> PointNormal;
 
   PointCloudLocalization();
   ~PointCloudLocalization();
@@ -89,7 +94,14 @@ class PointCloudLocalization {
   bool ComputeICPCovariance(const PointCloud pointCloud, 
                             const Eigen::Matrix4f T, 
                             Eigen::Matrix<double, 6, 6>& covariance);
-  
+
+  // Compute observability of ICP for two pointclouds
+  void ComputeIcpObservability(const PointCloud::Ptr& new_cloud,
+                               const PointCloud::Ptr& old_cloud,
+                               Eigen::Matrix<double, 6, 6>* eigenvectors_ptr,
+                               Eigen::Matrix<double, 6, 1>* eigenvalues_ptr,
+                               Eigen::Matrix<double, 6, 6>* A_ptr);
+
   // Get pose estimates.
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
   const geometry_utils::Transform3& GetIntegratedEstimate() const;
@@ -126,7 +138,10 @@ private:
                    const ros::Publisher& pub);
   
   // Publish condition number of ICP covariance matrix
-  void PublishConditionNumber(double& k, const ros::Publisher& pub);           
+  void PublishConditionNumber(double& k, const ros::Publisher& pub);
+
+  // Publish observability direction based on ICP of two ptclds
+  void PublishObservableDirections(const Eigen::Matrix<double, 6, 6>& A);
 
   // The node's name
   std::string name_;
@@ -138,6 +153,8 @@ private:
   ros::Publisher incremental_estimate_pub_;
   ros::Publisher integrated_estimate_pub_;
   ros::Publisher condition_number_pub_;
+  ros::Publisher observability_viz_pub_;
+  ros::Publisher observability_vector_pub_;
 
   // Most recent point cloud time stamp for publishers
   ros::Time stamp_;
@@ -153,6 +170,8 @@ private:
   struct Parameters {    
     // Compute ICP covariance and condition number
     bool compute_icp_covariance;
+    // Compute ICP observability 
+    bool compute_icp_observability;
     // Stop ICP if the transformation from the last iteration was this small
     double tf_epsilon;
     // During ICP, two points won't be considered a correspondence if they are
@@ -164,6 +183,8 @@ private:
     int num_threads;
     // Enable GICP timing information print logs
     bool enable_timing_output;
+    // Radius used when computing ptcld normals 
+    double normal_radius_;
   } params_;
 
   // Maximum acceptable translation and rotation tolerances.
@@ -181,6 +202,13 @@ private:
   pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
+  void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr pcl_normalized,
+                                   const PointNormal::Ptr pcl_normals,
+                                   Eigen::Matrix<double, 6, 6>& Ap);
+
+  void ComputeDiagonalAndUpperRightOfAi(Eigen::Vector3d& a_i,
+                                        Eigen::Vector3d& n_i,
+                                        Eigen::Matrix<double, 6, 6>& A_i);
 };
 
 #endif
