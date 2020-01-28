@@ -4,3 +4,7 @@ lidar_slip:
   filter_size: 1.0 # filter size in seconds (when filtering odom msgs)
   observability_threshold: 0.3 # minimum observability (if lower, classify as slip) 
   max_power: 23 # Condtion number threshod. Values larger than exp(max_power_) incidcate lidar slip.
+  
+  b_use_wio_check: true
+  b_use_condition_number_check: true
+  b_use_observability_check: true

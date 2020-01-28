@@ -123,6 +123,10 @@ class LidarSlipDetection {
   double observability_threshold_;
   std::vector<PoseCovStamped> last_lo_poses_;
   std::vector<PoseCovStamped> last_wo_poses_;
+
+  bool b_use_wio_check_;
+  bool b_use_condition_number_check_;
+  bool b_use_observability_check_;
 };
 
 #endif

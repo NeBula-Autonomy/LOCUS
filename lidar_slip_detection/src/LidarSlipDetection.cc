@@ -82,7 +82,18 @@ bool LidarSlipDetection::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("lidar_slip/filter_size", filter_size_)) return false;
   if (!pu::Get("lidar_slip/observability_threshold", observability_threshold_))
     return false;
+  if (!pu::Get("lidar_slip/b_use_wio_check", b_use_wio_check_)) return false;
+  if (!pu::Get("lidar_slip/b_use_condition_number_check",
+               b_use_condition_number_check_))
+    return false;
+  if (!pu::Get("lidar_slip/b_use_observability_check",
+               b_use_observability_check_))
+    return false;
   // ROS_INFO_STREAM("lidar slip param is: " << slip_threshold_);
+  slip_amount_from_odom_ = 0;  // set to no slip at init (0 slip)
+  condition_number_ = 0;       // set to no slip at init (small cond number)
+  observability_ = observability_threshold_ * 2;
+  // set to no slip (high observability)
   return true;
 }
 
@@ -155,8 +166,28 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
   if (delta_t > ros::Duration(filter_size_)) {
     last_lo_poses_.erase(last_lo_poses_.begin());
   }
-
   PublishLidarSlipAmount(slip_amount_from_odom_, slip_detection_from_odom_);
+
+  // Check for slippage
+  bool slip_status_from_wio = true;
+  bool slip_status_from_cond_number = true;
+  bool slip_status_from_observability = true;
+
+  if (b_use_wio_check_) {
+    if (slip_amount_from_odom_ < slip_threshold_) slip_status_from_wio = false;
+  }
+  if (b_use_condition_number_check_) {
+    if (condition_number_ < 8 * exp(max_power_))
+      slip_status_from_cond_number = false;
+  }
+  if (b_use_observability_check_) {
+    if (observability_ > observability_threshold_)
+      slip_status_from_observability = false;
+  }
+  if (slip_status_from_wio && slip_status_from_cond_number &&
+      slip_status_from_wio)
+    slip_status = true;
+  PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
 }
 
 void LidarSlipDetection::ConditionNumberCallback(
@@ -170,14 +201,6 @@ void LidarSlipDetection::ConditionNumberCallback(
 void LidarSlipDetection::ObservabilityVectorCallback(
     const geometry_msgs::Vector3::ConstPtr& msg) {
   observability_ = abs(msg->x);  // Interested in the slip so forward direction
-
-  // Check for slippage
-  bool slip_status;
-  if (slip_amount_from_odom_ > slip_threshold_ &&
-      condition_number_ > 8 * exp(max_power_) &&
-      observability_ < observability_threshold_)
-    slip_status = true;
-  PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
 }
 
 geometry_utils::Transform3 LidarSlipDetection::GetTransform(
