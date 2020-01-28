@@ -8,11 +8,6 @@
 #include <math.h>
 #include <ros/ros.h>
 
-#include <pose_graph_msgs/KeyedScan.h>
-#include <pose_graph_msgs/PoseGraph.h>
-#include <pose_graph_msgs/PoseGraphEdge.h>
-#include <pose_graph_msgs/PoseGraphNode.h>
-
 #include <gtsam/inference/Key.h>
 #include <gtsam/inference/Symbol.h>
 
@@ -20,14 +15,13 @@
 
 class TestLoFrontend : public ::testing::Test {
   public:
-    TestLoFrontend() :
-      lc(ros::NodeHandle()) {
+    TestLoFrontend() {
       // Set params
     }
     ~TestLoFrontend() {}
 
     
-    TestLoFrontend lo;
+    LoFrontend lo;
 
   protected:
 
@@ -36,8 +30,9 @@ class TestLoFrontend : public ::testing::Test {
 };
 
 TEST_F(TestLoFrontend, TestLoFrontend_init) {
-
+  ros::NodeHandle n("~");
   // initialize
+  lo.Initialize(n, false);
 }
 
 int main(int argc, char** argv) {
