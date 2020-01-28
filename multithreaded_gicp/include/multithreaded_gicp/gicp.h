@@ -41,10 +41,13 @@
 #ifndef MULTITHREADED_GICP_H_
 #define MULTITHREADED_GICP_H_
 
+#include <omp.h>
+
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/bfgs.h>
 #include <ros/ros.h>
+#include <omp.h>
 
 namespace pcl {
   /** \brief GeneralizedIterativeClosestPoint is an ICP variant that implements the 
