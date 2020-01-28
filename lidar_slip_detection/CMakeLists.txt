@@ -7,7 +7,7 @@ project(lidar_slip_detection)
 
 SET(CMAKE_BUILD_TYPE Release)
 
-find_package(PCL REQUIRED COMPONENTS common filters features registration)
+find_package(PCL 1.7 REQUIRED COMPONENTS common filters features registration)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
 endif(NOT PCL_FOUND)
@@ -33,11 +33,6 @@ catkin_package(
     nav_msgs
     tf2_ros
 )
-
-find_package(PCL 1.7 REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
 
 include_directories(
   include
