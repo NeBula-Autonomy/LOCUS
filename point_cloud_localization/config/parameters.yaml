@@ -25,7 +25,7 @@ localization:
   num_threads: 2
 
   # Enable GICP timing output
-  enable_timing_output: true
+  enable_timing_output: false
   
   # Radius for normal search
   normal_search_radius: 10
