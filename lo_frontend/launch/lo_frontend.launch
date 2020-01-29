@@ -50,6 +50,24 @@
       <!-- Point cloud mapper -->
       <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
+      <!-- Threads selection (changes for computational capacity) -->
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky1')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky2')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky3')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky3')" />
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky4')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'telemax1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'telemax1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
+
+
+
     </node>
 
     <!-- Trotthling input cloud -->

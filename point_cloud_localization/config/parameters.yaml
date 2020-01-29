@@ -22,7 +22,7 @@ localization:
   max_rotation: 0.1
 
   # Number of threads GICP can use (3 threads ~ 3x speedup)
-  num_threads: 2
+  # num_threads: 2 - defined in launch files to adapt to robot
 
   # Enable GICP timing output
   enable_timing_output: false
