@@ -436,8 +436,29 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
-   
-  if(b_use_imu_integration_) {
+
+  if (b_use_odometry_integration_) {
+    Odometry odometry_msg;
+    if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
+      odometry_number_of_calls_++;
+      if (odometry_number_of_calls_ > max_number_of_calls_) {
+        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
+        b_use_odometry_integration_ = false;
+        odometry_.DisableOdometryIntegration();
+      }
+      return;
+    }
+    if (!b_odometry_has_been_received_) {
+      ROS_INFO("Receiving odometry for the first time");
+      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+      b_odometry_has_been_received_= true;
+      return;
+    }
+    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+  }
+  else if(b_use_imu_integration_) {
     Imu imu_msg;
     if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
       ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar timestamp");
@@ -465,27 +486,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
     imu_quaternion_previous_ = imu_quaternion;
   }  
-  else if (b_use_odometry_integration_) {
-    Odometry odometry_msg;
-    if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
-      odometry_number_of_calls_++;
-      if (odometry_number_of_calls_ > max_number_of_calls_) {
-        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
-        b_use_odometry_integration_ = false;
-        odometry_.DisableOdometryIntegration();
-      }
-      return;
-    }
-    if (!b_odometry_has_been_received_) {
-      ROS_INFO("Receiving odometry for the first time");
-      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-      b_odometry_has_been_received_= true;
-      return;
-    }
-    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
-    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-  }
   else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_"); 
     return;
