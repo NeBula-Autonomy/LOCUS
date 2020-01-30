@@ -174,6 +174,18 @@ void PointCloudOdometry::EnablePoseStampedIntegration() {
   b_use_pose_stamped_integration_ = true;
 }
 
+void PointCloudOdometry::DisableImuIntegration() {
+  b_use_imu_integration_ = false;
+}
+
+void PointCloudOdometry::DisableOdometryIntegration() {
+  b_use_odometry_integration_ = false;
+}
+
+void PointCloudOdometry::DisablePoseStampedIntegration() {
+  b_use_pose_stamped_integration_ = false;
+}
+
 bool PointCloudOdometry::SetLidar(const PointCloud& points) {
   stamp_.fromNSec(points.header.stamp * 1e3);
   points_ = points;

@@ -445,6 +445,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       if (imu_number_of_calls_ > max_number_of_calls_) {
         ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
         b_use_imu_integration_ = false;
+        odometry_.DisableImuIntegration();
       }
       return;
     }
@@ -472,6 +473,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       if (odometry_number_of_calls_ > max_number_of_calls_) {
         ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
         b_use_odometry_integration_ = false;
+        odometry_.DisableOdometryIntegration();
       }
       return;
     }
