@@ -1,7 +1,7 @@
 localization:
 
   # Compute ICP covariance and condition number
-  compute_icp_covariance: true
+  compute_icp_covariance: false
 
   # Compute ICP observability 
   compute_icp_observability: true
