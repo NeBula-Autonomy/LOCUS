@@ -444,8 +444,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       odometry_number_of_calls_++;
       if (odometry_number_of_calls_ > max_number_of_calls_) {
         ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
-        b_use_odometry_integration_ = false;
-        odometry_.DisableOdometryIntegration();
+        SwitchToImuIntegration();
       }
       return;
     }
@@ -571,4 +570,13 @@ Eigen::Matrix3d LoFrontend::GetImuYawDelta() {
   rot_yaw_mat = Eigen::Matrix3d();
   rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
   return rot_yaw_mat;
+}
+
+void LoFrontend::SwitchToImuIntegration() {
+  ROS_WARN("LoFrontend - SwitchToImuIntegration");
+  b_use_odometry_integration_ = false;
+  odometry_.DisableOdometryIntegration();
+  b_use_imu_integration_ = true;
+  imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
+  odometry_.EnableImuIntegration();
 }

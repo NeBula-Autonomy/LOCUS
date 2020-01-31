@@ -206,11 +206,12 @@ private:
   bool b_is_open_space_;
   int number_of_points_open_space_;
 
-  /* -----------------------------
-  Dynamic hierarchical integration
-  ----------------------------- */
+  /* ----------------------------------
+  Dynamic hierarchical data integration
+  ---------------------------------- */
   
   ros::NodeHandle nl_;
+  void SwitchToImuIntegration();
 
 };
 
