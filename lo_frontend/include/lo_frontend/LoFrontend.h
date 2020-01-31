@@ -63,6 +63,8 @@
 
 class LoFrontend {
 
+  friend class LoFrontendTest;
+
 public:
 
   typedef pcl::PointXYZI Point;

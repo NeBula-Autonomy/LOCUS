@@ -1,38 +1,48 @@
-/**
- *  @brief Testing the LaserLoopClosure class
- *
- */
-
+#include <lo_frontend/LoFrontend.h>
 #include <gtest/gtest.h>
 
-#include <math.h>
-#include <ros/ros.h>
-
-#include <gtsam/inference/Key.h>
-#include <gtsam/inference/Symbol.h>
-
-#include <lo_frontend/LoFrontend.h>
-
-class TestLoFrontend : public ::testing::Test {
+class LoFrontendTest : public ::testing::Test {
+  
   public:
-    TestLoFrontend() {
-      // Set params
-    }
-    ~TestLoFrontend() {}
 
+    LoFrontendTest() {
+
+      system("rosparam load $(rospack find "
+             "lo_frontend)/config/lo_frames.yaml");  
+      system("rosparam load $(rospack find "
+             "lo_frontend)/config/lo_settings.yaml");  
+      system("rosparam load $(rospack find "
+             "lidar_slip_detection)/config/parameters.yaml");   
+      system("rosparam load $(rospack find "
+             "point_cloud_merger)/config/parameters.yaml"); 
+      system("rosparam load $(rospack find "
+             "point_cloud_filter)/config/parameters.yaml"); 
+      system("rosparam load $(rospack find "
+             "point_cloud_odometry)/config/parameters.yaml"); 
+      system("rosparam load $(rospack find "
+             "point_cloud_localization)/config/parameters.yaml"); 
+      system("rosparam load $(rospack find "
+             "point_cloud_mapper)/config/parameters.yaml"); 
+      system("rosparam set icp/num_threads 1");
+      system("rosparam set localization/num_threads 1");
+      
+    }
+
+    ~LoFrontendTest() {}
     
-    LoFrontend lo;
+    LoFrontend lf;
 
   protected:
 
-
   private:
+
 };
 
-TEST_F(TestLoFrontend, TestLoFrontend_init) {
-  ros::NodeHandle n("~");
-  // initialize
-  lo.Initialize(n, false);
+/* TEST Initialize */
+TEST_F(LoFrontendTest, TestInitialize) {
+  ros::NodeHandle nh;
+  bool result = lf.Initialize(nh, false);
+  ASSERT_TRUE(result);
 }
 
 int main(int argc, char** argv) {
