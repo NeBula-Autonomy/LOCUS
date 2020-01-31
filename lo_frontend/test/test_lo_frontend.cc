@@ -33,6 +33,10 @@ class LoFrontendTest : public ::testing::Test {
     LoFrontend lf;
 
   protected:
+    
+    bool SetDataIntegrationMode() {
+      return lf.SetDataIntegrationMode();
+    }
 
   private:
 
@@ -42,6 +46,14 @@ class LoFrontendTest : public ::testing::Test {
 TEST_F(LoFrontendTest, TestInitialize) {
   ros::NodeHandle nh;
   bool result = lf.Initialize(nh, false);
+  ASSERT_TRUE(result);
+}
+
+/* TEST SetDataIntegratioMode*/
+TEST_F(LoFrontendTest, TestSetDataIntegrationMode) {
+  ros::NodeHandle nh;
+  lf.Initialize(nh, false);
+  bool result = SetDataIntegrationMode();
   ASSERT_TRUE(result);
 }
 
