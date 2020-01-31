@@ -198,19 +198,19 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
 bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - RegisterOnlineCallbacks");  
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
-  ros::NodeHandle nl(n);  
-  lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
+  nl_ = ros::NodeHandle(n);
+  lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
   if (b_use_imu_integration_) {
     ROS_INFO("Registering ImuCallback");
-    imu_sub_ = nl.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
+    imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
   }
   if (b_use_odometry_integration_) {
     ROS_INFO("Registering OdometryCallback");
-    odom_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
+    odom_sub_ = nl_.subscribe("ODOM_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
   }  
   if (b_use_pose_stamped_integration_) {
     ROS_INFO("Registering PoseStampedCallback");
-    pose_sub_ = nl.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
+    pose_sub_ = nl_.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
   }    
   return CreatePublishers(n);
 }
