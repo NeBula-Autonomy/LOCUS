@@ -88,6 +88,10 @@ public:
   void EnableOdometryIntegration();
   void EnablePoseStampedIntegration();
 
+  void DisableImuIntegration();
+  void DisableOdometryIntegration();
+  void DisablePoseStampedIntegration();
+
 private:
 
   bool LoadParameters(const ros::NodeHandle& n);

@@ -28,5 +28,5 @@ buffers:
   # 4   ---> pose_stamped integration
 
 data_integration: 
-  mode: 3
+  mode: 1
   max_number_of_calls: 25

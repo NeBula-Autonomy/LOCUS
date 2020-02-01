@@ -489,8 +489,12 @@ void PointCloudLocalization::PublishPose(
     const geometry_utils::Transform3& pose,
     const Eigen::Matrix<double, 6, 6>& covariance,
     const ros::Publisher& pub) {
+
   // Check for subscribers before doing any work
-  if (pub.getNumSubscribers() == 0) return;
+  if (pub.getNumSubscribers() == 0) {
+    ROS_WARN("LoFrontend - PointCloudLocalization - PublishPose - Not publishing any pose as pub.getNumSubscribers() == 0");
+    return;
+  } 
 
   // Convert from gu::Transform3 to ROS's Pose with covariance stamped type and
   // publish
