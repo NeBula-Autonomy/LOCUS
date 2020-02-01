@@ -266,11 +266,43 @@ bool PointCloudOdometry::UpdateICP() {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
     return false;
   }
+
+  /*
+  Odometry incremental estimate update ---------------------------------------------------
+  */
   
-  incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-  incremental_estimate_.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
-                                            T(1, 0), T(1, 1), T(1, 2),
-                                            T(2, 0), T(2, 1), T(2, 2));
+  if (b_is_flat_ground_assumption_) {
+    ROS_INFO("b_is_flat_ground_assumption");
+    // Get rotation from wio delta 
+    auto wio_rotation_w = odometry_delta_.getRotation().getW();
+    auto wio_rotation_x = odometry_delta_.getRotation().getX();
+    auto wio_rotation_y = odometry_delta_.getRotation().getY();
+    auto wio_rotation_z = odometry_delta_.getRotation().getZ();
+    tf::Quaternion wio_quaternion(wio_rotation_x, wio_rotation_y, wio_rotation_z, wio_rotation_w);
+    double wio_roll, wio_pitch, wio_yaw;
+    tf::Matrix3x3(wio_quaternion).getRPY(wio_roll, wio_pitch, wio_yaw);
+    // Get translation from wio delta
+    auto wio_translation_x = odometry_delta_.getOrigin().getX();
+    auto wio_translation_y = odometry_delta_.getOrigin().getY();
+    auto wio_translation_z = odometry_delta_.getOrigin().getZ();
+    // Update odometry incremental transform 
+    incremental_estimate_.translation = gu::Vec3(wio_translation_x, wio_translation_y, 0);
+    incremental_estimate_.rotation    = gu::Rot3(cos(wio_yaw), -sin(wio_yaw), 0, 
+                                                 sin(wio_yaw), cos(wio_yaw), 0,
+                                                 0, 0, 1);      
+  }
+  else {
+    ROS_INFO("Using ICP transforms");
+    incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
+    incremental_estimate_.rotation =    gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                                 T(1, 0), T(1, 1), T(1, 2),
+                                                 T(2, 0), T(2, 1), T(2, 2));
+  }
+  
+  /*
+  Odometry incremental estimate update ---------------------------------------------------
+  */
+
   if (!transform_thresholding_ ||
       (incremental_estimate_.translation.Norm() <= max_translation_ &&
        incremental_estimate_.rotation.ToEulerZYX().Norm() <= max_rotation_)) {
