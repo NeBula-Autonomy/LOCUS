@@ -137,7 +137,9 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
-
+  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
+    return false;
+   
   return true;
 }
 

@@ -162,6 +162,12 @@ private:
   bool b_use_pose_stamped_integration_;
   tf::Transform pose_stamped_delta_;
 
+  /*--------------------
+  Flat ground assumption  
+  --------------------*/
+  
+  bool b_is_flat_ground_assumption_;
+
 };
 
 #endif

@@ -124,6 +124,9 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
 
   pu::Get("b_publish_tfs", b_publish_tfs_);
 
+  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
+    return false;
+
   return true;
 }
 
