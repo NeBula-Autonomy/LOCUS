@@ -265,47 +265,24 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   const Eigen::Matrix4f T = icp_.getFinalTransformation();
   pcl::transformPointCloud(*query, *aligned_query, T);
 
-  /*
-  Localization incremental estimate update ---------------------------------------------------
-  */
-
   gu::Transform3 pose_update;
 
   if (b_is_flat_ground_assumption_) {
-    ROS_INFO("b_is_flat_ground_assumption");
+    ROS_INFO("LoFrontend - PointCloudLocalization - b_is_flat_ground_assumption");
     tf::Matrix3x3 icp_rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
     double icp_roll, icp_pitch, icp_yaw;
     icp_rotation.getRPY(icp_roll, icp_pitch, icp_yaw);
-    Eigen::Matrix3d icp_rotation_yaw;
-    icp_rotation_yaw << cos(icp_yaw), -sin(icp_yaw), 0, sin(icp_yaw), cos(icp_yaw), 0, 0, 0, 1;
     pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
-    pose_update.rotation = gu::Rot3(icp_rotation_yaw(0, 0),
-                                    icp_rotation_yaw(0, 1),
-                                    icp_rotation_yaw(0, 2),
-                                    icp_rotation_yaw(1, 0),
-                                    icp_rotation_yaw(1, 1),
-                                    icp_rotation_yaw(1, 2),
-                                    icp_rotation_yaw(2, 0),
-                                    icp_rotation_yaw(2, 1),
-                                    icp_rotation_yaw(2, 2));   
+    pose_update.rotation = gu::Rot3(cos(icp_yaw), -sin(icp_yaw), 0,
+                                    sin(icp_yaw), cos(icp_yaw), 0, 
+                                    0, 0, 1);   
   }
   else {
-    ROS_INFO("Using ICP transform");
     pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-    pose_update.rotation = gu::Rot3(T(0, 0),
-                                    T(0, 1),
-                                    T(0, 2),
-                                    T(1, 0),
-                                    T(1, 1),
-                                    T(1, 2),
-                                    T(2, 0),
-                                    T(2, 1),
-                                    T(2, 2));
+    pose_update.rotation =    gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                       T(1, 0), T(1, 1), T(1, 2),
+                                       T(2, 0), T(2, 1), T(2, 2));
   }
-
-  /*
-  Localization incremental estimate update ---------------------------------------------------
-  */
   
   // Only update if the transform is small enough
   if (!transform_thresholding_ ||
