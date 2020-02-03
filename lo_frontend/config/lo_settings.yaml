@@ -28,7 +28,7 @@ buffers:
   # 4   ---> pose_stamped integration
 
 data_integration: 
-  mode: 1
+  mode: 3
   max_number_of_calls: 25
 
 b_is_flat_ground_assumption: true

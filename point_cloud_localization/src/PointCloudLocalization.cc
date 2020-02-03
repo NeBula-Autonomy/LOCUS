@@ -507,7 +507,7 @@ void PointCloudLocalization::PublishPose(
     const ros::Publisher& pub) {
 
   // Check for subscribers before doing any work
-  if (pub.getNumSubscribers() == 0) return;  
+  if (pub.getNumSubscribers() == 0) return; 
 
   // Convert from gu::Transform3 to ROS's Pose with covariance stamped type and
   // publish
