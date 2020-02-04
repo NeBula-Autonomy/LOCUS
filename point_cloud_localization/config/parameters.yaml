@@ -4,7 +4,7 @@ localization:
   compute_icp_covariance: false
 
   # Compute ICP observability 
-  compute_icp_observability: true
+  compute_icp_observability: false
 
   # Stop ICP if the transformation from the last iteration was this small.
   tf_epsilon: 0.0000000001
