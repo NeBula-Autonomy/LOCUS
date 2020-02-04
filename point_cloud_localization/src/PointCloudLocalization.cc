@@ -271,14 +271,11 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   gu::Transform3 pose_update;
 
   if (b_is_flat_ground_assumption_) {
-    ROS_INFO("LoFrontend - PointCloudLocalization - b_is_flat_ground_assumption");
-    tf::Matrix3x3 icp_rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
-    double icp_roll, icp_pitch, icp_yaw;
-    icp_rotation.getRPY(icp_roll, icp_pitch, icp_yaw);
+    tf::Matrix3x3 rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    double roll, pitch, yaw;
+    rotation.getRPY(roll, pitch, yaw);
     pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
-    pose_update.rotation = gu::Rot3(cos(icp_yaw), -sin(icp_yaw), 0,
-                                    sin(icp_yaw), cos(icp_yaw), 0, 
-                                    0, 0, 1);   
+    pose_update.rotation = gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);   
   }
   else {
     pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));

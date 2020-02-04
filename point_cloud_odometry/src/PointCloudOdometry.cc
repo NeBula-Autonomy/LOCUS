@@ -268,21 +268,11 @@ bool PointCloudOdometry::UpdateICP() {
   }
   
   if (b_is_flat_ground_assumption_) {
-    ROS_INFO("LoFrontend - PointCloudOdometry - b_is_flat_ground_assumption");
-    auto wio_rotation_w = odometry_delta_.getRotation().getW();
-    auto wio_rotation_x = odometry_delta_.getRotation().getX();
-    auto wio_rotation_y = odometry_delta_.getRotation().getY();
-    auto wio_rotation_z = odometry_delta_.getRotation().getZ();
-    tf::Quaternion wio_quaternion(wio_rotation_x, wio_rotation_y, wio_rotation_z, wio_rotation_w);
-    double wio_roll, wio_pitch, wio_yaw;
-    tf::Matrix3x3(wio_quaternion).getRPY(wio_roll, wio_pitch, wio_yaw);
-    auto wio_translation_x = odometry_delta_.getOrigin().getX();
-    auto wio_translation_y = odometry_delta_.getOrigin().getY();
-    auto wio_translation_z = odometry_delta_.getOrigin().getZ();
-    incremental_estimate_.translation = gu::Vec3(wio_translation_x, wio_translation_y, 0);
-    incremental_estimate_.rotation    = gu::Rot3(cos(wio_yaw), -sin(wio_yaw), 0, 
-                                                 sin(wio_yaw), cos(wio_yaw), 0,
-                                                 0, 0, 1);      
+    tf::Matrix3x3 rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    double roll, pitch, yaw;
+    rotation.getRPY(roll, pitch, yaw);
+    incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
+    incremental_estimate_.rotation = gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);      
   }
   else {
     incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
