@@ -336,6 +336,12 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
+void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO_STREAM("PointCloudLocalization - SetFlatGroundAssumptionValue - Received: " << value);
+  b_is_flat_ground_assumption_ = value;
+  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+}
+
 void PointCloudLocalization::ComputeIcpObservability(
     const PointCloud::Ptr& new_cloud,
     const PointCloud::Ptr& old_cloud,
@@ -670,11 +676,4 @@ void PointCloudLocalization::ComputeDiagonalAndUpperRightOfAi(
   A_i.block(0, 0, 3, 3) = ai_cross_ni * (ai_cross_ni.transpose());
   A_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
   A_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
-}
-
-
-void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
-  ROS_INFO_STREAM("PointCloudLocalization - SetFlatGroundAssumptionValue - Received: " << value);
-  b_is_flat_ground_assumption_ = value;
-  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
 }
