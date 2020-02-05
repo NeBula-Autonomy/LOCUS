@@ -125,6 +125,8 @@ class PointCloudLocalization {
 
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsLocalization_;
+
+  void SetFlatGroundAssumptionValue(const bool& value);
  
 private:
 

@@ -582,7 +582,9 @@ void LoFrontend::SwitchToImuIntegration() {
   odometry_.EnableImuIntegration();
 }
 
-void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& value) {
+void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
   ROS_INFO("LoFrontend - FlatGroundAssumptionCallback");
-  std::cout << "Received " << value << std::endl;
+  std::cout << "Received " << bool_msg.data << std::endl;
+  odometry_.SetFlatGroundAssumptionValue(bool_msg.data);
+  localization_.SetFlatGroundAssumptionValue(bool_msg.data);
 }

@@ -327,3 +327,9 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
   ros_pose.header.stamp = stamp_;
   pub.publish(ros_pose);
 }
+
+void PointCloudOdometry::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO("PointCloudOdometry - SetFlatGroundAssumptionValue");
+  std::cout << "received: " << value << std::endl;
+  b_is_flat_ground_assumption_ = value;
+}

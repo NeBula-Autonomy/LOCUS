@@ -92,6 +92,8 @@ public:
   void DisableOdometryIntegration();
   void DisablePoseStampedIntegration();
 
+  void SetFlatGroundAssumptionValue(const bool& value); 
+
 private:
 
   bool LoadParameters(const ros::NodeHandle& n);

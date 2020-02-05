@@ -671,3 +671,10 @@ void PointCloudLocalization::ComputeDiagonalAndUpperRightOfAi(
   A_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
   A_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
 }
+
+
+void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO("PointCloudLocalization - SetFlatGroundAssumptionValue");
+  std::cout << "received: " << value << std::endl;
+  b_is_flat_ground_assumption_ = value;
+}
