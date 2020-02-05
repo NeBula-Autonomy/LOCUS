@@ -329,8 +329,7 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
 }
 
 void PointCloudOdometry::SetFlatGroundAssumptionValue(const bool& value) {
-  ROS_INFO("PointCloudOdometry - SetFlatGroundAssumptionValue");
-  std::cout << "received: " << value << std::endl;
+  ROS_INFO_STREAM("PointCloudOdometry - SetFlatGroundAssumptionValue - Received: " << value);
   b_is_flat_ground_assumption_ = value;
   if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
 }
