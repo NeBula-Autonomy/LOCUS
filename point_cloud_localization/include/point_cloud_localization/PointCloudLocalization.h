@@ -209,6 +209,13 @@ private:
   void ComputeDiagonalAndUpperRightOfAi(Eigen::Vector3d& a_i,
                                         Eigen::Vector3d& n_i,
                                         Eigen::Matrix<double, 6, 6>& A_i);
+
+  /*--------------------
+  Flat ground assumption  
+  --------------------*/
+
+  bool b_is_flat_ground_assumption_;
+
 };
 
 #endif
