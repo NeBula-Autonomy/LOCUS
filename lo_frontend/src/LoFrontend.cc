@@ -211,7 +211,8 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   if (b_use_pose_stamped_integration_) {
     ROS_INFO("Registering PoseStampedCallback");
     pose_sub_ = nl_.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
-  }    
+  }  
+  fga_sub_ = nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);  
   return CreatePublishers(n);
 }
 
@@ -579,4 +580,9 @@ void LoFrontend::SwitchToImuIntegration() {
   b_use_imu_integration_ = true;
   imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
   odometry_.EnableImuIntegration();
+}
+
+void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& value) {
+  ROS_INFO("LoFrontend - FlatGroundAssumptionCallback");
+  std::cout << "Received " << value << std::endl;
 }
