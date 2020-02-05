@@ -14,8 +14,7 @@
   <group ns="$(arg robot_namespace)">
   
     <!-- Laser-Odometry -->
-    <node launch-prefix="gdb -ex 'set print thread-events off' -ex run --args"
-          pkg="lo_frontend"
+    <node pkg="lo_frontend"
           name="lo_frontend"
           type="lo_frontend_node"
           output="screen">
@@ -26,7 +25,7 @@
       <!-- Topics -->
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
       <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
-      <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom_integrated"/>
+      <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom"/>
       <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
       <param name="robot_name" value="$(arg robot_namespace)"/>

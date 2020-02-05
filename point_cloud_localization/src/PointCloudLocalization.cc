@@ -36,6 +36,7 @@
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <chrono>
 #include <point_cloud_localization/utils.h>
+#include <tf/transform_datatypes.h>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -61,6 +62,7 @@ bool PointCloudLocalization::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
+  
   // Load frame ids
   if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
   if (!pu::Get("frame_id/base", base_frame_id_)) return false;
@@ -83,7 +85,6 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
     b_have_fiducial = false;
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
-
   if (!b_have_fiducial) {
     ROS_WARN("Can't find fiducials, using origin");
   }
@@ -101,30 +102,40 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
 
   // Load algorithm parameters
-  if (!pu::Get("localization/compute_icp_covariance",
-               params_.compute_icp_covariance))
+  if (!pu::Get("localization/compute_icp_covariance", params_.compute_icp_covariance))
     return false;
-  if (!pu::Get("localization/compute_icp_observability",
-               params_.compute_icp_observability))
+  if (!pu::Get("localization/compute_icp_observability", params_.compute_icp_observability))
     return false;
-  if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) return false;
-  if (!pu::Get("localization/corr_dist", params_.corr_dist)) return false;
-  if (!pu::Get("localization/iterations", params_.iterations)) return false;
+  if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) 
+    return false;
+  if (!pu::Get("localization/corr_dist", params_.corr_dist)) 
+    return false;
+  if (!pu::Get("localization/iterations", params_.iterations)) 
+    return false;
   if (!pu::Get("localization/transform_thresholding", transform_thresholding_))
     return false;
   if (!pu::Get("localization/num_threads", params_.num_threads)) 
     return false;
   if (!pu::Get("localization/enable_timing_output", params_.enable_timing_output)) 
     return false;
-  if (!pu::Get("localization/max_translation", max_translation_)) return false;
-  if (!pu::Get("localization/max_rotation", max_rotation_)) return false;
+  if (!pu::Get("localization/max_translation", max_translation_)) 
+    return false;
+  if (!pu::Get("localization/max_rotation", max_rotation_)) 
+    return false;
   if (!pu::Get("localization/normal_search_radius", params_.normal_radius_))
     return false;
-  // if (!pu::Get("localization/max_power", max_power_)) return false;
+  /*
+  if (!pu::Get("localization/max_power", max_power_)) 
+    return false;
+  */
 
   pu::Get("b_publish_tfs", b_publish_tfs_);
 
+  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
+    return false;
+
   return true;
+  
 }
 
 bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
@@ -160,7 +171,7 @@ const gu::Transform3& PointCloudLocalization::GetIntegratedEstimate() const {
 void PointCloudLocalization::SetIntegratedEstimate(
     const gu::Transform3& integrated_estimate) {
   integrated_estimate_ = integrated_estimate;
-  // Publish transform between fixed frame and localization frame.
+  // Publish transform between fixed frame and localization frame
   if (b_publish_tfs_) {
     geometry_msgs::TransformStamped tf;
     tf.transform = gr::ToRosTransform(integrated_estimate_);
@@ -171,8 +182,7 @@ void PointCloudLocalization::SetIntegratedEstimate(
   }
 }
 
-bool PointCloudLocalization::MotionUpdate(
-    const gu::Transform3& incremental_odom) {
+bool PointCloudLocalization::MotionUpdate(const gu::Transform3& incremental_odom) {
   // Store the incremental transform from odometry
   incremental_estimate_ = incremental_odom;
   return true;
@@ -186,7 +196,7 @@ bool PointCloudLocalization::TransformPointsToFixedFrame(
     return false;
   }
 
-  // Compose the current incremental estimate (from odometry) with the
+  // Compose current incremental estimate from odometry with the
   // integrated estimate, and transform the incoming point cloud
   const gu::Transform3 estimate =
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
@@ -210,7 +220,7 @@ bool PointCloudLocalization::TransformPointsToSensorFrame(
     return false;
   }
 
-  // Compose the current incremental estimate (from odometry) with the
+  // Compose current incremental estimate from odometry with the
   // integrated estimate, then invert to go from world to sensor frame
   const gu::Transform3 estimate = gu::PoseInverse(
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_));
@@ -254,25 +264,26 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   icp_.align(icpAlignedPointsLocalization_);
   icpFitnessScore_ = icp_.getFitnessScore();
 
-  // ROS_INFO_STREAM("ICP Fitness score in
-  // PointCloudLocalization::MeasurementUpdate is " << icpFitnessScore_);
-
   // Retrieve transformation and estimate and update
   const Eigen::Matrix4f T = icp_.getFinalTransformation();
   pcl::transformPointCloud(*query, *aligned_query, T);
 
   gu::Transform3 pose_update;
-  pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-  pose_update.rotation = gu::Rot3(T(0, 0),
-                                  T(0, 1),
-                                  T(0, 2),
-                                  T(1, 0),
-                                  T(1, 1),
-                                  T(1, 2),
-                                  T(2, 0),
-                                  T(2, 1),
-                                  T(2, 2));
 
+  if (b_is_flat_ground_assumption_) {
+    tf::Matrix3x3 rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    double roll, pitch, yaw;
+    rotation.getRPY(roll, pitch, yaw);
+    pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
+    pose_update.rotation = gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);   
+  }
+  else {
+    pose_update.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
+    pose_update.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                    T(1, 0), T(1, 1), T(1, 2),
+                                    T(2, 0), T(2, 1), T(2, 2));
+  }
+  
   // Only update if the transform is small enough
   if (!transform_thresholding_ ||
       (pose_update.translation.Norm() <= max_translation_ &&
@@ -286,8 +297,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
         pose_update.rotation.ToEulerZYX().Norm());
   }
 
-  integrated_estimate_ =
-      gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
+  integrated_estimate_ = gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
 
   Eigen::Matrix<double, 6, 6> icp_covariance;
   icp_covariance = Eigen::Matrix<double, 6, 6>::Zero();
@@ -332,6 +342,7 @@ void PointCloudLocalization::ComputeIcpObservability(
     Eigen::Matrix<double, 6, 6>* eigenvectors_ptr,
     Eigen::Matrix<double, 6, 1>* eigenvalues_ptr,
     Eigen::Matrix<double, 6, 6>* A_ptr) {
+  
   // Get normals
   PointNormal::Ptr new_normals(new PointNormal);   // pc with normals
   PointNormal::Ptr old_normals(new PointNormal);   // pc with normals
@@ -352,6 +363,7 @@ void PointCloudLocalization::ComputeIcpObservability(
   ComputeAp_ForPoint2PlaneICP(new_normalized, new_normals, Ap);
   doEigenDecomp6x6(Ap, *eigenvalues_ptr, *eigenvectors_ptr);
   *A_ptr = Ap;
+
 }
 
 bool PointCloudLocalization::ComputeICPCovariance(
@@ -466,6 +478,7 @@ bool PointCloudLocalization::ComputeICPCovariance(
     // cloud
     H += J.transpose() * J;
   }
+  
   covariance = H.inverse() * icpFitnessScore_;
 
   // Compute the SVD of the covariance matrix

@@ -137,7 +137,9 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
-
+  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
+    return false;
+   
   return true;
 }
 
@@ -265,10 +267,20 @@ bool PointCloudOdometry::UpdateICP() {
     return false;
   }
   
-  incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-  incremental_estimate_.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
-                                            T(1, 0), T(1, 1), T(1, 2),
-                                            T(2, 0), T(2, 1), T(2, 2));
+  if (b_is_flat_ground_assumption_) {
+    tf::Matrix3x3 rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    double roll, pitch, yaw;
+    rotation.getRPY(roll, pitch, yaw);
+    incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
+    incremental_estimate_.rotation = gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);      
+  }
+  else {
+    incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
+    incremental_estimate_.rotation =    gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                                 T(1, 0), T(1, 1), T(1, 2),
+                                                 T(2, 0), T(2, 1), T(2, 2));
+  }
+
   if (!transform_thresholding_ ||
       (incremental_estimate_.translation.Norm() <= max_translation_ &&
        incremental_estimate_.rotation.ToEulerZYX().Norm() <= max_rotation_)) {
