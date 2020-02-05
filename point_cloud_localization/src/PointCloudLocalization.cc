@@ -674,7 +674,7 @@ void PointCloudLocalization::ComputeDiagonalAndUpperRightOfAi(
 
 
 void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
-  ROS_INFO("PointCloudLocalization - SetFlatGroundAssumptionValue");
-  std::cout << "received: " << value << std::endl;
+  ROS_INFO_STREAM("PointCloudLocalization - SetFlatGroundAssumptionValue - Received: " << value);
   b_is_flat_ground_assumption_ = value;
+  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
 }
