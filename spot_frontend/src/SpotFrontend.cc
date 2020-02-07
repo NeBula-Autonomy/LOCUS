@@ -84,6 +84,10 @@ bool SpotFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
   }
+  if (!SetDataIntegrationMode()) {
+    ROS_ERROR("Failed to set data integration mode");
+    return false;
+  }
   if (!RegisterCallbacks(n, from_log)) {
     ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
     return false;
