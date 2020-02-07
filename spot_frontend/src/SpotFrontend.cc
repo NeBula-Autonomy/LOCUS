@@ -119,6 +119,8 @@ bool SpotFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("buffers/odometry_buffer_size_limit", odometry_buffer_size_limit_))
     return false;
+  if(!pu::Get("data_integration/mode", data_integration_mode_))
+    return false;
   if(!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
     return false;
   return true;
