@@ -1,13 +1,108 @@
 <launch>
 
-  <group ns="$(arg robot_namespace)">
+  <arg name="robot_namespace" default="robot"/>
 
+  <arg name="pc_input" default="foo"/>
+
+  <!-- Velodyne topic throttle params -->
+  <arg name="vlp_throttle_freq" default="10.0"/><!-- Hz -->
+  <arg name="pc_trans_in_1" default="velodyne_points/transformed"/>
+
+  <group ns="$(arg robot_namespace)">
+  
+    <!-- Laser-Odometry -->
     <node pkg="spot_frontend"
           name="spot_frontend"
           type="spot_frontend_node"
           output="screen">
+
+      <!-- tf pub -->
+      <param name="b_publish_tfs" value="false"/>
+
+      <!-- Topics -->
+      <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
+      <remap from="~ODOM_TOPIC" to="visual_odom"/>
+
+      <param name="robot_name" value="$(arg robot_namespace)"/>
+      <param name="tf_prefix" value="$(arg robot_namespace)"/>
+
+      <!-- Settings -->
+      <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
+
+      <!-- Frames -->
+      <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
+
+      <!-- Point cloud filter -->
+      <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
+
+      <!-- Point cloud odometry -->
+      <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>
+
+      <!-- Point cloud localization -->
+      <rosparam file="$(find point_cloud_localization)/config/parameters.yaml"/>
+
+      <!-- Point cloud mapper -->
+      <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
+
+      <!-- Threads selection (changes for computational capacity) -->
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky1')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky2')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky3')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky3')" />
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky4')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'telemax1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'telemax1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
+
+    </node>
+  
+    <!-- Transform to base_link frame -->
+    <node pkg="nodelet" type="nodelet" name="transform_points_base_link" args="standalone pcl/PassThrough">
+      <remap from="~input" to="velodyne_points"/>
+      <remap from="~output" to="$(arg pc_trans_in_1)"/>
+      <rosparam subst_value="true">
+        filter_field_name: z
+        filter_limit_min: -100
+        filter_limit_max: 100
+        output_frame: $(arg robot_namespace)/base_link
+      </rosparam>
     </node>
 
-   </group>
+    <!-- Downsample -->
+    <node pkg="nodelet" type="nodelet" name="pcl_manager_lo" args="manager" output="screen" respawn="true"/>
+    <node pkg="nodelet" type="nodelet" name="voxel_grid_lo" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
+    <remap from="~input" to="velodyne_points/transformed" />
+    <remap from="~output" to="foo" />
+    <rosparam subst_value="true">
+      filter_field_name: z
+      filter_limit_min: -100
+      filter_limit_max: 100
+      filter_limit_negative: False
+      leaf_size: 0.1
+      output_frame: $(arg robot_namespace)/base_link
+      </rosparam>
+    </node>
 
+    <!-- Convert output PoseStamped message to Odometry -->
+    <node pkg="topic_tools" type="transform" name="pose_to_odom"
+          respawn="true" output="screen"
+          args="/$(arg robot_namespace)/spot_frontend/localization_integrated_estimate
+                /$(arg robot_namespace)/spot_frontend/odometry
+                nav_msgs/Odometry
+                'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
+    </node>
+
+  </group>
+
+  <!-- Slip detector -->
+  <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
+    <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+  </include>
+  
 </launch>
