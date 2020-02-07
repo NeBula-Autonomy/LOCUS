@@ -1,0 +1,13 @@
+<launch>
+
+  <group ns="$(arg robot_namespace)">
+
+    <node pkg="spot_frontend"
+          name="spot_frontend"
+          type="spot_frontend_node"
+          output="screen">
+    </node>
+
+   </group>
+
+</launch>
