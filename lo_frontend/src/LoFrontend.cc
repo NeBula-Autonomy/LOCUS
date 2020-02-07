@@ -443,11 +443,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
       odometry_number_of_calls_++;
       if (odometry_number_of_calls_ > max_number_of_calls_) {
-        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
+        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls");
         SwitchToImuIntegration();
       }
       return;
     }
+    odometry_number_of_calls_ = 0;
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
       tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
@@ -463,12 +464,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar timestamp");
       imu_number_of_calls_++;
       if (imu_number_of_calls_ > max_number_of_calls_) {
-        ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls - TODO: Robustify with consecutiveness-check");
+        ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls");
         b_use_imu_integration_ = false;
         odometry_.DisableImuIntegration();
       }
       return;
     }
+    imu_number_of_calls_ = 0;
     auto imu_quaternion = GetImuQuaternion(imu_msg);
     if (!b_imu_has_been_received_) {
       ROS_INFO("Receiving imu for the first time");
