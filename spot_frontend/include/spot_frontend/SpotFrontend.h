@@ -164,7 +164,13 @@ private:
 
   bool b_is_open_space_;
   int number_of_points_open_space_;
-  
+
+  /* -------------------------------------------
+  Handle lower rate of spot visual odometry data
+  ------------------------------------------- */
+
+  tf2_ros::Buffer spot_odometry_buffer_;
+
 };
 
 #endif 
