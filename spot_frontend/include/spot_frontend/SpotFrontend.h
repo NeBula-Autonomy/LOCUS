@@ -34,14 +34,44 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
+/* ---------------------------------
+Boston Dynamics Spot Custom Frontend 
+--------------------------------- */
+
 #ifndef LO_FRONTEND_SPOT_FRONTEND_H
 #define LO_FRONTEND_SPOT_FRONTEND_H
 
+#include <chrono>
+#include <math.h>
 #include <ros/ros.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <geometry_utils/GeometryUtilsROS.h>
+#include <geometry_utils/Transform3.h>
+#include <parameter_utils/ParameterUtils.h>
+#include <point_cloud_filter/PointCloudFilter.h>
+#include <point_cloud_odometry/PointCloudOdometry.h>
+#include <point_cloud_localization/PointCloudLocalization.h>
+#include <point_cloud_mapper/PointCloudMapper.h>
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Rot3.h>
+#include <core_msgs/PoseAndScan.h>
+#include <std_msgs/Time.h>
+#include <nav_msgs/Odometry.h>
+#include <core_msgs/PoseAndScan.h>
+#include <visualization_msgs/Marker.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
 
 class SpotFrontend {
 
 public:
+
+  typedef pcl::PointXYZI Point;
+  typedef pcl::PointCloud<Point> PointCloud;
+  typedef nav_msgs::Odometry Odometry; 
+  typedef std::map<double, Odometry> OdometryBuffer;         
+  typedef Odometry::ConstPtr OdometryConstPtr;
 
   SpotFrontend();
   ~SpotFrontend();
@@ -51,6 +81,89 @@ public:
 private:
 
   std::string name_;
+  bool b_verbose_;
+
+  bool LoadParameters(const ros::NodeHandle& n);
+  bool RegisterCallbacks(const ros::NodeHandle& n, bool from_log);
+  bool RegisterLogCallbacks(const ros::NodeHandle& n);
+  bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
+  bool CreatePublishers(const ros::NodeHandle& n);
+
+  ros::Subscriber lidar_sub_;  
+  ros::Subscriber odom_sub_;  
+  ros::Publisher base_frame_pcld_pub_; 
+
+  void LidarCallback(const PointCloud::ConstPtr& msg);
+  void OdometryCallback(const OdometryConstPtr& odometry_msg);
+
+  int lidar_queue_size_; 
+  int odom_queue_size_; 
+
+  OdometryBuffer odometry_buffer_;
+  int odometry_buffer_size_limit_;
+
+  template <typename T1, typename T2>
+  bool InsertMsgInBuffer(const T1& msg, T2& buffer);
+
+  template <typename T>
+  int CheckBufferSize(const T& buffer) const;
+
+  template <typename T1, typename T2>
+  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const;   
+
+  double translation_threshold_kf_;
+  double rotation_threshold_kf_;
+  bool b_add_first_scan_to_key_;
+
+  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;   
+  geometry_utils::Transform3 last_keyframe_pose_;      
+
+  std::string fixed_frame_id_; 
+  std::string base_frame_id_; 
+
+  // TODO: Check VO, KO to be expressed in base_link frame
+  
+  PointCloudFilter filter_;
+  PointCloudOdometry odometry_;
+  PointCloudLocalization localization_; 
+  PointCloudMapper mapper_;   
+
+  bool b_publish_map_;
+  int counter_;
+  int map_publishment_meters_;
+  
+  bool b_pcld_received_;
+  int pcld_seq_prev_;
+
+  PointCloud::Ptr msg_filtered_;
+  PointCloud::Ptr msg_transformed_;
+  PointCloud::Ptr msg_neighbors_;
+  PointCloud::Ptr msg_base_;
+  PointCloud::Ptr msg_fixed_;
+  PointCloud::Ptr mapper_unused_fixed_;
+  PointCloud::Ptr mapper_unused_out_;
+
+  /*--------------
+  Data integration 
+  --------------*/
+
+  bool SetDataIntegrationMode();
+  int data_integration_mode_;
+  int max_number_of_calls_;
+
+  // Odometry
+  bool b_use_odometry_integration_;
+  bool b_odometry_has_been_received_;
+  int odometry_number_of_calls_;
+  tf::Transform odometry_pose_previous_;
+  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+
+  /*-----------------
+  Open space detector
+  ------------------*/
+
+  bool b_is_open_space_;
+  int number_of_points_open_space_;
   
 };
 
