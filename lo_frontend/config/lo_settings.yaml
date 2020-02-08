@@ -31,4 +31,4 @@ data_integration:
   mode: 3
   max_number_of_calls: 25
 
-b_is_flat_ground_assumption: true
+b_is_flat_ground_assumption: false
