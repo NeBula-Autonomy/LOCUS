@@ -301,6 +301,12 @@ bool PointCloudOdometry::UpdateICP() {
 
 }
 
+void PointCloudOdometry::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO_STREAM("PointCloudOdometry - SetFlatGroundAssumptionValue - Received: " << value);
+  b_is_flat_ground_assumption_ = value;
+  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+}
+
 const gu::Transform3& PointCloudOdometry::GetIncrementalEstimate() const {
   return incremental_estimate_;
 }
