@@ -57,7 +57,8 @@ SpotFrontend::SpotFrontend():
   b_use_odometry_integration_(false), 
   odometry_number_of_calls_(0), 
   b_odometry_has_been_received_(false),
-  b_is_open_space_(false) {}
+  b_is_open_space_(false), 
+  tf_buffer_authority_("transform_odometry") {}
 
 SpotFrontend::~SpotFrontend() {}
 

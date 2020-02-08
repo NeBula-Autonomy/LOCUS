@@ -170,6 +170,7 @@ private:
   ------------------------------------------- */
 
   tf2_ros::Buffer spot_odometry_buffer_;
+  const std::string tf_buffer_authority_;   
 
 };
 
