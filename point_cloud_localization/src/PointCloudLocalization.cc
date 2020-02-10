@@ -124,6 +124,8 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("localization/normal_search_radius", params_.normal_radius_))
     return false;
+  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
+    return false;
   /*
   if (!pu::Get("localization/max_power", max_power_)) 
     return false;
@@ -131,8 +133,7 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
 
   pu::Get("b_publish_tfs", b_publish_tfs_);
 
-  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
-    return false;
+  
 
   return true;
   
@@ -334,6 +335,12 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   }
 
   return true;
+}
+
+void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO_STREAM("PointCloudLocalization - SetFlatGroundAssumptionValue - Received: " << value);
+  b_is_flat_ground_assumption_ = value;
+  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
 }
 
 void PointCloudLocalization::ComputeIcpObservability(
