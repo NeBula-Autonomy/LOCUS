@@ -296,10 +296,8 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if (b_use_odometry_integration_) {
     Odometry odometry_msg;
 
-    // Get interpolated spot odometry transform at lidar stamp from tf2_ros::Buffer
-    geometry_msgs::TransformStamped spot_odometry_transform;
-    spot_odometry_transform = spot_odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
-    // TODO: Change interfaces
+    // Get interpolated VO at lidar stamp from tf2_ros::Buffer - TODO: Change interfaces
+    auto spot_odometry_transform = spot_odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
 
     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
