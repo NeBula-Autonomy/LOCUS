@@ -34,10 +34,6 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-/* ---------------------------------
-Boston Dynamics Spot Custom Frontend 
---------------------------------- */
-
 #include <spot_frontend/SpotFrontend.h>
 
 namespace pu = parameter_utils;
@@ -58,7 +54,9 @@ SpotFrontend::SpotFrontend():
   odometry_number_of_calls_(0), 
   b_odometry_has_been_received_(false),
   b_is_open_space_(false), 
-  tf_buffer_authority_("transform_odometry") {}
+  tf_buffer_authority_("transform_odometry"),
+  odometry_frame_("odometry_frame"), 
+  lidar_frame_("lidar_frame") {}
 
 SpotFrontend::~SpotFrontend() {}
 
@@ -297,6 +295,12 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_use_odometry_integration_) {
     Odometry odometry_msg;
+
+    // Get interpolated spot odometry transform at lidar stamp from tf2_ros::Buffer
+    geometry_msgs::TransformStamped spot_odometry_transform;
+    spot_odometry_transform = spot_odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
+    // TODO: Change interfaces
+
     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
       odometry_number_of_calls_++;
@@ -364,4 +368,19 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }  
   
+}
+
+void SpotFrontend::NewOdometryCallback(const OdometryConstPtr& odometry_msg) {
+  if (b_verbose_) ROS_INFO("SpotFrontend - NewOdometryCallback - TODO: FIFO"); 
+  geometry_msgs::TransformStamped odometry;
+  geometry_msgs::Vector3 t;
+  t.x = odometry_msg->pose.pose.position.x;
+  t.y = odometry_msg->pose.pose.position.y;
+  t.z = odometry_msg->pose.pose.position.z; 
+  odometry.transform.translation = t;
+  odometry.transform.rotation = odometry_msg->pose.pose.orientation;
+  odometry.header = odometry_msg->header;
+  odometry.header.frame_id = odometry_frame_;
+  odometry.child_frame_id = lidar_frame_;
+  spot_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
 }

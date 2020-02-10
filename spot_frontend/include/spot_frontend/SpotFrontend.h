@@ -34,10 +34,6 @@
  * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
  */
 
-/* ---------------------------------
-Boston Dynamics Spot Custom Frontend 
---------------------------------- */
-
 #ifndef LO_FRONTEND_SPOT_FRONTEND_H
 #define LO_FRONTEND_SPOT_FRONTEND_H
 
@@ -169,8 +165,11 @@ private:
   Handle lower rate of spot visual odometry data
   ------------------------------------------- */
 
+  void NewOdometryCallback(const OdometryConstPtr& odometry_msg);
   tf2_ros::Buffer spot_odometry_buffer_;
   const std::string tf_buffer_authority_;   
+  const std::string odometry_frame_;
+  const std::string lidar_frame_;
 
 };
 
