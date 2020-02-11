@@ -54,10 +54,17 @@
 #include <core_msgs/PoseAndScan.h>
 #include <std_msgs/Time.h>
 #include <nav_msgs/Odometry.h>
-#include <core_msgs/PoseAndScan.h>
 #include <visualization_msgs/Marker.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+#include <tf/message_filter.h>
+#include <tf2_ros/message_filter.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
+#include <message_filters/subscriber.h>
+#include <sensor_msgs/PointCloud2.h>
 
 class SpotFrontend {
 
@@ -116,8 +123,6 @@ private:
 
   std::string fixed_frame_id_; 
   std::string base_frame_id_; 
-
-  // TODO: Check VO, KO to be expressed in base_link frame
   
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
