@@ -97,7 +97,7 @@ private:
   ros::Publisher base_frame_pcld_pub_; 
 
   void LidarCallback(const PointCloud::ConstPtr& msg);
-  void OdometryCallback(const OdometryConstPtr& odometry_msg);
+  void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
 
   int lidar_queue_size_; 
   int odom_queue_size_; 
@@ -164,7 +164,6 @@ private:
   Handle lower rate of spot visual odometry data
   ------------------------------------------- */
 
-  void NewOdometryCallback(const OdometryConstPtr& odometry_msg);
   tf2_ros::Buffer spot_odometry_buffer_;
   const std::string tf_buffer_authority_;   
   const std::string odometry_frame_;

@@ -165,7 +165,6 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
   lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this);
   if (b_use_odometry_integration_) {
-    ROS_INFO("Registering OdometryCallback");
     odom_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
   }  
   return CreatePublishers(n);
@@ -178,8 +177,19 @@ bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
-void SpotFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
-  ROS_INFO("SpotFrontend - OdometryCallback - To be implemented");   
+void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg) {
+  if (b_verbose_) ROS_INFO("SpotFrontend - OdometryCallback"); 
+  geometry_msgs::TransformStamped odometry;
+  geometry_msgs::Vector3 t;
+  t.x = odometry_msg->pose.pose.position.x;
+  t.y = odometry_msg->pose.pose.position.y;
+  t.z = odometry_msg->pose.pose.position.z; 
+  odometry.transform.translation = t;
+  odometry.transform.rotation = odometry_msg->pose.pose.orientation;
+  odometry.header = odometry_msg->header;
+  odometry.header.frame_id = odometry_frame_;
+  odometry.child_frame_id = lidar_frame_;
+  spot_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
 }
 
 gtsam::Pose3 SpotFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
@@ -311,19 +321,4 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }  
   
-}
-
-void SpotFrontend::NewOdometryCallback(const OdometryConstPtr& odometry_msg) {
-  if (b_verbose_) ROS_INFO("SpotFrontend - NewOdometryCallback - TODO: FIFO"); 
-  geometry_msgs::TransformStamped odometry;
-  geometry_msgs::Vector3 t;
-  t.x = odometry_msg->pose.pose.position.x;
-  t.y = odometry_msg->pose.pose.position.y;
-  t.z = odometry_msg->pose.pose.position.z; 
-  odometry.transform.translation = t;
-  odometry.transform.rotation = odometry_msg->pose.pose.orientation;
-  odometry.header = odometry_msg->header;
-  odometry.header.frame_id = odometry_frame_;
-  odometry.child_frame_id = lidar_frame_;
-  spot_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
 }
