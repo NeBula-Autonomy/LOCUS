@@ -105,14 +105,8 @@ private:
   OdometryBuffer odometry_buffer_;
   int odometry_buffer_size_limit_;
 
-  template <typename T1, typename T2>
-  bool InsertMsgInBuffer(const T1& msg, T2& buffer);
-
   template <typename T>
   int CheckBufferSize(const T& buffer) const;
-
-  template <typename T1, typename T2>
-  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const;   
 
   double translation_threshold_kf_;
   double rotation_threshold_kf_;

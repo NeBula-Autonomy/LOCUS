@@ -179,13 +179,7 @@ bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void SpotFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
-  if (b_verbose_) ROS_INFO("SpotFrontend - OdometryCallback"); 
-  if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
-      odometry_buffer_.erase(odometry_buffer_.begin());
-  }   
-  if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) {
-      ROS_WARN("SpotFrontend - OdometryCallback - Unable to store message in buffer");
-  }
+  ROS_INFO("SpotFrontend - OdometryCallback - To be implemented");   
 }
 
 gtsam::Pose3 SpotFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
@@ -206,63 +200,10 @@ gtsam::Pose3 SpotFrontend::ToGtsam(const geometry_utils::Transform3& pose) const
   return gtsam::Pose3(r, t);
 }
 
-template <typename T1, typename T2>
-bool SpotFrontend::InsertMsgInBuffer(const T1& msg, T2& buffer) {
-  if(b_verbose_) ROS_INFO("SpotFrontend - InsertMsgInBuffer");  
-  auto initial_size = buffer.size();    
-  auto current_time = msg->header.stamp.toSec();    
-  buffer.insert({current_time, *msg});
-  auto final_size = buffer.size();    
-  if (final_size == (initial_size+1)) {
-    return true;
-  }
-  else {
-    return false; 
-  }
-}
-
 template <typename T>
 int SpotFrontend::CheckBufferSize(const T& buffer) const {
   if(b_verbose_) ROS_INFO("SpotFrontend - ChechBufferSize");    
   return buffer.size();
-}
-
-template <typename T1, typename T2>
-bool SpotFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const {
-  if (b_verbose_) ROS_INFO("SpotFrontend - GetMsgAtTime"); 
-  if (buffer.size() == 0) {
-    return false;
-  }
-  auto itrTime = buffer.lower_bound(stamp.toSec());
-  auto time2 = itrTime->first;
-  double time_diff;    
-  if (itrTime == buffer.begin()) {
-    msg = itrTime->second;
-    time_diff = itrTime->first - stamp.toSec();
-    ROS_WARN("itrTime points to buffer begin");
-  }
-  else if (itrTime == buffer.end()) {
-    itrTime--;
-    msg = itrTime->second;
-    time_diff = stamp.toSec() - itrTime->first;
-    ROS_WARN("itrTime points to buffer end");
-  }
-  else {
-    double time1 = std::prev(itrTime, 1)->first;
-    if (time2 - stamp.toSec() < stamp.toSec() - time1) {
-      msg = itrTime->second;
-      time_diff = time2 - stamp.toSec();
-    } 
-    else {
-      msg = std::prev(itrTime, 1)->second;
-      time_diff = stamp.toSec() - time1;
-    }
-  }
-  if (fabs(time_diff) > 0.1) {
-    ROS_WARN("fabs(time_diff) > 0.1 : returing false");      
-    return false;
-  }     
-  return true; 
 }
 
 tf::Transform SpotFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
@@ -293,12 +234,11 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
+  /*
+
+  // TODO: This will be replaced by tf based interpolation of Visual Odometry data
   if (b_use_odometry_integration_) {
     Odometry odometry_msg;
-
-    // Get interpolated VO at lidar stamp from tf2_ros::Buffer - TODO: Change interfaces
-    auto spot_odometry_transform = spot_odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
-
     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
       odometry_number_of_calls_++;
@@ -318,7 +258,12 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
   }
-  
+
+  // TODO: Change interfaces
+  auto spot_odometry_transform = spot_odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
+
+  */
+ 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
   
