@@ -53,6 +53,7 @@
 #include <gtsam/geometry/Rot3.h>
 #include <core_msgs/PoseAndScan.h>
 #include <std_msgs/Time.h>
+#include <std_msgs/Bool.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <core_msgs/PoseAndScan.h>
@@ -214,6 +215,13 @@ private:
   
   ros::NodeHandle nl_;
   void SwitchToImuIntegration();
+
+  /* -------------------------
+  Flat Ground Assumption (FGA)
+  ------------------------- */
+
+  ros::Subscriber fga_sub_;
+  void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
 
 };
 

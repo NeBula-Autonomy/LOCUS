@@ -337,6 +337,12 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   return true;
 }
 
+void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO_STREAM("PointCloudLocalization - SetFlatGroundAssumptionValue - Received: " << value);
+  b_is_flat_ground_assumption_ = value;
+  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+}
+
 void PointCloudLocalization::ComputeIcpObservability(
     const PointCloud::Ptr& new_cloud,
     const PointCloud::Ptr& old_cloud,
