@@ -164,20 +164,17 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("SpotFrontend - RegisterOnlineCallbacks");  
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
   ros::NodeHandle nl(n);
-
-  // Change the way to register Subscribers and Callbacks
+  // New way to register subscribers and callbacks with message filters
   odometry_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
   lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
   lidar_odometry_filter_ = new tf2_ros::MessageFilter<sensor_msgs::PointCloud2>(lidar_sub_, odometry_buffer_, "spot1/odom", 10, nl); 
   lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));
-  
-  // lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallbackOld, this);
-  // if (b_use_odometry_integration_) {
-  //   odometry_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
-  // }  
-
+  /*
+  // TODO: For now we assume that VO integration is baseline when running spot
+  lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallbackOld, this);
+  if (b_use_odometry_integration_) odometry_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
+  */
   return CreatePublishers(n);
-
 }
 
 bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
@@ -188,7 +185,7 @@ bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg) {
-  if (b_verbose_) ROS_INFO("SpotFrontend - OdometryCallback"); 
+  ROS_INFO("SpotFrontend - OdometryCallback"); 
   geometry_msgs::TransformStamped odometry;
   geometry_msgs::Vector3 t;
   t.x = odometry_msg->pose.pose.position.x;
@@ -202,43 +199,10 @@ void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry
   odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
 }
 
-gtsam::Pose3 SpotFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
-  if(b_verbose_) ROS_INFO("SpotFrontend - ToGtsam");
-  gtsam::Vector3 t;
-  t(0) = pose.translation(0);
-  t(1) = pose.translation(1);
-  t(2) = pose.translation(2);
-  gtsam::Rot3 r(pose.rotation(0, 0),
-                pose.rotation(0, 1),
-                pose.rotation(0, 2),
-                pose.rotation(1, 0),
-                pose.rotation(1, 1),
-                pose.rotation(1, 2),
-                pose.rotation(2, 0),
-                pose.rotation(2, 1),
-                pose.rotation(2, 2));
-  return gtsam::Pose3(r, t);
-}
-
-template <typename T>
-int SpotFrontend::CheckBufferSize(const T& buffer) const {
-  if(b_verbose_) ROS_INFO("SpotFrontend - ChechBufferSize");    
-  return buffer.size();
-}
-
-tf::Transform SpotFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
-  tf::Transform odometry_pose;
-  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-  auto odometry_delta = odometry_pose_previous_.inverseTimes(odometry_pose);
-  return odometry_delta;
-}
-
-void SpotFrontend::LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &lidar_msg) {
+void SpotFrontend::LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &msg) {
   ROS_INFO("SpotFrontend - LidarCallback");
-}
 
-void SpotFrontend::LidarCallbackOld(const PointCloud::ConstPtr& msg) {  
-  if (b_verbose_) ROS_INFO("SpotFrontend - LidarCallbackOld"); 
+
 
   if(!b_pcld_received_) {
     pcld_seq_prev_ = msg->header.seq;
@@ -250,16 +214,24 @@ void SpotFrontend::LidarCallbackOld(const PointCloud::ConstPtr& msg) {
     }
     pcld_seq_prev_ = msg->header.seq;
   }
+  
+
 
   auto number_of_points = msg->width;
   if (number_of_points > number_of_points_open_space_) b_is_open_space_ = true;
-  else b_is_open_space_ = false;  
-  
-  auto msg_stamp = msg->header.stamp;
-  ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
+  else b_is_open_space_ = false; 
+
+
+  auto stamp = msg->header.stamp;
+
+  ROS_INFO_STREAM("Received lidar msg stamp is: " << stamp);
+
+}
+
+void SpotFrontend::LidarCallbackOld(const PointCloud::ConstPtr& msg) {  
+  ROS_INFO("TO be deleted");
 
   /*
-
   // TODO: This will be replaced by tf based interpolation of Visual Odometry data
   if (b_use_odometry_integration_) {
     Odometry odometry_msg;
@@ -285,54 +257,86 @@ void SpotFrontend::LidarCallbackOld(const PointCloud::ConstPtr& msg) {
 
   // TODO: Change interfaces
   auto spot_odometry_transform = odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
-
   */
- 
-  filter_.Filter(msg, msg_filtered_, b_is_open_space_);
-  odometry_.SetLidar(*msg_filtered_);
-  
-  if (!odometry_.UpdateEstimate()) {
-    b_add_first_scan_to_key_ = true;
-  }
 
-  if (b_add_first_scan_to_key_) {
-    localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-    mapper_.InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
-    localization_.UpdateTimestamp(stamp);
-    localization_.PublishPoseNoUpdate();
-    b_add_first_scan_to_key_ = false;
-    last_keyframe_pose_ = localization_.GetIntegratedEstimate();
-    return;
-  }  
+  //////////////////////////////////////////////////////////////////////////
 
-  localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
-  localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-  mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
-  localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
-  localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
-  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
-  gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
+  // filter_.Filter(msg, msg_filtered_, b_is_open_space_);
+  // odometry_.SetLidar(*msg_filtered_);
   
-  if (delta.translation().norm()>translation_threshold_kf_ ||
-      fabs(2*acos(delta.rotation().toQuaternion().w()))>rotation_threshold_kf_) {
-    if(b_verbose_) ROS_INFO_STREAM("Adding to map with translation " << delta.translation().norm() << " and rotation " << 2*acos(delta.rotation().toQuaternion().w())*180.0/M_PI << " deg");
-    localization_.MotionUpdate(gu::Transform3::Identity());
-    localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
-    mapper_.InsertPoints(msg_fixed_, mapper_unused_out_.get());
-    if(b_publish_map_) {
-      counter_++;   
-      if (counter_==map_publishment_meters_) { 
-        mapper_.PublishMap();
-        counter_ = 0;
-      }
-    } 
-    last_keyframe_pose_ = current_pose;
-  }
+  // if (!odometry_.UpdateEstimate()) {
+  //   b_add_first_scan_to_key_ = true;
+  // }
 
-  if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
-    PointCloud base_frame_pcld = *msg;
-    base_frame_pcld.header.frame_id = base_frame_id_;
-    base_frame_pcld_pub_.publish(base_frame_pcld);
-  }  
+  // if (b_add_first_scan_to_key_) {
+  //   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
+  //   mapper_.InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
+  //   localization_.UpdateTimestamp(stamp);
+  //   localization_.PublishPoseNoUpdate();
+  //   b_add_first_scan_to_key_ = false;
+  //   last_keyframe_pose_ = localization_.GetIntegratedEstimate();
+  //   return;
+  // }  
+
+  // localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
+  // localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
+  // mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
+  // localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
+  // localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
+  // geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
+  // gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   
+  // if (delta.translation().norm()>translation_threshold_kf_ ||
+  //     fabs(2*acos(delta.rotation().toQuaternion().w()))>rotation_threshold_kf_) {
+  //   if(b_verbose_) ROS_INFO_STREAM("Adding to map with translation " << delta.translation().norm() << " and rotation " << 2*acos(delta.rotation().toQuaternion().w())*180.0/M_PI << " deg");
+  //   localization_.MotionUpdate(gu::Transform3::Identity());
+  //   localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
+  //   mapper_.InsertPoints(msg_fixed_, mapper_unused_out_.get());
+  //   if(b_publish_map_) {
+  //     counter_++;   
+  //     if (counter_==map_publishment_meters_) { 
+  //       mapper_.PublishMap();
+  //       counter_ = 0;
+  //     }
+  //   } 
+  //   last_keyframe_pose_ = current_pose;
+  // }
+
+  // if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
+  //   PointCloud base_frame_pcld = *msg;
+  //   base_frame_pcld.header.frame_id = base_frame_id_;
+  //   base_frame_pcld_pub_.publish(base_frame_pcld);
+  // }  
+  
+}
+
+tf::Transform SpotFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
+  tf::Transform odometry_pose;
+  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
+  auto odometry_delta = odometry_pose_previous_.inverseTimes(odometry_pose);
+  return odometry_delta;
+}
+
+template <typename T>
+int SpotFrontend::CheckBufferSize(const T& buffer) const {
+  if(b_verbose_) ROS_INFO("SpotFrontend - ChechBufferSize");    
+  return buffer.size();
+}
+
+gtsam::Pose3 SpotFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
+  if(b_verbose_) ROS_INFO("SpotFrontend - ToGtsam");
+  gtsam::Vector3 t;
+  t(0) = pose.translation(0);
+  t(1) = pose.translation(1);
+  t(2) = pose.translation(2);
+  gtsam::Rot3 r(pose.rotation(0, 0),
+                pose.rotation(0, 1),
+                pose.rotation(0, 2),
+                pose.rotation(1, 0),
+                pose.rotation(1, 1),
+                pose.rotation(1, 2),
+                pose.rotation(2, 0),
+                pose.rotation(2, 1),
+                pose.rotation(2, 2));
+  return gtsam::Pose3(r, t);
 }

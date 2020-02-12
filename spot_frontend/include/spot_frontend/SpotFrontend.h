@@ -116,7 +116,7 @@ private:
   const std::string tf_buffer_authority_;   
 
   void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
-  void LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &lidar_msg);
+  void LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &msg);
   
   void LidarCallbackOld(const PointCloud::ConstPtr& msg);
 
