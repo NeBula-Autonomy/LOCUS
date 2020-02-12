@@ -84,6 +84,14 @@ public:
 private:
 
   std::string name_;
+
+  std::string fixed_frame_id_; 
+  std::string base_frame_id_; 
+
+  const std::string odometry_frame_;
+  const std::string lidar_frame_;
+  const std::string inertial_frame_;
+
   bool b_verbose_;
 
   bool LoadParameters(const ros::NodeHandle& n);
@@ -92,18 +100,29 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  ros::Subscriber lidar_sub_;  
-  ros::Subscriber odom_sub_;  
-  ros::Publisher base_frame_pcld_pub_; 
+  // -------------------------------------------------------------------------
 
-  void LidarCallback(const PointCloud::ConstPtr& msg);
-  void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
+  ros::Subscriber odometry_sub_;  
+  tf2_ros::Buffer odometry_buffer_;
+
+  message_filters::Subscriber<sensor_msgs::PointCloud2> lidar_sub_;
+  tf2_ros::MessageFilter<sensor_msgs::PointCloud2> *lidar_odometry_filter_;
 
   int lidar_queue_size_; 
   int odom_queue_size_; 
 
-  OdometryBuffer odometry_buffer_;
   int odometry_buffer_size_limit_;
+
+  const std::string tf_buffer_authority_;   
+
+  void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
+  void LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &lidar_msg);
+  
+  void LidarCallbackOld(const PointCloud::ConstPtr& msg);
+
+  // -------------------------------------------------------------------------
+
+  ros::Publisher base_frame_pcld_pub_; 
 
   template <typename T>
   int CheckBufferSize(const T& buffer) const;
@@ -114,9 +133,6 @@ private:
 
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;   
   geometry_utils::Transform3 last_keyframe_pose_;      
-
-  std::string fixed_frame_id_; 
-  std::string base_frame_id_; 
   
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
@@ -159,15 +175,6 @@ private:
 
   bool b_is_open_space_;
   int number_of_points_open_space_;
-
-  /* -------------------------------------------
-  Handle lower rate of spot visual odometry data
-  ------------------------------------------- */
-
-  tf2_ros::Buffer spot_odometry_buffer_;
-  const std::string tf_buffer_authority_;   
-  const std::string odometry_frame_;
-  const std::string lidar_frame_;
 
 };
 

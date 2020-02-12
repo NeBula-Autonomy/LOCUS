@@ -56,7 +56,8 @@ SpotFrontend::SpotFrontend():
   b_is_open_space_(false), 
   tf_buffer_authority_("transform_odometry"),
   odometry_frame_("odometry_frame"), 
-  lidar_frame_("lidar_frame") {}
+  lidar_frame_("lidar_frame"), 
+  inertial_frame_("inertial_frame") {}
 
 SpotFrontend::~SpotFrontend() {}
 
@@ -163,11 +164,20 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("SpotFrontend - RegisterOnlineCallbacks");  
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
   ros::NodeHandle nl(n);
-  lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this);
-  if (b_use_odometry_integration_) {
-    odom_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
-  }  
+
+  // Change the way to register Subscribers and Callbacks
+  odometry_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
+  lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
+  lidar_odometry_filter_ = new tf2_ros::MessageFilter<sensor_msgs::PointCloud2>(lidar_sub_, odometry_buffer_, "spot1/odom", 10, nl); 
+  lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));
+  
+  // lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallbackOld, this);
+  // if (b_use_odometry_integration_) {
+  //   odometry_sub_ = nl.subscribe("ODOM_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
+  // }  
+
   return CreatePublishers(n);
+
 }
 
 bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
@@ -187,9 +197,9 @@ void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry
   odometry.transform.translation = t;
   odometry.transform.rotation = odometry_msg->pose.pose.orientation;
   odometry.header = odometry_msg->header;
-  odometry.header.frame_id = odometry_frame_;
-  odometry.child_frame_id = lidar_frame_;
-  spot_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
+  odometry.header.frame_id = "spot1/odom";
+  odometry.child_frame_id = "spot1/base_link";
+  odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
 }
 
 gtsam::Pose3 SpotFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
@@ -223,8 +233,12 @@ tf::Transform SpotFrontend::GetOdometryDelta(const Odometry& odometry_msg) const
   return odometry_delta;
 }
 
-void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
-  if (b_verbose_) ROS_INFO("SpotFrontend - LidarCallback"); 
+void SpotFrontend::LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &lidar_msg) {
+  ROS_INFO("SpotFrontend - LidarCallback");
+}
+
+void SpotFrontend::LidarCallbackOld(const PointCloud::ConstPtr& msg) {  
+  if (b_verbose_) ROS_INFO("SpotFrontend - LidarCallbackOld"); 
 
   if(!b_pcld_received_) {
     pcld_seq_prev_ = msg->header.seq;
@@ -270,7 +284,7 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   // TODO: Change interfaces
-  auto spot_odometry_transform = spot_odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
+  auto spot_odometry_transform = odometry_buffer_.lookupTransform(odometry_frame_, lidar_frame_, stamp);
 
   */
  
