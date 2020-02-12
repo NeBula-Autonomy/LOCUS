@@ -86,10 +86,7 @@ private:
   std::string name_;
   std::string fixed_frame_id_; 
   std::string base_frame_id_;
-   
-  const std::string odometry_frame_;
-  const std::string lidar_frame_;
-  const std::string inertial_frame_;
+  std::string bd_odom_frame_id_;
 
   bool b_verbose_;
 

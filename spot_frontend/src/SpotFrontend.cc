@@ -54,10 +54,7 @@ SpotFrontend::SpotFrontend():
   odometry_number_of_calls_(0), 
   b_odometry_has_been_received_(false),
   b_is_open_space_(false), 
-  tf_buffer_authority_("transform_odometry"),
-  odometry_frame_("odometry_frame"), 
-  lidar_frame_("lidar_frame"), 
-  inertial_frame_("inertial_frame") {}
+  tf_buffer_authority_("transform_odometry") {}
 
 SpotFrontend::~SpotFrontend() {}
 
@@ -113,6 +110,8 @@ bool SpotFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("frame_id/base", base_frame_id_))
     return false;
+  if (!pu::Get("frame_id/bd_odometry", bd_odom_frame_id_))
+    return false;
   if (!pu::Get("queues/lidar_queue_size", lidar_queue_size_)) 
     return false;
   if (!pu::Get("queues/odom_queue_size", odom_queue_size_))
@@ -166,7 +165,7 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
   odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
   lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
-  lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, "spot1/odom", 10, nl); // TODO: Get robot_namespace
+  lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, bd_odom_frame_id_, 10, nl); 
   lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
   return CreatePublishers(n);
 }
@@ -214,7 +213,7 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_use_odometry_integration_) {
     // TODO: Deactivate if VO dies
-    auto t = odometry_buffer_.lookupTransform("spot1/odom", "spot1/base_link", stamp);
+    auto t = odometry_buffer_.lookupTransform(bd_odom_frame_id_, base_frame_id_, stamp);
     tf::Transform tf_transform;
     tf::Vector3 tf_translation;
     tf::Quaternion tf_quaternion;
