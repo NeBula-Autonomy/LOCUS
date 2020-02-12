@@ -53,6 +53,7 @@
 #include <gtsam/geometry/Rot3.h>
 #include <core_msgs/PoseAndScan.h>
 #include <std_msgs/Time.h>
+#include <std_msgs/Bool.h>
 #include <nav_msgs/Odometry.h>
 #include <visualization_msgs/Marker.h>
 #include <tf/transform_listener.h>
@@ -164,7 +165,14 @@ private:
 
   bool b_is_open_space_;
   int number_of_points_open_space_;
-  
+
+  /*--------------------
+  Flat Ground Assumption
+  --------------------*/
+
+  ros::Subscriber fga_sub_;
+  void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
+    
 };
 
 #endif 
