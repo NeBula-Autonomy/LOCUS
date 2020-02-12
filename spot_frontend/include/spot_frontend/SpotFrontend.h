@@ -84,10 +84,9 @@ public:
 private:
 
   std::string name_;
-
   std::string fixed_frame_id_; 
-  std::string base_frame_id_; 
-
+  std::string base_frame_id_;
+   
   const std::string odometry_frame_;
   const std::string lidar_frame_;
   const std::string inertial_frame_;
@@ -105,8 +104,8 @@ private:
   ros::Subscriber odometry_sub_;  
   tf2_ros::Buffer odometry_buffer_;
 
-  message_filters::Subscriber<sensor_msgs::PointCloud2> lidar_sub_;
-  tf2_ros::MessageFilter<sensor_msgs::PointCloud2> *lidar_odometry_filter_;
+  message_filters::Subscriber<PointCloud> lidar_sub_;
+  tf2_ros::MessageFilter<PointCloud> *lidar_odometry_filter_;
 
   int lidar_queue_size_; 
   int odom_queue_size_; 
@@ -116,9 +115,7 @@ private:
   const std::string tf_buffer_authority_;   
 
   void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
-  void LidarCallback(const sensor_msgs::PointCloud2::ConstPtr &msg);
-  
-  void LidarCallbackOld(const PointCloud::ConstPtr& msg);
+  void LidarCallback(const PointCloud::ConstPtr& msg);
 
   // -------------------------------------------------------------------------
 

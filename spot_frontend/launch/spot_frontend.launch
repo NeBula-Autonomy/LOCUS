@@ -21,7 +21,7 @@
 
       <!-- Topics -->
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
-      <remap from="~ODOM_TOPIC" to="visual_odom"/>
+      <remap from="~ODOMETRY_TOPIC" to="visual_odom"/>
 
       <param name="robot_name" value="$(arg robot_namespace)"/>
       <param name="tf_prefix" value="$(arg robot_namespace)"/>
@@ -55,8 +55,8 @@
       <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
       <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'telemax1')" />
       <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'telemax1')" />
-      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
-      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'spot1')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'spot1')" />
       <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
       <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
 
@@ -87,15 +87,6 @@
       leaf_size: 0.1
       output_frame: $(arg robot_namespace)/base_link
       </rosparam>
-    </node>
-
-    <!-- Convert output PoseStamped message to Odometry -->
-    <node pkg="topic_tools" type="transform" name="pose_to_odom"
-          respawn="true" output="screen"
-          args="/$(arg robot_namespace)/spot_frontend/localization_integrated_estimate
-                /$(arg robot_namespace)/spot_frontend/odometry
-                nav_msgs/Odometry
-                'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
     </node>
 
   </group>
