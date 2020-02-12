@@ -179,7 +179,6 @@ bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg) {
-  ROS_INFO("SpotFrontend - OdometryCallback"); 
   geometry_msgs::TransformStamped odometry;
   geometry_msgs::Vector3 t;
   t.x = odometry_msg->pose.pose.position.x;
@@ -194,7 +193,6 @@ void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry
 }
 
 void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
-  ROS_INFO("LoFrontend - LidarCallback"); 
 
   if(!b_pcld_received_) {
     pcld_seq_prev_ = msg->header.seq;
@@ -236,9 +234,7 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
  
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
-
-  ROS_INFO("Calling UpdateEstimate on odometry_"); 
-  
+ 
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
   }
