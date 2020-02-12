@@ -221,6 +221,30 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
+
+  // VO integration --------------------------------------------------------------------
+  if (b_use_odometry_integration_) {
+    auto t = odometry_buffer_.lookupTransform("spot1/odom", "spot1/base_link", stamp);
+    // TODO: Deactivate if VO dies
+    // Convert geometry_msgs::TransformStamped to tf::Transform
+    tf::Transform tf_transform;
+    tf::Vector3 tf_translation;
+    tf::Quaternion tf_quaternion;
+    tf::vector3MsgToTF(t.transform.translation, tf_translation);
+    tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion);
+    tf_transform.setOrigin(tf_translation);
+    tf_transform.setRotation(tf_quaternion);
+    if (!b_odometry_has_been_received_) {
+      ROS_INFO("Receiving odometry for the first time");
+      // Store odometry_pose_previous 
+      odometry_pose_previous_ = tf_transform;  
+      b_odometry_has_been_received_= true;
+      return;
+    }
+    odometry_.SetOdometryDelta(GetOdometryDelta(tf_transform)); 
+    odometry_pose_previous_ = tf_transform;
+  }
+  // ---------------------------------------------------------------------------------
  
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
@@ -273,122 +297,8 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   
 }
 
-
-
-
-// void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-//   ROS_INFO("SpotFrontend - LidarCallback");
-
-//   if(!b_pcld_received_) {
-//     pcld_seq_prev_ = msg->header.seq;
-//     b_pcld_received_ = true;
-//   }
-//   else {
-//     if(msg->header.seq!=pcld_seq_prev_+1) {
-//       ROS_WARN("Lidar scan dropped");
-//     }
-//     pcld_seq_prev_ = msg->header.seq;
-//   }
-
-//   auto number_of_points = msg->width;
-//   if (number_of_points > number_of_points_open_space_) b_is_open_space_ = true;
-//   else b_is_open_space_ = false; 
-
-//   auto msg_stamp = msg->header.stamp;
-//   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
-
-//   // Do I have data in this pointcloud? 
-
-//   std::cout << "Number of points in received scan: " << number_of_points << std::endl;
-
-
-//   // Retrieve interpolated visual odometry data from tf2_ros::Buffer given Lidar timestamp - TODO: Change Interfaces
-//   // auto transform = odometry_buffer_.lookupTransform("spot1/odom", "spot1/base_link", stamp);
-//   // std::cout << "Interpolated VO data at Lidar query timestamp: " << transform << std::endl;
-
-//   /*
-//   ///////////////////////// VISUAL ODOMETRY INTEGRATION //////////////////////////
-
-//   // TODO: This will be replaced by tf based interpolation of Visual Odometry data
-
-//   if (b_use_odometry_integration_) {
-//     Odometry odometry_msg;
-//     if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-//       ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
-//       odometry_number_of_calls_++;
-//       if (odometry_number_of_calls_ > max_number_of_calls_) {
-//         ROS_WARN("Deactivating odometry_integration in SpotFrontend as odometry_number_of_calls > max_number_of_calls");
-//         b_use_odometry_integration_ = false;
-//       }
-//       return;
-//     }
-//     odometry_number_of_calls_ = 0;
-//     if (!b_odometry_has_been_received_) {
-//       ROS_INFO("Receiving odometry for the first time");
-//       tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-//       b_odometry_has_been_received_= true;
-//       return;
-//     }
-//     odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
-//     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-//   }
-
-//   */
-
-//   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
-//   odometry_.SetLidar(*msg_filtered_);
-  
-//   if (!odometry_.UpdateEstimate()) {
-//     b_add_first_scan_to_key_ = true;
-//   }
-
-//   if (b_add_first_scan_to_key_) {
-//     localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-//     mapper_.InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
-//     localization_.UpdateTimestamp(stamp);
-//     localization_.PublishPoseNoUpdate();
-//     b_add_first_scan_to_key_ = false;
-//     last_keyframe_pose_ = localization_.GetIntegratedEstimate();
-//     return;
-//   }  
-
-//   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
-//   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-//   mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
-//   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
-//   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
-//   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
-//   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
-  
-//   if (delta.translation().norm()>translation_threshold_kf_ ||
-//       fabs(2*acos(delta.rotation().toQuaternion().w()))>rotation_threshold_kf_) {
-//     if(b_verbose_) ROS_INFO_STREAM("Adding to map with translation " << delta.translation().norm() << " and rotation " << 2*acos(delta.rotation().toQuaternion().w())*180.0/M_PI << " deg");
-//     localization_.MotionUpdate(gu::Transform3::Identity());
-//     localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
-//     mapper_.InsertPoints(msg_fixed_, mapper_unused_out_.get());
-//     if(b_publish_map_) {
-//       counter_++;   
-//       if (counter_==map_publishment_meters_) { 
-//         mapper_.PublishMap();
-//         counter_ = 0;
-//       }
-//     } 
-//     last_keyframe_pose_ = current_pose;
-//   }
-
-//   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
-//     PointCloud base_frame_pcld = *msg;
-//     base_frame_pcld.header.frame_id = base_frame_id_;
-//     base_frame_pcld_pub_.publish(base_frame_pcld);
-//   }  
-
-// }
-
-tf::Transform SpotFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
-  tf::Transform odometry_pose;
-  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-  auto odometry_delta = odometry_pose_previous_.inverseTimes(odometry_pose);
-  return odometry_delta;
+tf::Transform SpotFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
+  return odometry_pose_previous_.inverseTimes(odometry_pose);;
 }
 
 template <typename T>

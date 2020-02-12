@@ -164,7 +164,7 @@ private:
   bool b_odometry_has_been_received_;
   int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
-  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+  tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
 
   /*-----------------
   Open space detector
@@ -172,7 +172,7 @@ private:
 
   bool b_is_open_space_;
   int number_of_points_open_space_;
-
+  
 };
 
 #endif 
