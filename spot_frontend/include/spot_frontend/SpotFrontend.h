@@ -72,10 +72,7 @@ class SpotFrontend {
 public:
 
   typedef pcl::PointXYZI Point;
-  typedef pcl::PointCloud<Point> PointCloud;
-  typedef nav_msgs::Odometry Odometry; 
-  typedef std::map<double, Odometry> OdometryBuffer;         
-  typedef Odometry::ConstPtr OdometryConstPtr;
+  typedef pcl::PointCloud<Point> PointCloud;    
 
   SpotFrontend();
   ~SpotFrontend();
@@ -88,6 +85,7 @@ private:
   std::string fixed_frame_id_; 
   std::string base_frame_id_;
   std::string bd_odom_frame_id_;
+  const std::string tf_buffer_authority_;   
 
   bool b_verbose_;
 
@@ -102,12 +100,9 @@ private:
   message_filters::Subscriber<PointCloud> lidar_sub_;
   tf2_ros::MessageFilter<PointCloud> *lidar_odometry_filter_;
 
-  int lidar_queue_size_; 
   int odom_queue_size_; 
-
+  int lidar_queue_size_;  
   int odometry_buffer_size_limit_;
-
-  const std::string tf_buffer_authority_;   
 
   void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
   void LidarCallback(const PointCloud::ConstPtr& msg);
@@ -152,7 +147,6 @@ private:
   int data_integration_mode_;
   int max_number_of_calls_;
 
-  // Odometry
   bool b_use_odometry_integration_;
   bool b_odometry_has_been_received_;
   int odometry_number_of_calls_;
