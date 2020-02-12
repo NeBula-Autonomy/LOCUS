@@ -99,11 +99,8 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  // -------------------------------------------------------------------------
-
   ros::Subscriber odometry_sub_;  
   tf2_ros::Buffer odometry_buffer_;
-
   message_filters::Subscriber<PointCloud> lidar_sub_;
   tf2_ros::MessageFilter<PointCloud> *lidar_odometry_filter_;
 
@@ -116,8 +113,6 @@ private:
 
   void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg);
   void LidarCallback(const PointCloud::ConstPtr& msg);
-
-  // -------------------------------------------------------------------------
 
   ros::Publisher base_frame_pcld_pub_; 
 

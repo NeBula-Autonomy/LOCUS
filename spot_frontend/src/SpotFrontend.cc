@@ -164,18 +164,10 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("SpotFrontend - RegisterOnlineCallbacks");  
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
   ros::NodeHandle nl(n);
-  // New way to register subscribers and callbacks with message filters
-  odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this); 
-  
+  odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
   lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
   lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, "spot1/odom", 10, nl); 
-  lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));
-  
-  /*
-  // TODO: For now we assume that VO integration is baseline when running spot
-  lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallbackOld, this);
-  if (b_use_odometry_integration_) odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
-  */
+  lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
   return CreatePublishers(n);
 }
 
@@ -222,11 +214,9 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
-  // VO integration --------------------------------------------------------------------
   if (b_use_odometry_integration_) {
-    auto t = odometry_buffer_.lookupTransform("spot1/odom", "spot1/base_link", stamp);
     // TODO: Deactivate if VO dies
-    // Convert geometry_msgs::TransformStamped to tf::Transform
+    auto t = odometry_buffer_.lookupTransform("spot1/odom", "spot1/base_link", stamp);
     tf::Transform tf_transform;
     tf::Vector3 tf_translation;
     tf::Quaternion tf_quaternion;
@@ -236,7 +226,6 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     tf_transform.setRotation(tf_quaternion);
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
-      // Store odometry_pose_previous 
       odometry_pose_previous_ = tf_transform;  
       b_odometry_has_been_received_= true;
       return;
@@ -244,7 +233,6 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     odometry_.SetOdometryDelta(GetOdometryDelta(tf_transform)); 
     odometry_pose_previous_ = tf_transform;
   }
-  // ---------------------------------------------------------------------------------
  
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
