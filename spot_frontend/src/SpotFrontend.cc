@@ -166,7 +166,7 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
   odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
   lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
-  lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, "spot1/odom", 10, nl); 
+  lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, "spot1/odom", 10, nl); // TODO: Get robot_namespace
   lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
   return CreatePublishers(n);
 }
@@ -187,8 +187,8 @@ void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry
   odometry.transform.translation = t;
   odometry.transform.rotation = odometry_msg->pose.pose.orientation;
   odometry.header = odometry_msg->header;
-  odometry.header.frame_id = "spot1/odom";
-  odometry.child_frame_id = "spot1/base_link";
+  odometry.header.frame_id = odometry_msg->header.frame_id;
+  odometry.child_frame_id = odometry_msg->child_frame_id;
   odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
 }
 
