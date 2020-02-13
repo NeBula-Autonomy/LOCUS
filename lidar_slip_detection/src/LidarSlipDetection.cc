@@ -184,8 +184,7 @@ void LidarSlipDetection::LidarOdometryCallback(const Odometry::ConstPtr& msg) {
     if (observability_ > observability_threshold_)
       slip_status_from_observability = false;
   }
-  if (slip_status_from_wio && slip_status_from_cond_number &&
-      slip_status_from_wio)
+  if (slip_status_from_observability && slip_status_from_wio)
     slip_status = true;
   PublishLidarSlipStatus(slip_status, lidar_slip_status_pub_);
 }
