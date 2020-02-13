@@ -3,6 +3,8 @@ b_verbose: false
 translation_threshold_kf: 1.0 
 rotation_threshold_kf: 0.3 
 
+number_of_points_open_space: 9999999 # Dsiabled - baseline to use is: 11000
+
 map_publishment: 
   b_publish_map: true
   meters: 1
@@ -28,3 +30,5 @@ buffers:
 data_integration: 
   mode: 3
   max_number_of_calls: 25
+
+b_is_flat_ground_assumption: true

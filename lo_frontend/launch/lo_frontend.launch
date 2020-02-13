@@ -14,19 +14,19 @@
   <group ns="$(arg robot_namespace)">
   
     <!-- Laser-Odometry -->
-    <node launch-prefix="gdb -ex run --args"
+    <node launch-prefix="gdb -ex 'set print thread-events off' -ex run --args"
           pkg="lo_frontend"
           name="lo_frontend"
           type="lo_frontend_node"
           output="screen">
-
+      
       <!-- tf pub -->
       <param name="b_publish_tfs" value="false"/>
 
       <!-- Topics -->
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
       <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
-      <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom"/>
+      <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom_integrated"/>
       <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
       <param name="robot_name" value="$(arg robot_namespace)"/>
@@ -49,6 +49,24 @@
 
       <!-- Point cloud mapper -->
       <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
+
+      <!-- Threads selection (changes for computational capacity) -->
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky1')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky2')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky3')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky3')" />
+      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky4')" />
+      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'telemax1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'telemax1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
+
+
 
     </node>
 

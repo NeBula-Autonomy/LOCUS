@@ -59,6 +59,8 @@ bool PointCloudFilter::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("filtering/decimate_percentage", params_.decimate_percentage))
     return false;
+  if (!pu::Get("filtering/decimate_percentage_open_space", params_.decimate_percentage_open_space))
+    return false;
   if (!pu::Get("filtering/outlier_filter", params_.outlier_filter)) 
     return false;
   if (!pu::Get("filtering/outlier_std", params_.outlier_std)) 
@@ -79,7 +81,8 @@ bool PointCloudFilter::LoadParameters(const ros::NodeHandle& n) {
 }
 
 bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
-                              PointCloud::Ptr points_filtered) {
+                              PointCloud::Ptr points_filtered, 
+                              const bool b_is_open_space) {
   if (points_filtered == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
     return false;
@@ -88,10 +91,22 @@ bool PointCloudFilter::Filter(const PointCloud::ConstPtr& points,
   // Copy input points
   *points_filtered = *points; 
   if (!params_.extract_features) {
+    
     // Apply a random downsampling filter to the incoming point cloud
     if (params_.random_filter) {
-      const int n_points = static_cast<int>((1.0 - params_.decimate_percentage) *
-                                            points_filtered->size());
+
+      /*-----------------
+      Open space detector
+      NOTE: this would take place only if random_filter is enabled in yaml
+      ------------------*/
+      int n_points;
+      if (b_is_open_space) {
+        n_points = static_cast<int>((1.0 - params_.decimate_percentage_open_space) * points_filtered->size());
+      }
+      else {
+        n_points = static_cast<int>((1.0 - params_.decimate_percentage) * points_filtered->size());
+      }     
+
       pcl::RandomSample<pcl::PointXYZI> random_filter;
       random_filter.setSample(n_points);
       random_filter.setInputCloud(points_filtered);

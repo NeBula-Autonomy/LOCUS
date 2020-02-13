@@ -45,7 +45,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf/transform_broadcaster.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <pcl/registration/gicp.h>
+#include <multithreaded_gicp/gicp.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/search/impl/search.hpp>
 #include <geometry_msgs/PoseStamped.h>
@@ -87,6 +87,12 @@ public:
   void EnableImuIntegration();
   void EnableOdometryIntegration();
   void EnablePoseStampedIntegration();
+
+  void DisableImuIntegration();
+  void DisableOdometryIntegration();
+  void DisablePoseStampedIntegration();
+
+  void SetFlatGroundAssumptionValue(const bool& value); 
 
 private:
 
@@ -134,8 +140,12 @@ private:
     double icp_tf_epsilon;
     double icp_corr_dist;
     unsigned int icp_iterations;
+    // Number of threads GICP is allowed to use
+    int num_threads;
+    // Enable GICP timing information print logs
+    bool enable_timing_output;
   } params_;
-  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
   /*--------------
@@ -153,6 +163,12 @@ private:
   // PoseStamped
   bool b_use_pose_stamped_integration_;
   tf::Transform pose_stamped_delta_;
+
+  /*--------------------
+  Flat ground assumption  
+  --------------------*/
+  
+  bool b_is_flat_ground_assumption_;
 
 };
 

@@ -78,19 +78,23 @@ class LidarSlipDetection {
   void LidarOdometryCallback(const Odometry::ConstPtr& msg);
 
   // Condition Number Callback
-  void ConditionNumberCallback(const std_msgs::Float64& condition_number);
+  void ConditionNumberCallback(
+      const std_msgs::Float64::ConstPtr& condition_number);
 
+  // Observability Vector Callback
+  void ObservabilityVectorCallback(const geometry_msgs::Vector3::ConstPtr& msg);
+
+  double wheel_delta_;
+  double lidar_delta_;
   PoseCovStamped lidar_last_pose_;
   PoseCovStamped wheel_last_pose_;
-
-  double avg_wheel_delta_;
-  double avg_lidar_delta_;
 
  protected:
   // Subscribers
   ros::Subscriber condition_number_sub_;
   ros::Subscriber lidar_odom_sub_;
   ros::Subscriber wheel_odom_sub_;
+  ros::Subscriber observability_sub_;
 
   // Publishers
   ros::Publisher slip_detection_from_odom_;
@@ -100,23 +104,29 @@ class LidarSlipDetection {
   void InitializePose(PoseCovStamped first_pose);
   geometry_utils::Transform3 GetTransform(const PoseCovStamped first_pose,
                                           const PoseCovStamped second_pose);
-  void PublishLidarSlipAmount(double& slip_detection_odom,
+  void PublishLidarSlipAmount(const double& slip_detection_odom,
                               const ros::Publisher& pub);
-  void PublishLidarSlipStatus(bool& slip_status, const ros::Publisher& pub);
+  void PublishLidarSlipStatus(const bool& slip_status,
+                              const ros::Publisher& pub);
   bool LoadParameters(const ros::NodeHandle& n);
-  void PublishConditionNumber(double& slip_detection_cov,
+  void PublishConditionNumber(const double& slip_detection_cov,
                               const ros::Publisher& pub);
 
  private:
   std::string name_;
+  double slip_amount_from_odom_;
   double slip_threshold_;
   double max_power_;
-  int filter_size_;
+  double filter_size_;
+  double observability_;
+  double condition_number_;
+  double observability_threshold_;
+  std::vector<PoseCovStamped> last_lo_poses_;
+  std::vector<PoseCovStamped> last_wo_poses_;
 
-  // keep track of the last slip, discrepencies (size is filter_size)
-  std::vector<double> wio_last_deltas_;  
-  std::vector<double> lo_last_deltas_;
-                                     
+  bool b_use_wio_check_;
+  bool b_use_condition_number_check_;
+  bool b_use_observability_check_;
 };
 
 #endif

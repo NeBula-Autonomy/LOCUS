@@ -37,6 +37,7 @@
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
+#include <chrono>
 #include <math.h>
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
@@ -52,6 +53,7 @@
 #include <gtsam/geometry/Rot3.h>
 #include <core_msgs/PoseAndScan.h>
 #include <std_msgs/Time.h>
+#include <std_msgs/Bool.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <core_msgs/PoseAndScan.h>
@@ -61,6 +63,8 @@
 #include <tf/transform_datatypes.h>
 
 class LoFrontend {
+
+  friend class LoFrontendTest;
 
 public:
 
@@ -197,6 +201,27 @@ private:
   bool b_use_pose_stamped_integration_;
   bool b_pose_stamped_has_been_received_;
   int pose_stamped_number_of_calls_;
+
+  /*-----------------
+  Open space detector
+  ------------------*/
+  
+  bool b_is_open_space_;
+  int number_of_points_open_space_;
+
+  /* ----------------------------------
+  Dynamic hierarchical data integration
+  ---------------------------------- */
+  
+  ros::NodeHandle nl_;
+  void SwitchToImuIntegration();
+
+  /* -------------------------
+  Flat Ground Assumption (FGA)
+  ------------------------- */
+
+  ros::Subscriber fga_sub_;
+  void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
 
 };
 

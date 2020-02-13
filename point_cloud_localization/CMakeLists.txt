@@ -12,6 +12,14 @@ if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
 endif(NOT PCL_FOUND)
 
+
+find_package(OpenMP)
+# if (OpenMP_FOUND)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp")
+# endif()
+
+
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -22,6 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   parameter_utils
   tf2_ros
   pcl_ros
+  multithreaded_gicp
 )
 
 catkin_package(
@@ -31,6 +40,7 @@ catkin_package(
     roscpp
     geometry_utils
     parameter_utils
+    visualization_msgs
     tf2_ros
     pcl_ros
 )
@@ -46,7 +56,7 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/PointCloudLocalization.cc)
+add_library(${PROJECT_NAME} src/PointCloudLocalization.cc src/utils.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
