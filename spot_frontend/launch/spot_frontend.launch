@@ -84,7 +84,7 @@
       filter_limit_min: -100
       filter_limit_max: 100
       filter_limit_negative: False
-      leaf_size: 0.1
+      leaf_size: 0.2
       output_frame: $(arg robot_namespace)/base_link
       </rosparam>
     </node>
