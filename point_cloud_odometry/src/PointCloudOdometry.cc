@@ -45,7 +45,10 @@ using pcl::PointCloud;
 using pcl::PointXYZI;
 
 PointCloudOdometry::PointCloudOdometry() : 
-  initialized_(false) {
+  initialized_(false), 
+  b_use_imu_integration_(false), 
+  b_use_odometry_integration_(false), 
+  b_use_pose_stamped_integration_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
 }
@@ -70,6 +73,7 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
+  ROS_INFO("PointCloudOdometry - LoadParameters");
 
   if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
@@ -127,19 +131,20 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
+  if (!pu::Get("icp/num_threads", params_.num_threads)) 
+    return false;
+  if (!pu::Get("icp/enable_timing_output", params_.enable_timing_output)) 
+    return false;
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
-  if(!pu::Get("imu_integration/b_use_imu_integration", b_use_imu_integration_))
+  if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
     return false;
-  if(!pu::Get("imu_integration/b_use_imu_yaw_only", b_use_imu_yaw_only_))
-    return false;
-  if(!pu::Get("odometry_integration/b_use_odometry_integration", b_use_odometry_integration_))
-    return false;
-
+   
   return true;
 }
 
 bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
+  ROS_INFO("PointCloudOdometry - RegisterCallbacks");
   ros::NodeHandle nl(n);
   query_pub_ = nl.advertise<PointCloud>("odometry_query_points", 10, false);
   reference_pub_ = nl.advertise<PointCloud>("odometry_reference_points", 10, false);
@@ -149,11 +154,38 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
 }
 
 bool PointCloudOdometry::SetupICP() {
+  ROS_INFO("PointCloudOdometry - SetupICP");
   icp_.setTransformationEpsilon(params_.icp_tf_epsilon);
   icp_.setMaxCorrespondenceDistance(params_.icp_corr_dist);
   icp_.setMaximumIterations(params_.icp_iterations);
   icp_.setRANSACIterations(0);
+  icp_.setNumThreads(params_.num_threads);
+  icp_.enableTimingOutput(params_.enable_timing_output);
   return true;
+}
+
+void PointCloudOdometry::EnableImuIntegration() {
+  b_use_imu_integration_ = true;
+}
+
+void PointCloudOdometry::EnableOdometryIntegration() {
+  b_use_odometry_integration_ = true;
+}
+
+void PointCloudOdometry::EnablePoseStampedIntegration() {
+  b_use_pose_stamped_integration_ = true;
+}
+
+void PointCloudOdometry::DisableImuIntegration() {
+  b_use_imu_integration_ = false;
+}
+
+void PointCloudOdometry::DisableOdometryIntegration() {
+  b_use_odometry_integration_ = false;
+}
+
+void PointCloudOdometry::DisablePoseStampedIntegration() {
+  b_use_pose_stamped_integration_ = false;
 }
 
 bool PointCloudOdometry::SetLidar(const PointCloud& points) {
@@ -162,30 +194,30 @@ bool PointCloudOdometry::SetLidar(const PointCloud& points) {
   return true;
 }
 
-bool PointCloudOdometry::SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion) {
-  imu_quaternion_ = imu_quaternion;
+bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
+  imu_delta_ = imu_delta;
   return true;
 }
 
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
-  ROS_INFO("PointCloudOdometry - SetOdometryDelta");
-  // TODO: If LoFrontend sends OdometryDelta, it should be sending ImuDelta for unified convention
   odometry_delta_ = odometry_delta;
+  return true;
+}
+
+bool PointCloudOdometry::SetPoseStampedDelta(const tf::Transform& pose_stamped_delta) {
+  pose_stamped_delta_ = pose_stamped_delta;
   return true;
 }
 
 bool PointCloudOdometry::UpdateEstimate() {
   if (!initialized_) {
     copyPointCloud(points_, *query_);
-    imu_quaternion_previous_ = imu_quaternion_;
     initialized_ = true;
     return false;
   }
   else {
     copyPointCloud(*query_, *reference_);
     copyPointCloud(points_, *query_); 
-    imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion_;
-    imu_quaternion_previous_ = imu_quaternion_;
     return UpdateICP();
   } 
 } 
@@ -196,25 +228,23 @@ bool PointCloudOdometry::UpdateICP() {
   
   Eigen::Matrix4d imu_prior; 
   Eigen::Matrix4d odometry_prior;
+  Eigen::Matrix4d pose_stamped_prior;
 
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    if(b_use_imu_yaw_only_) {
-      imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeYawChange();
-    }
-    else {
-      imu_prior.block(0, 0, 3, 3) = GetExternalAttitudeChange();
-    }
+    imu_prior.block(0, 0, 3, 3) = imu_delta_;   
     pcl::transformPointCloud(*query_, *query_trans, imu_prior);  
   }
-  
-  if (b_use_odometry_integration_) {
+  else if (b_use_odometry_integration_) {
     Eigen::Matrix4f temp;
     pcl_ros::transformAsMatrix(odometry_delta_, temp);
     odometry_prior = temp.cast <double> ();
     pcl::transformPointCloud(*query_, *query_trans, odometry_prior);
   }
-  
+  else if (b_use_pose_stamped_integration_) {
+    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
+    return false;
+  }  
   else {
     *query_trans = *query_;
   }
@@ -223,23 +253,34 @@ bool PointCloudOdometry::UpdateICP() {
   icp_.setInputTarget(reference_);
   icp_.align(icpAlignedPointsOdometry_);
   icpFitnessScore_ = icp_.getFitnessScore();
-  PointCloud unused_result;
-  icp_.align(unused_result);
   Eigen::Matrix4d T; 
   T = icp_.getFinalTransformation().cast<double>();
 
   if (b_use_imu_integration_) { 
     T = T * imu_prior;
   }
-
-  if (b_use_odometry_integration_) {
+  else if (b_use_odometry_integration_) {
     T = T * odometry_prior;
   }
+  else if (b_use_pose_stamped_integration_) {
+    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
+    return false;
+  }
   
-  incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-  incremental_estimate_.rotation = gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
-                                            T(1, 0), T(1, 1), T(1, 2),
-                                            T(2, 0), T(2, 1), T(2, 2));
+  if (b_is_flat_ground_assumption_) {
+    tf::Matrix3x3 rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    double roll, pitch, yaw;
+    rotation.getRPY(roll, pitch, yaw);
+    incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
+    incremental_estimate_.rotation = gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);      
+  }
+  else {
+    incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
+    incremental_estimate_.rotation =    gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
+                                                 T(1, 0), T(1, 1), T(1, 2),
+                                                 T(2, 0), T(2, 1), T(2, 2));
+  }
+
   if (!transform_thresholding_ ||
       (incremental_estimate_.translation.Norm() <= max_translation_ &&
        incremental_estimate_.rotation.ToEulerZYX().Norm() <= max_rotation_)) {
@@ -260,6 +301,12 @@ bool PointCloudOdometry::UpdateICP() {
 
 }
 
+void PointCloudOdometry::SetFlatGroundAssumptionValue(const bool& value) {
+  ROS_INFO_STREAM("PointCloudOdometry - SetFlatGroundAssumptionValue - Received: " << value);
+  b_is_flat_ground_assumption_ = value;
+  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+}
+
 const gu::Transform3& PointCloudOdometry::GetIncrementalEstimate() const {
   return incremental_estimate_;
 }
@@ -275,36 +322,6 @@ bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
   }
   out = query_;
   return true;
-}
-
-Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeChange() {
-  return imu_quaternion_change_.normalized().toRotationMatrix();
-}
-
-Eigen::Matrix3d PointCloudOdometry::GetExternalAttitudeYawChange() {
-  Eigen::Matrix3d rot_yaw_mat;
-  double roll, pitch, yaw;
-  tf::Quaternion q(imu_quaternion_change_.x(),
-                   imu_quaternion_change_.y(),
-                   imu_quaternion_change_.z(),
-                   imu_quaternion_change_.w());
-  tf::Matrix3x3 m(q);
-  m.getRPY(roll, pitch, yaw);
-  ROS_INFO_STREAM("PointCloudOdometry - GetExtAttYawChange - Yaw delta from IMU is " 
-                  << yaw*180.0/M_PI << " deg");
-  rot_yaw_mat = Eigen::Matrix3d();
-  rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;
-  return rot_yaw_mat;
-}
-
-void PointCloudOdometry::PublishPoints(const PointCloud::Ptr& points,
-                                       const ros::Publisher& pub) {
-  if (pub.getNumSubscribers() > 0) {
-    PointCloud out;
-    out = *points;
-    out.header.frame_id = odometry_frame_id_;
-    pub.publish(out);
-  }
 }
  
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,

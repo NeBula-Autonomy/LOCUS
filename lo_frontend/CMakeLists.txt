@@ -40,6 +40,13 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+find_package(OpenMP)
+# if (OpenMP_FOUND)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp")
+# endif()
+
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -88,3 +95,14 @@ target_link_libraries(${PROJECT_NAME}_node
   ${Boost_LIBRARIES}
   gtsam
 )
+
+#############
+## Testing ##
+#############
+if (CATKIN_ENABLE_TESTING)
+find_package(rostest REQUIRED)
+  # add_subdirectory(test)
+  ## Add gtest based cpp test target and link libraries
+  add_rostest_gtest(test_lo_frontend test/test_lo_frontend.test test/test_lo_frontend.cc)
+  target_link_libraries(test_lo_frontend ${PROJECT_NAME} ${catkin_LIBRARIES})
+endif()

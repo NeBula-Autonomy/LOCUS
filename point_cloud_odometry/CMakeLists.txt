@@ -7,10 +7,17 @@ project(point_cloud_odometry)
 
 SET(CMAKE_BUILD_TYPE Release)
 
-find_package(PCL REQUIRED COMPONENTS common filters features registration)
+find_package(PCL 1.7 REQUIRED COMPONENTS common filters features registration)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
 endif(NOT PCL_FOUND)
+
+find_package(OpenMP)
+# if (OpenMP_FOUND)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+# endif()
+
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -20,7 +27,9 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_ros
   tf2_ros
+  tf
   eigen_conversions
+  multithreaded_gicp
 )
 
 catkin_package(
@@ -34,13 +43,15 @@ catkin_package(
     sensor_msgs
     pcl_ros
     tf2_ros
+    tf
     eigen_conversions
+    multithreaded_gicp
 )
 
-find_package(PCL 1.7 REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+# find_package(PCL 1.7 REQUIRED)
+# include_directories(${PCL_INCLUDE_DIRS})
+# link_directories(${PCL_LIBRARY_DIRS})
+# add_definitions(${PCL_DEFINITIONS})
 
 include_directories(
   include

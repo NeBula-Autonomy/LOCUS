@@ -37,6 +37,7 @@
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
+#include <chrono>
 #include <math.h>
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
@@ -52,6 +53,7 @@
 #include <gtsam/geometry/Rot3.h>
 #include <core_msgs/PoseAndScan.h>
 #include <std_msgs/Time.h>
+#include <std_msgs/Bool.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <core_msgs/PoseAndScan.h>
@@ -61,6 +63,8 @@
 #include <tf/transform_datatypes.h>
 
 class LoFrontend {
+
+  friend class LoFrontendTest;
 
 public:
 
@@ -92,17 +96,22 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  void ImuCallback(const ImuConstPtr& imu_msg);
-  void OdometryCallback(const OdometryConstPtr& odometry_msg);
-  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
-  void PointCloudCallback(const PointCloud::ConstPtr& msg);
-
-  ros::Subscriber pcld_sub_;  
+  ros::Subscriber lidar_sub_;  
   ros::Subscriber imu_sub_;   
   ros::Subscriber odom_sub_;  
   ros::Subscriber pose_sub_;    
 
   ros::Publisher base_frame_pcld_pub_; 
+
+  void LidarCallback(const PointCloud::ConstPtr& msg);
+  void ImuCallback(const ImuConstPtr& imu_msg);
+  void OdometryCallback(const OdometryConstPtr& odometry_msg);
+  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
+
+  int lidar_queue_size_; 
+  int imu_queue_size_; 
+  int odom_queue_size_; 
+  int pose_queue_size_; 
 
   ImuBuffer imu_buffer_;
   OdometryBuffer odometry_buffer_;
@@ -126,8 +135,7 @@ private:
   bool b_add_first_scan_to_key_;
 
   gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;   
-  geometry_utils::Transform3 last_keyframe_pose_; 
-  ros::Time last_pcld_stamp_;        
+  geometry_utils::Transform3 last_keyframe_pose_;      
 
   std::string fixed_frame_id_; 
   std::string base_frame_id_; 
@@ -138,38 +146,19 @@ private:
   Eigen::Affine3d I_T_B_;    
   Eigen::Affine3d B_T_I_; 
   Eigen::Quaterniond I_T_B_q_;   
-
-  // IMU Frontend Integration   
-  double ts_threshold_;
-  Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
-  bool b_convert_imu_to_base_link_frame_;
-  bool b_use_imu_integration_;
-  int imu_number_of_calls_;
-  int imu_max_number_of_calls_;
-
-  // ODOMETRY Frontend Integration 
-  bool b_use_odometry_integration_;
-  int odometry_number_of_calls_;
-  int odometry_max_number_of_calls_;
-  bool b_odometry_has_been_received_;
-  tf::Transform odometry_pose_previous_;
-  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
   
-  // Class objects
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
   PointCloudLocalization localization_; 
   PointCloudMapper mapper_;   
 
-  // Map publishment 
-  int counter_;
   bool b_publish_map_;
+  int counter_;
   int map_publishment_meters_;
   
   bool b_pcld_received_;
   int pcld_seq_prev_;
 
-  // Storages - TODO: This can be optimized
   PointCloud::Ptr msg_filtered_;
   PointCloud::Ptr msg_transformed_;
   PointCloud::Ptr msg_neighbors_;
@@ -178,11 +167,61 @@ private:
   PointCloud::Ptr mapper_unused_fixed_;
   PointCloud::Ptr mapper_unused_out_;
 
-  // Load queue sizes as params 
-  int imu_queue_size_; 
-  int odom_queue_size_; 
-  int pose_queue_size_; 
-  int lidar_queue_size_; 
+  /*--------------
+  Data integration 
+  --------------*/
+
+  bool SetDataIntegrationMode();
+  int data_integration_mode_;
+  int max_number_of_calls_;
+
+  // Imu  
+  void CheckImuFrame(const ImuConstPtr& imu_msg); 
+  bool CheckNans(const Imu &msg);
+  Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
+  bool b_convert_imu_to_base_link_frame_;
+  bool b_imu_frame_is_correct_;
+  bool b_use_imu_integration_;
+  bool b_use_imu_yaw_integration_;
+  bool b_imu_has_been_received_;
+  int imu_number_of_calls_;
+  Eigen::Quaterniond imu_quaternion_previous_;
+  Eigen::Quaterniond imu_quaternion_change_;
+  Eigen::Matrix3d GetImuDelta();
+  Eigen::Matrix3d GetImuYawDelta();
+
+  // Odometry
+  bool b_use_odometry_integration_;
+  bool b_odometry_has_been_received_;
+  int odometry_number_of_calls_;
+  tf::Transform odometry_pose_previous_;
+  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+
+  // PoseStamped 
+  bool b_use_pose_stamped_integration_;
+  bool b_pose_stamped_has_been_received_;
+  int pose_stamped_number_of_calls_;
+
+  /*-----------------
+  Open space detector
+  ------------------*/
+  
+  bool b_is_open_space_;
+  int number_of_points_open_space_;
+
+  /* ----------------------------------
+  Dynamic hierarchical data integration
+  ---------------------------------- */
+  
+  ros::NodeHandle nl_;
+  void SwitchToImuIntegration();
+
+  /* -------------------------
+  Flat Ground Assumption (FGA)
+  ------------------------- */
+
+  ros::Subscriber fga_sub_;
+  void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
 
 };
 

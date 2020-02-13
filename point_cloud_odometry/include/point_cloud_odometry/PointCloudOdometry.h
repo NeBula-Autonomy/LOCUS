@@ -45,7 +45,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf/transform_broadcaster.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <pcl/registration/gicp.h>
+#include <multithreaded_gicp/gicp.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/search/impl/search.hpp>
 #include <geometry_msgs/PoseStamped.h>
@@ -67,8 +67,10 @@ public:
   bool Initialize(const ros::NodeHandle& n);
 
   bool SetLidar(const PointCloud& points);
-  bool SetImuQuaternion(const Eigen::Quaterniond& imu_quaternion);
+  bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
+  bool SetPoseStampedDelta(const tf::Transform& pose_stamped_delta);
+
   bool UpdateEstimate();
   
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
@@ -82,6 +84,16 @@ public:
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
 
+  void EnableImuIntegration();
+  void EnableOdometryIntegration();
+  void EnablePoseStampedIntegration();
+
+  void DisableImuIntegration();
+  void DisableOdometryIntegration();
+  void DisablePoseStampedIntegration();
+
+  void SetFlatGroundAssumptionValue(const bool& value); 
+
 private:
 
   bool LoadParameters(const ros::NodeHandle& n);
@@ -89,20 +101,13 @@ private:
 
   // Use ICP between a query and reference point cloud to estimate pose
   bool UpdateICP();
-  
-  // Publish reference and query point clouds - TODO: Do we need it? 
-  void PublishPoints(const PointCloud::Ptr& points, 
-                     const ros::Publisher& pub);
 
   // Publish incremental and integrated pose estimates
   void PublishPose(const geometry_utils::Transform3& pose,
                    const ros::Publisher& pub);
 
-  // The node's name
   std::string name_;
   bool b_verbose_;
-
-  // For initialization
   bool initialized_;
 
   // Publishers
@@ -119,6 +124,7 @@ private:
   std::string odometry_frame_id_;
 
   // Point cloud containers
+  PointCloud points_;
   PointCloud::Ptr query_;
   PointCloud::Ptr reference_;
 
@@ -134,23 +140,35 @@ private:
     double icp_tf_epsilon;
     double icp_corr_dist;
     unsigned int icp_iterations;
+    // Number of threads GICP is allowed to use
+    int num_threads;
+    // Enable GICP timing information print logs
+    bool enable_timing_output;
   } params_;
-  pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
-  // IMU Frontend Integration
-  PointCloud points_;
-  Eigen::Quaterniond imu_quaternion_;
-  Eigen::Quaterniond imu_quaternion_previous_;
-  Eigen::Quaterniond imu_quaternion_change_;
-  Eigen::Matrix3d GetExternalAttitudeYawChange();
-  Eigen::Matrix3d GetExternalAttitudeChange();
-  bool b_use_imu_integration_;
-  bool b_use_imu_yaw_only_;
+  /*--------------
+  Data integration 
+  --------------*/
 
-  // ODOMETRY Frontend Integration
+  // Imu
+  bool b_use_imu_integration_;
+  Eigen::Matrix3d imu_delta_;
+
+  // Odometry
   bool b_use_odometry_integration_; 
   tf::Transform odometry_delta_;
+
+  // PoseStamped
+  bool b_use_pose_stamped_integration_;
+  tf::Transform pose_stamped_delta_;
+
+  /*--------------------
+  Flat ground assumption  
+  --------------------*/
+  
+  bool b_is_flat_ground_assumption_;
 
 };
 

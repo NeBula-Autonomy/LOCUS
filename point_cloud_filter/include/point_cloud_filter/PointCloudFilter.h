@@ -79,7 +79,8 @@ class PointCloudFilter {
 
   // Filter an incoming point cloud
   bool Filter(const PointCloud::ConstPtr& points,
-              PointCloud::Ptr points_filtered);
+              PointCloud::Ptr points_filtered, 
+              const bool b_is_open_space = false);
 
   // VLP16 characteristics
   const float lowerBound_ = -15;
@@ -173,6 +174,8 @@ class PointCloudFilter {
     bool random_filter;
     // Percentage of points to discard. Must be between 0.0 and 1.0;
     double decimate_percentage;
+    // Percentage of points to discard when in open space. Must be between 0.0 and 1.0;
+    double decimate_percentage_open_space;
     // Apply a statistical outlier filter.
     bool outlier_filter;
     // Standard deviation threshold in distance to neighbors for outlier
