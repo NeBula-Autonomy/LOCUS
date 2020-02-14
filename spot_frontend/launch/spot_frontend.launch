@@ -31,10 +31,10 @@
       <param name="tf_prefix" value="$(arg robot_namespace)"/>
 
       <!-- Settings -->
-      <rosparam file="$(find spot_frontend)/config/lo_settings.yaml"/>
+      <rosparam file="$(find spot_frontend)/config/spot_settings.yaml"/>
 
       <!-- Frames -->
-      <rosparam file="$(find spot_frontend)/config/lo_frames.yaml" subst_value="true"/>
+      <rosparam file="$(find spot_frontend)/config/spot_frames.yaml" subst_value="true"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
@@ -101,7 +101,7 @@
     </node>
 
     <!-- Combining the two point clouds -->
-    <node if="$(arg b_use_two_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo">
+    <node if="$(arg b_use_two_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_spot">
       <rosparam file="$(find point_cloud_merger)/config/parameters.yaml"/>
       <remap from="~pcld" to="$(arg pc_trans_in_1)"/>
       <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
@@ -109,8 +109,8 @@
     </node>
 
     <!-- Run a VoxelGrid filter to clean NaNs, downsample the data, and transform poincloud before publication-->
-    <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="pcl_manager_lo" args="manager" output="screen" respawn="true"/>
-    <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="voxel_grid_lo" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
+    <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="pcl_manager_spot" args="manager" output="screen" respawn="true"/>
+    <node if="$(arg b_use_two_pc)" pkg="nodelet" type="nodelet" name="voxel_grid_spot" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
     <remap from="~input" to="combined_point_cloud" /><!--ADD BACK _throttle-->
     <remap from="~output" to="combined_point_cloud_filtered" />
     <rosparam subst_value="true">
