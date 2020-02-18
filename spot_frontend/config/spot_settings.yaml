@@ -1,0 +1,27 @@
+b_verbose: false
+
+translation_threshold_kf: 1.0 
+rotation_threshold_kf: 0.3 
+
+number_of_points_open_space: 9999999 # Disabled - baseline to use is: 11000
+
+map_publishment: 
+  b_publish_map: true
+  meters: 1
+
+queues: 
+  lidar_queue_size: 1
+  odom_queue_size: 1000 
+
+buffers: 
+  odometry_buffer_size_limit: 1000
+
+# DATA INTEGRATION 
+  # 0   ---> no integration 
+  # 3   ---> odometry integration 
+
+data_integration: 
+  mode: 3
+  max_number_of_calls: 25
+
+b_is_flat_ground_assumption: false

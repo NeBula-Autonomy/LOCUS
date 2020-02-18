@@ -1,0 +1,6 @@
+frame_id:
+  fixed: $(arg robot_namespace)/map
+  base: $(arg robot_namespace)/base_link
+  odometry: $(arg robot_namespace)/base_link_blam_odometry # TODO: To be updated?
+  bd_odometry: $(arg robot_namespace)/odom
+  artifacts_in_global: true
