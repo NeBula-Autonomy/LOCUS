@@ -163,10 +163,16 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("SpotFrontend - RegisterOnlineCallbacks");  
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
   ros::NodeHandle nl(n);
-  odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
-  lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
-  lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, bd_odom_frame_id_, 10, nl); 
-  lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
+  if (b_use_odometry_integration_) {
+    odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
+    lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
+    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, bd_odom_frame_id_, 10, nl); 
+    lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
+  }
+  else {
+    lidar_ros_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this); 
+  }
+  
   fga_sub_ = nl.subscribe("SPOT_FGA_TOPIC", 1, &SpotFrontend::FlatGroundAssumptionCallback, this); 
   return CreatePublishers(n);
 }
