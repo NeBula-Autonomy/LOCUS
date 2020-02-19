@@ -21,7 +21,7 @@ buffers:
   # 3   ---> odometry integration 
 
 data_integration: 
-  mode: 0
+  mode: 3
   max_number_of_calls: 25
 
 b_is_flat_ground_assumption: false
