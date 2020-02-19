@@ -171,8 +171,7 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   }
   else {
     lidar_ros_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this); 
-  }
-  
+  }  
   fga_sub_ = nl.subscribe("SPOT_FGA_TOPIC", 1, &SpotFrontend::FlatGroundAssumptionCallback, this); 
   return CreatePublishers(n);
 }
