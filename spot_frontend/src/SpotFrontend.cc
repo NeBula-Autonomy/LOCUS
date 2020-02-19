@@ -170,6 +170,7 @@ bool SpotFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
     lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
   }
   else {
+    ROS_WARN("Running pure LO in SpotFrontend as no data integration has been requested");
     lidar_ros_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this); 
   }  
   fga_sub_ = nl.subscribe("SPOT_FGA_TOPIC", 1, &SpotFrontend::FlatGroundAssumptionCallback, this); 
