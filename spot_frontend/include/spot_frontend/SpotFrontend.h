@@ -99,6 +99,7 @@ private:
   tf2_ros::Buffer odometry_buffer_;
   message_filters::Subscriber<PointCloud> lidar_sub_;
   tf2_ros::MessageFilter<PointCloud> *lidar_odometry_filter_;
+  ros::Subscriber lidar_ros_sub_;
 
   int odom_queue_size_; 
   int lidar_queue_size_;  
