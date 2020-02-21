@@ -73,8 +73,8 @@
      <!-- Convert output PoseStamped message to Odometry -->
     <node pkg="topic_tools" type="transform" name="pose_to_odom"
           respawn="true" output="screen"
-          args="/$(arg robot_namespace)/lo_frontend/localization_integrated_estimate
-                /$(arg robot_namespace)/lo_frontend/odometry
+          args="/$(arg robot_namespace)/spot_frontend/localization_integrated_estimate
+                /$(arg robot_namespace)/spot_frontend/odometry
                 nav_msgs/Odometry
                 'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
     </node>
