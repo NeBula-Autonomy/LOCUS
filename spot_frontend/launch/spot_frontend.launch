@@ -70,8 +70,15 @@
     <!--node name="point_cloud_throttler" type="throttle" pkg="topic_tools" args="messages velodyne_points $(arg vlp_throttle_freq)">
     </node-->
 
-    <!-- DISCLAIMER: pose to odom conversion node has been removed, to be reinserted if needed by other modules -->
-  
+     <!-- Convert output PoseStamped message to Odometry -->
+    <node pkg="topic_tools" type="transform" name="pose_to_odom"
+          respawn="true" output="screen"
+          args="/$(arg robot_namespace)/lo_frontend/localization_integrated_estimate
+                /$(arg robot_namespace)/lo_frontend/odometry
+                nav_msgs/Odometry
+                'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
+    </node>
+
     <!-- Republish node with different frame_id -->
     <node pkg="nodelet" type="nodelet" name="transform_points_base_link"
           args="standalone pcl/PassThrough">
