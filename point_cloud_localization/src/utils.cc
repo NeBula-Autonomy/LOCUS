@@ -21,7 +21,7 @@ void addNormal(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
   searchTree->setInputCloud(cloud_xyz);
 
   pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normalEstimator(
-      8);  // parallel
+      4);  // parallel
   // pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimator; //not
   // parallel
   normalEstimator.setInputCloud(cloud_xyz);
