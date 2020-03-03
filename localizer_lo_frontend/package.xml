@@ -9,6 +9,7 @@
 
   <!-- Use depend as a shortcut for packages that are both build and exec dependencies -->
   <depend>lo_frontend</depend>
+  <depend>spot_frontend</depend>
   <depend>point_cloud_odometry</depend>
   <depend>point_cloud_filter</depend>
 
