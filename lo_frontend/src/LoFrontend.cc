@@ -150,7 +150,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("b_run_with_gt_point_cloud", b_run_with_gt_point_cloud_))
     return false;
-  if(!pu::Get("gt_point_cloud_filename_", gt_point_cloud_filename_))
+  if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
   return true;
 }
