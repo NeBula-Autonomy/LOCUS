@@ -488,6 +488,21 @@ bool PointCloudLocalization::ComputeICPCovariance(
   
   covariance = H.inverse() * icpFitnessScore_;
 
+  // Here bound the covariance using eigen values
+  Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
+  eigensolver.compute(covariance);
+  Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
+  Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
+  double lower_bound = 0;     // Should be positive semidef
+  double upper_bound = 1000;  // Arbitrary upper bound TODO (Yun) make param
+  for (size_t i = 0; i < eigen_values.size(); i++) {
+    if (eigen_values(i) < lower_bound) eigen_values(i) = lower_bound;
+    if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
+  }
+  // Update covariance matrix after bound
+  covariance =
+      eigen_vectors * eigen_values.asDiagonal() * eigen_vectors.inverse();
+
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
       covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
