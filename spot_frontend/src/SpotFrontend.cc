@@ -89,6 +89,9 @@ bool SpotFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
     return false;
   }
+  if (b_run_with_gt_point_cloud_){
+    InitWithGTPointCloud(gt_point_cloud_filename_);
+  }
   return true;
 }
 
@@ -121,6 +124,10 @@ bool SpotFrontend::LoadParameters(const ros::NodeHandle& n) {
   if(!pu::Get("data_integration/mode", data_integration_mode_))
     return false;
   if(!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
+    return false;
+  if(!pu::Get("b_run_with_gt_point_cloud", b_run_with_gt_point_cloud_))
+    return false;
+  if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
   return true;
 }
@@ -319,4 +326,20 @@ void SpotFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) 
   ROS_INFO_STREAM("SpotFrontend - FlatGroundAssumptionCallback - Received: " << bool_msg.data);
   odometry_.SetFlatGroundAssumptionValue(bool_msg.data);
   localization_.SetFlatGroundAssumptionValue(bool_msg.data);
+}
+
+void SpotFrontend::InitWithGTPointCloud(const std::string filename) {
+  ROS_INFO_STREAM("Generating point cloud ground truth using point cloud from " << filename);
+
+  // Read ground truth from file
+  pcl::PCDReader pcd_reader;
+  PointCloud gt_point_cloud;
+  pcd_reader.read(filename, gt_point_cloud);
+  PointCloud::Ptr gt_pc_ptr(new PointCloud(gt_point_cloud));
+
+  // Create octree map to select only the parts needed
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(gt_pc_ptr, unused.get());
+
+  ROS_INFO("Completed addition of GT point cloud to map");
 }
