@@ -100,7 +100,6 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (b_convert_imu_to_base_link_frame_) {
     LoadCalibrationFromTfTree();
   }  
-
   if (b_run_with_gt_point_cloud_){
     InitWithGTPointCloud(gt_point_cloud_filename_);
   }
