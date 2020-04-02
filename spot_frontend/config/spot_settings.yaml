@@ -25,3 +25,5 @@ data_integration:
   max_number_of_calls: 25
 
 b_is_flat_ground_assumption: true
+
+b_enable_computation_time_profiling: true
