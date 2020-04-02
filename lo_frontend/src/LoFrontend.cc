@@ -423,7 +423,14 @@ tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
-  auto lidar_callback_start = ros::Time::now();
+
+  ros::Time lidar_callback_start;
+  ros::Time scan_to_scan_start;
+  ros::Time scan_to_submap_start;
+
+  if(b_enable_computation_time_profiling_) {
+    lidar_callback_start = ros::Time::now();
+  }  
 
   if (b_verbose_) ROS_INFO("LoFrontend - LidarCallback"); 
 
@@ -503,15 +510,21 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
   
-  auto scan_to_scan_start = ros::Time::now();
+  if (b_enable_computation_time_profiling_) {
+    scan_to_scan_start = ros::Time::now();
+  }
+  
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
   }
-  auto scan_to_scan_end = ros::Time::now(); 
-  auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start; 
-  auto scan_to_scan_duration_msg = std_msgs::Float64(); 
-  scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec()); 
-  scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
+  
+  if (b_enable_computation_time_profiling_) {
+    auto scan_to_scan_end = ros::Time::now(); 
+    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start; 
+    auto scan_to_scan_duration_msg = std_msgs::Float64(); 
+    scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec()); 
+    scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
+  }
 
   if (b_add_first_scan_to_key_) {
     localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
@@ -523,7 +536,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     return;
   }
 
-  auto scan_to_submap_start = ros::Time::now();  
+  if (b_enable_computation_time_profiling_) { 
+    scan_to_submap_start = ros::Time::now();
+  }  
 
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
@@ -531,11 +546,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
   
-  auto scan_to_submap_end = ros::Time::now(); 
-  auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start; 
-  auto scan_to_submap_duration_msg = std_msgs::Float64(); 
-  scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec()); 
-  scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
+  if (b_enable_computation_time_profiling_) {
+    auto scan_to_submap_end = ros::Time::now(); 
+    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start; 
+    auto scan_to_submap_duration_msg = std_msgs::Float64(); 
+    scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec()); 
+    scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
+  }
   
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
@@ -562,11 +579,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
-  auto lidar_callback_end = ros::Time::now(); 
-  auto lidar_callback_duration = lidar_callback_end - lidar_callback_start; 
-  auto lidar_callback_duration_msg = std_msgs::Float64(); 
-  lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec()); 
-  lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);  
+  if (b_enable_computation_time_profiling_) {
+    auto lidar_callback_end = ros::Time::now(); 
+    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start; 
+    auto lidar_callback_duration_msg = std_msgs::Float64(); 
+    lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec()); 
+    lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);  
+  }
   
 }
 
