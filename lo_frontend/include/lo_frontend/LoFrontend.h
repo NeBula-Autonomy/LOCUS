@@ -223,6 +223,14 @@ private:
   ros::Subscriber fga_sub_;
   void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
 
+  /* -------------------------
+  Computation Time Profiling 
+  ------------------------- */
+
+  ros::Publisher lidar_callback_duration_pub_; 
+  ros::Publisher scan_to_scan_duration_pub_;  
+  ros::Publisher scan_to_submap_duration_pub_;  
+  
 };
 
 #endif 
