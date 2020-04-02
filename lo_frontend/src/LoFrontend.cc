@@ -142,6 +142,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
     return false;
+  if(!pu::Get("b_enable_computation_time_profiling", b_enable_computation_time_profiling_))
+    return false;
   return true;
 }
 

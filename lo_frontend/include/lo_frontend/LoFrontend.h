@@ -227,6 +227,7 @@ private:
   Computation Time Profiling 
   ------------------------- */
 
+  bool b_enable_computation_time_profiling_;
   ros::Publisher lidar_callback_duration_pub_; 
   ros::Publisher scan_to_scan_duration_pub_;  
   ros::Publisher scan_to_submap_duration_pub_;  
