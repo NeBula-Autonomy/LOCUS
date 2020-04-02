@@ -220,6 +220,9 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - CreatePublishers");  
   ros::NodeHandle nl(n);  
   base_frame_pcld_pub_ = nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
+  lidar_callback_duration_pub_ = nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
+  scan_to_scan_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
+  scan_to_submap_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
   return true;
 }
 
