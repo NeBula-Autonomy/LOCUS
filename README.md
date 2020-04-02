@@ -1,3 +1,3 @@
-# LO-frontend
+# LO Front-End
 
-Description to be updated
+Robust Lidar Odometry And Mapping
