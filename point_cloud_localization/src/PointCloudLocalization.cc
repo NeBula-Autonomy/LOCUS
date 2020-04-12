@@ -301,7 +301,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   integrated_estimate_ = gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
 
   Eigen::Matrix<double, 6, 6> icp_covariance;
-  icp_covariance = Eigen::Matrix<double, 6, 6>::Zero();
   if (params_.compute_icp_observability) {
     // Compute ICP obersvability (for lidar slip detection)
     Eigen::Matrix<double, 6, 6> eigenvectors_new;
@@ -314,7 +313,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   if (params_.compute_icp_covariance) {
     // Compute the covariance matrix for the estimated transform
-    ComputeICPCovariance(icpAlignedPointsLocalization_, T, icp_covariance);
+    ComputeICPCovariance(icpAlignedPointsLocalization_, T, &icp_covariance);
     PublishPose(
         incremental_estimate_, icp_covariance, incremental_estimate_pub_);
     PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
@@ -361,7 +360,7 @@ void PointCloudLocalization::ComputeIcpObservability(
 
   // Check input pointers not null
   if (not eigenvectors_ptr or not eigenvalues_ptr) {
-    std::cout << "Null pointer error!" << std::endl;
+    ROS_ERROR("Null pointer error in ComputIcpObservability");
   }
   // auto start = std::chrono::high_resolution_clock::now();
 
@@ -374,9 +373,9 @@ void PointCloudLocalization::ComputeIcpObservability(
 }
 
 bool PointCloudLocalization::ComputeICPCovariance(
-    const PointCloud pointCloud,
-    const Eigen::Matrix4f T,
-    Eigen::Matrix<double, 6, 6>& covariance) {
+    const PointCloud& pointCloud,
+    const Eigen::Matrix4f& T,
+    Eigen::Matrix<double, 6, 6>* covariance) {
   geometry_utils::Transform3 ICP_transformation;
 
   // Extract translation values from T
@@ -485,14 +484,17 @@ bool PointCloudLocalization::ComputeICPCovariance(
     // cloud
     H += J.transpose() * J;
   }
-  
-  covariance = H.inverse() * icpFitnessScore_;
+  *covariance = H.inverse() * icpFitnessScore_;
 
   // Here bound the covariance using eigen values
   Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
-  eigensolver.compute(covariance);
+  eigensolver.compute(*covariance);
   Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
   Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
+  if (eigen_values.size() < 6) {
+    ROS_ERROR("Failed to find eigen values when computing icp covariance");
+    return false;
+  }
   double lower_bound = 0;     // Should be positive semidef
   double upper_bound = 1000;  // Arbitrary upper bound TODO (Yun) make param
   for (size_t i = 0; i < eigen_values.size(); i++) {
@@ -500,12 +502,12 @@ bool PointCloudLocalization::ComputeICPCovariance(
     if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
   }
   // Update covariance matrix after bound
-  covariance =
+  *covariance =
       eigen_vectors * eigen_values.asDiagonal() * eigen_vectors.inverse();
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
-      covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      *covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
   // Eigen::JacobiSVD<Eigen::MatrixXd> svd( covariance, Eigen::ComputeFullV |
   // Eigen::ComputeFullU);
 

@@ -91,9 +91,9 @@ class PointCloudLocalization {
                          PointCloud* aligned_query);
 
   // Compute ICP Covariance Matrix
-  bool ComputeICPCovariance(const PointCloud pointCloud, 
-                            const Eigen::Matrix4f T, 
-                            Eigen::Matrix<double, 6, 6>& covariance);
+  bool ComputeICPCovariance(const PointCloud& pointCloud, 
+                            const Eigen::Matrix4f& T, 
+                            Eigen::Matrix<double, 6, 6>* covariance);
 
   // Compute observability of ICP for two pointclouds
   void ComputeIcpObservability(const PointCloud::Ptr& new_cloud,
