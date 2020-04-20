@@ -1,38 +1,8 @@
 /*
- * Copyright (c) 2016, The Regents of the University of California (Regents).
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *    1. Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *    2. Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *    3. Neither the name of the copyright holder nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * Please contact the author(s) of this library if you have any questions.
- * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
- */
+Authors: 
+  - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
+  - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+*/
 
 #include <spot_frontend/SpotFrontend.h>
 
@@ -125,6 +95,8 @@ bool SpotFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
     return false;
+  if(!pu::Get("b_enable_computation_time_profiling", b_enable_computation_time_profiling_))
+    return false;
   if(!pu::Get("b_run_with_gt_point_cloud", b_run_with_gt_point_cloud_))
     return false;
   if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
@@ -188,6 +160,9 @@ bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("SpotFrontend - CreatePublishers");  
   ros::NodeHandle nl(n);  
   base_frame_pcld_pub_ = nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
+  lidar_callback_duration_pub_ = nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
+  scan_to_scan_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
+  scan_to_submap_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
   return true;
 }
 
@@ -206,6 +181,14 @@ void SpotFrontend::OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry
 }
 
 void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
+
+  ros::Time lidar_callback_start;
+  ros::Time scan_to_scan_start;
+  ros::Time scan_to_submap_start;
+
+  if(b_enable_computation_time_profiling_) {
+    lidar_callback_start = ros::Time::now();
+  }  
 
   if(!b_pcld_received_) {
     pcld_seq_prev_ = msg->header.seq;
@@ -247,9 +230,21 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
  
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
+
+  if (b_enable_computation_time_profiling_) {
+    scan_to_scan_start = ros::Time::now();
+  }
  
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
+  }
+
+  if (b_enable_computation_time_profiling_) {
+    auto scan_to_scan_end = ros::Time::now(); 
+    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start; 
+    auto scan_to_scan_duration_msg = std_msgs::Float64(); 
+    scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec()); 
+    scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
   }
 
   if (b_add_first_scan_to_key_) {
@@ -262,11 +257,24 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     return;
   }  
 
+  if (b_enable_computation_time_profiling_) { 
+    scan_to_submap_start = ros::Time::now();
+  }
+
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
   mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
+  
+  if (b_enable_computation_time_profiling_) {
+    auto scan_to_submap_end = ros::Time::now(); 
+    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start; 
+    auto scan_to_submap_duration_msg = std_msgs::Float64(); 
+    scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec()); 
+    scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
+  }
+  
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   
@@ -291,6 +299,14 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }  
+
+  if (b_enable_computation_time_profiling_) {
+    auto lidar_callback_end = ros::Time::now(); 
+    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start; 
+    auto lidar_callback_duration_msg = std_msgs::Float64(); 
+    lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec()); 
+    lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);  
+  }
   
 }
 
