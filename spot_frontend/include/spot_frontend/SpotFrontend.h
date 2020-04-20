@@ -138,7 +138,7 @@ private:
   ros::Subscriber fga_sub_;
   void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
 
-
+  /* -------------------------
   Computation Time Profiling 
   ------------------------- */
 
