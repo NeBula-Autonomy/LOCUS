@@ -31,7 +31,8 @@ LoFrontend::LoFrontend():
   b_odometry_has_been_received_(false),
   b_pose_stamped_has_been_received_(false),  
   b_imu_frame_is_correct_(false), 
-  b_is_open_space_(false) {}
+  b_is_open_space_(false),
+  b_run_with_gt_point_cloud_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -69,6 +70,10 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (b_convert_imu_to_base_link_frame_) {
     LoadCalibrationFromTfTree();
   }  
+  if (b_run_with_gt_point_cloud_){
+    InitWithGTPointCloud(gt_point_cloud_filename_);
+  }
+
   return true;  
 }
 
@@ -113,6 +118,10 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if(!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
     return false;
   if(!pu::Get("b_enable_computation_time_profiling", b_enable_computation_time_profiling_))
+    return false;
+  if(!pu::Get("b_run_with_gt_point_cloud", b_run_with_gt_point_cloud_))
+    return false;
+  if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
   return true;
 }
@@ -606,4 +615,20 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
   std::cout << "Received " << bool_msg.data << std::endl;
   odometry_.SetFlatGroundAssumptionValue(bool_msg.data);
   localization_.SetFlatGroundAssumptionValue(bool_msg.data);
+}
+
+void LoFrontend::InitWithGTPointCloud(const std::string filename) {
+  ROS_INFO_STREAM("Generating point cloud ground truth using point cloud from " << filename);
+
+  // Read ground truth from file
+  pcl::PCDReader pcd_reader;
+  PointCloud gt_point_cloud;
+  pcd_reader.read(filename, gt_point_cloud);
+  PointCloud::Ptr gt_pc_ptr(new PointCloud(gt_point_cloud));
+
+  // Create octree map to select only the parts needed
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(gt_pc_ptr, unused.get());
+
+  ROS_INFO("Completed addition of GT point cloud to map");
 }

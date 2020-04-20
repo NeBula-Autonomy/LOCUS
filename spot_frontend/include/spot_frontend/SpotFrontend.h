@@ -138,7 +138,7 @@ private:
   ros::Subscriber fga_sub_;
   void FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg);
 
-  /* -------------------------
+
   Computation Time Profiling 
   ------------------------- */
 
@@ -147,6 +147,13 @@ private:
   ros::Publisher scan_to_scan_duration_pub_;  
   ros::Publisher scan_to_submap_duration_pub_;  
     
+  /* -------------------------
+  Ground Truth 
+  ------------------------- */
+
+  std::string gt_point_cloud_filename_;
+  bool b_run_with_gt_point_cloud_;
+  void InitWithGTPointCloud(const std::string filename); 
 };
 
 #endif 

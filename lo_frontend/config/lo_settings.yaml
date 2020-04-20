@@ -31,6 +31,9 @@ data_integration:
   mode: 3
   max_number_of_calls: 25
 
-b_is_flat_ground_assumption: true
+b_is_flat_ground_assumption: false
 
-b_enable_computation_time_profiling: true
+b_enable_computation_time_profiling: false
+
+b_run_with_gt_point_cloud: false
+gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
