@@ -1,38 +1,8 @@
 /*
- * Copyright (c) 2016, The Regents of the University of California (Regents).
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *    1. Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *    2. Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *    3. Neither the name of the copyright holder nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * Please contact the author(s) of this library if you have any questions.
- * Authors: Erik Nelson            ( eanelson@eecs.berkeley.edu )
- */
+Authors: 
+  - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
+  - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+*/
 
 #include <lo_frontend/LoFrontend.h>
 
@@ -61,7 +31,8 @@ LoFrontend::LoFrontend():
   b_odometry_has_been_received_(false),
   b_pose_stamped_has_been_received_(false),  
   b_imu_frame_is_correct_(false), 
-  b_is_open_space_(false) {}
+  b_is_open_space_(false),
+  b_run_with_gt_point_cloud_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -99,6 +70,10 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (b_convert_imu_to_base_link_frame_) {
     LoadCalibrationFromTfTree();
   }  
+  if (b_run_with_gt_point_cloud_){
+    InitWithGTPointCloud(gt_point_cloud_filename_);
+  }
+
   return true;  
 }
 
@@ -141,6 +116,12 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if(!pu::Get("data_integration/mode", data_integration_mode_))
     return false;
   if(!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
+    return false;
+  if(!pu::Get("b_enable_computation_time_profiling", b_enable_computation_time_profiling_))
+    return false;
+  if(!pu::Get("b_run_with_gt_point_cloud", b_run_with_gt_point_cloud_))
+    return false;
+  if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
   return true;
 }
@@ -220,6 +201,9 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - CreatePublishers");  
   ros::NodeHandle nl(n);  
   base_frame_pcld_pub_ = nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
+  lidar_callback_duration_pub_ = nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
+  scan_to_scan_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
+  scan_to_submap_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
   return true;
 }
 
@@ -418,6 +402,15 @@ tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
+
+  ros::Time lidar_callback_start;
+  ros::Time scan_to_scan_start;
+  ros::Time scan_to_submap_start;
+
+  if(b_enable_computation_time_profiling_) {
+    lidar_callback_start = ros::Time::now();
+  }  
+
   if (b_verbose_) ROS_INFO("LoFrontend - LidarCallback"); 
 
   if(!b_pcld_received_) {
@@ -496,8 +489,20 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
   
+  if (b_enable_computation_time_profiling_) {
+    scan_to_scan_start = ros::Time::now();
+  }
+  
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
+  }
+  
+  if (b_enable_computation_time_profiling_) {
+    auto scan_to_scan_end = ros::Time::now(); 
+    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start; 
+    auto scan_to_scan_duration_msg = std_msgs::Float64(); 
+    scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec()); 
+    scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
   }
 
   if (b_add_first_scan_to_key_) {
@@ -508,6 +513,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_add_first_scan_to_key_ = false;
     last_keyframe_pose_ = localization_.GetIntegratedEstimate();
     return;
+  }
+
+  if (b_enable_computation_time_profiling_) { 
+    scan_to_submap_start = ros::Time::now();
   }  
 
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
@@ -515,6 +524,15 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
+  
+  if (b_enable_computation_time_profiling_) {
+    auto scan_to_submap_end = ros::Time::now(); 
+    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start; 
+    auto scan_to_submap_duration_msg = std_msgs::Float64(); 
+    scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec()); 
+    scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
+  }
+  
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   
@@ -538,7 +556,15 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     PointCloud base_frame_pcld = *msg;
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
-  }  
+  }
+
+  if (b_enable_computation_time_profiling_) {
+    auto lidar_callback_end = ros::Time::now(); 
+    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start; 
+    auto lidar_callback_duration_msg = std_msgs::Float64(); 
+    lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec()); 
+    lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);  
+  }
   
 }
 
@@ -589,4 +615,20 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
   std::cout << "Received " << bool_msg.data << std::endl;
   odometry_.SetFlatGroundAssumptionValue(bool_msg.data);
   localization_.SetFlatGroundAssumptionValue(bool_msg.data);
+}
+
+void LoFrontend::InitWithGTPointCloud(const std::string filename) {
+  ROS_INFO_STREAM("Generating point cloud ground truth using point cloud from " << filename);
+
+  // Read ground truth from file
+  pcl::PCDReader pcd_reader;
+  PointCloud gt_point_cloud;
+  pcd_reader.read(filename, gt_point_cloud);
+  PointCloud::Ptr gt_pc_ptr(new PointCloud(gt_point_cloud));
+
+  // Create octree map to select only the parts needed
+  PointCloud::Ptr unused(new PointCloud);
+  mapper_.InsertPoints(gt_pc_ptr, unused.get());
+
+  ROS_INFO("Completed addition of GT point cloud to map");
 }

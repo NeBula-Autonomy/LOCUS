@@ -1,3 +1,9 @@
+/*
+Authors: 
+  - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
+  - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+*/
+
 #include <lo_frontend/LoFrontend.h>
 #include <gtest/gtest.h>
 
