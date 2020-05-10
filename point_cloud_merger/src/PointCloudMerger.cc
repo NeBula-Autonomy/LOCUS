@@ -46,17 +46,26 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
 
   pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld", 10);
-  pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);
-  pcld3_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld3", 10);
+  pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);  
 
-  pcld_synchronizer = std::unique_ptr<PcldSynchronizer>(
-    new PcldSynchronizer(PcldSyncPolicy(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_));
-  pcld_synchronizer->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
-
-  pcld_synchronizer3 = std::unique_ptr<PcldSynchronizer3>(
-    new PcldSynchronizer3(PcldSyncPolicy3(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_, *pcld3_sub_));
-  pcld_synchronizer3->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
-  
+  if (number_of_velodynes_==2) {
+    ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
+    pcld_synchronizer = std::unique_ptr<PcldSynchronizer>(
+      new PcldSynchronizer(PcldSyncPolicy(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_));
+    pcld_synchronizer->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
+  }
+  else if (number_of_velodynes_==3) {
+    ROS_INFO("PointCloudMerger - 3 VLPs merging requested");
+    pcld3_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld3", 10);
+    pcld_synchronizer3 = std::unique_ptr<PcldSynchronizer3>(
+      new PcldSynchronizer3(PcldSyncPolicy3(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_, *pcld3_sub_));
+    pcld_synchronizer3->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
+  }
+  else {
+    ROS_WARN("PointCloudMerger - number_of_velodynes_ !=2 and !=3");
+    return false;
+  }
+ 
   return true;
 
 }
