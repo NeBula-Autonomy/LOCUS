@@ -26,6 +26,8 @@ bool PointCloudMerger::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudMerger::LoadParameters(const ros::NodeHandle& n) {
+  if (!pu::Get("merging/number_of_velodynes", number_of_velodynes_)) 
+    return false;
   if (!pu::Get("merging/decimate_percentage", decimate_percentage_)) 
     return false;
   if (!pu::Get("merging/b_use_random_filter", b_use_random_filter_)) 

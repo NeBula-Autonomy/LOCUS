@@ -45,6 +45,8 @@ class PointCloudMerger {
     std::string name_;
 
     ros::Publisher merged_pcld_pub_;
+
+    int number_of_velodynes_;
     
     bool b_use_random_filter_;
     double decimate_percentage_;
