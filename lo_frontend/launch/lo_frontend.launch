@@ -4,8 +4,6 @@
 
     <!--TODO: Parse from yaml -->
     <arg name="number_of_velodynes" default="3" />
-    <arg name="b_use_two_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
-    <arg name="b_use_three_pc" value="$(eval arg('number_of_velodynes') > 2)"/>
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
 
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
@@ -77,7 +75,7 @@
             </rosparam>
         </node>
 
-        <node if="$(arg b_use_multiple_pc)"
+        <node if="$(eval arg('number_of_velodynes') > 1)"
             pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link_front"
@@ -92,7 +90,7 @@
             </rosparam>
         </node>
 
-        <node if="$(arg b_use_three_pc)"
+        <node if="$(eval arg('number_of_velodynes') > 2)"
             pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link_rear"
