@@ -26,6 +26,8 @@ bool PointCloudMerger::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudMerger::LoadParameters(const ros::NodeHandle& n) {
+  if (!pu::Get("merging/number_of_velodynes", number_of_velodynes_)) 
+    return false;
   if (!pu::Get("merging/decimate_percentage", decimate_percentage_)) 
     return false;
   if (!pu::Get("merging/b_use_random_filter", b_use_random_filter_)) 
@@ -40,13 +42,32 @@ bool PointCloudMerger::LoadParameters(const ros::NodeHandle& n) {
 }
 
 bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
+
   ros::NodeHandle nl(n);
+
   pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld", 10);
-  pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);
-  pcld_synchronizer = std::unique_ptr<PcldSynchronizer>(
-    new PcldSynchronizer(PcldSyncPolicy(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_));
-  pcld_synchronizer->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
+  pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);  
+
+  if (number_of_velodynes_==2) {
+    ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
+    pcld_synchronizer = std::unique_ptr<PcldSynchronizer>(
+      new PcldSynchronizer(PcldSyncPolicy(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_));
+    pcld_synchronizer->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
+  }
+  else if (number_of_velodynes_==3) {
+    ROS_INFO("PointCloudMerger - 3 VLPs merging requested");
+    pcld3_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld3", 10);
+    pcld_synchronizer3 = std::unique_ptr<PcldSynchronizer3>(
+      new PcldSynchronizer3(PcldSyncPolicy3(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_, *pcld3_sub_));
+    pcld_synchronizer3->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
+  }
+  else {
+    ROS_WARN("PointCloudMerger - number_of_velodynes_ !=2 and !=3");
+    return false;
+  }
+ 
   return true;
+
 }
 
 bool PointCloudMerger::CreatePublishers(const ros::NodeHandle& n) {
@@ -56,26 +77,21 @@ bool PointCloudMerger::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& pcld1,
-                                     const sensor_msgs::PointCloud2::ConstPtr& pcld2) {
+                                             const sensor_msgs::PointCloud2::ConstPtr& pcld2) {
 
-  // Merge point clouds
   PointCloud p1, p2;
   pcl::fromROSMsg(*pcld1, p1);
   pcl::fromROSMsg(*pcld2, p2);
 
-  // Simple add together (could do filtering later)
   PointCloud::Ptr sum(new PointCloud(p1 + p2));
 
-  // Filter the combined point cloud
   if (b_use_random_filter_){
-    const int n_points = static_cast<int>((1.0 - decimate_percentage_) *
-                                              sum->size());
+    const int n_points = static_cast<int>((1.0 - decimate_percentage_) * sum->size());
     pcl::RandomSample<pcl::PointXYZI> random_filter;
     random_filter.setSample(n_points);
     random_filter.setInputCloud(sum);
     random_filter.filter(*sum);
   }
-
   if (b_use_radius_filter_){
     pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
     rad.setInputCloud(sum);
@@ -83,14 +99,41 @@ void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::Con
     rad.setMinNeighborsInRadius(radius_knn_);
     rad.filter(*sum);
   }
-  // Or a radius filter?
 
   PublishMergedPointCloud(sum);
+
 }
 
-void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combined_pc){
-  // Publish incoming point cloud message from the reference frame
-  if (merged_pcld_pub_.getNumSubscribers() != 0) {
-    merged_pcld_pub_.publish(*combined_pc);
+void PointCloudMerger::ThreePointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& pcld1,
+                                               const sensor_msgs::PointCloud2::ConstPtr& pcld2, 
+                                               const sensor_msgs::PointCloud2::ConstPtr& pcld3) {
+  
+  PointCloud p1, p2, p3;
+  pcl::fromROSMsg(*pcld1, p1);
+  pcl::fromROSMsg(*pcld2, p2);
+  pcl::fromROSMsg(*pcld3, p3);
+
+  PointCloud::Ptr sum(new PointCloud(p1 + (p2 + p3)));
+  
+  if (b_use_random_filter_){
+    const int n_points = static_cast<int>((1.0 - decimate_percentage_) * sum->size());
+    pcl::RandomSample<pcl::PointXYZI> random_filter;
+    random_filter.setSample(n_points);
+    random_filter.setInputCloud(sum);
+    random_filter.filter(*sum);
   }
+  if (b_use_radius_filter_){
+    pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
+    rad.setInputCloud(sum);
+    rad.setRadiusSearch(radius_);
+    rad.setMinNeighborsInRadius(radius_knn_);
+    rad.filter(*sum);
+  }
+
+  PublishMergedPointCloud(sum);
+
+}
+
+void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combined_pc) {
+  if (merged_pcld_pub_.getNumSubscribers() != 0) merged_pcld_pub_.publish(*combined_pc);
 }
