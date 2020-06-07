@@ -172,6 +172,8 @@ private:
   struct Parameters {    
     // Compute ICP covariance and condition number
     bool compute_icp_covariance;
+    // Max boundd for icp covariance
+    double icp_max_covariance;
     // Compute ICP observability 
     bool compute_icp_observability;
     // Stop ICP if the transformation from the last iteration was this small
