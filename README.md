@@ -1,3 +1,5 @@
 # LO Front-End
 
-Robust Lidar Odometry And Mapping
+Accurate, robust and adaptable lidar odometry and mapping.
+
+![alt text](readme.png)
