@@ -2,6 +2,7 @@ localization:
 
   # Compute ICP covariance and condition number
   compute_icp_covariance: true
+  icp_max_covariance: 1000
 
   # Compute ICP observability 
   compute_icp_observability: false
