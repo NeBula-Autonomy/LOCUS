@@ -55,6 +55,11 @@
 
         </node>
 
+
+        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
+            <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
+        </node>
+
         <node pkg="topic_tools" type="transform" name="pose_to_odom" respawn="true" output="screen"
             args="/$(arg robot_namespace)/lo_frontend/localization_integrated_estimate
                     /$(arg robot_namespace)/lo_frontend/odometry nav_msgs/Odometry
