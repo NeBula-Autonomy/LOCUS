@@ -47,20 +47,20 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
 
   failure_detection_sub_ = nl.subscribe("failure_detection", 10, &PointCloudMerger::FailureDetectionCallback, this); 
 
-  pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld", 10);
-  pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);  
+  pcld0_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld0", 10);
+  pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld1", 10);  
 
   if (number_of_velodynes_==2) {
     ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
     pcld_synchronizer = std::unique_ptr<PcldSynchronizer>(
-      new PcldSynchronizer(PcldSyncPolicy(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_));
+      new PcldSynchronizer(PcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
     pcld_synchronizer->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
   }
   else if (number_of_velodynes_==3) {
     ROS_INFO("PointCloudMerger - 3 VLPs merging requested");
-    pcld3_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld3", 10);
+    pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);
     pcld_synchronizer3 = std::unique_ptr<PcldSynchronizer3>(
-      new PcldSynchronizer3(PcldSyncPolicy3(pcld_queue_size_), *pcld1_sub_, *pcld2_sub_, *pcld3_sub_));
+      new PcldSynchronizer3(PcldSyncPolicy3(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
     pcld_synchronizer3->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
   }
   else {
@@ -78,12 +78,12 @@ bool PointCloudMerger::CreatePublishers(const ros::NodeHandle& n) {
   return true;
 }
 
-void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& pcld1,
-                                             const sensor_msgs::PointCloud2::ConstPtr& pcld2) {
+void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& a,
+                                             const sensor_msgs::PointCloud2::ConstPtr& b) {
 
   PointCloud p1, p2;
-  pcl::fromROSMsg(*pcld1, p1);
-  pcl::fromROSMsg(*pcld2, p2);
+  pcl::fromROSMsg(*a, p1);
+  pcl::fromROSMsg(*b, p2);
 
   PointCloud::Ptr sum(new PointCloud(p1 + p2));
 
@@ -106,14 +106,14 @@ void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::Con
 
 }
 
-void PointCloudMerger::ThreePointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& pcld1,
-                                               const sensor_msgs::PointCloud2::ConstPtr& pcld2, 
-                                               const sensor_msgs::PointCloud2::ConstPtr& pcld3) {
+void PointCloudMerger::ThreePointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& a,
+                                               const sensor_msgs::PointCloud2::ConstPtr& b, 
+                                               const sensor_msgs::PointCloud2::ConstPtr& c) {
   
   PointCloud p1, p2, p3;
-  pcl::fromROSMsg(*pcld1, p1);
-  pcl::fromROSMsg(*pcld2, p2);
-  pcl::fromROSMsg(*pcld3, p3);
+  pcl::fromROSMsg(*a, p1);
+  pcl::fromROSMsg(*b, p2);
+  pcl::fromROSMsg(*c, p3);
 
   PointCloud::Ptr sum(new PointCloud(p1 + (p2 + p3)));
   

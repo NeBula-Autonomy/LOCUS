@@ -42,8 +42,8 @@ failure_detection_pub = rospy.Publisher("failure_detection", Int8, queue_size=1)
 timers = []
 timeout_threshold = 5
 topics = ["velodyne_points/transformed", 
-          "velodyne_rear/velodyne_points/transformed",
-          "velodyne_front/velodyne_points/transformed"]
+          "velodyne_front/velodyne_points/transformed", 
+          "velodyne_rear/velodyne_points/transformed"]
 
 
 

@@ -34,12 +34,12 @@ class PointCloudMerger {
     bool RegisterCallbacks(const ros::NodeHandle& n);
     bool CreatePublishers(const ros::NodeHandle& n);
 
-    void TwoPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& pcld1,
-                              const sensor_msgs::PointCloud2::ConstPtr& pcld2);  
+    void TwoPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& a,
+                               const sensor_msgs::PointCloud2::ConstPtr& b);  
 
-    void ThreePointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& pcld1,
-                                const sensor_msgs::PointCloud2::ConstPtr& pcld2, 
-                                const sensor_msgs::PointCloud2::ConstPtr& pcld3);
+    void ThreePointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& a,
+                                 const sensor_msgs::PointCloud2::ConstPtr& b, 
+                                 const sensor_msgs::PointCloud2::ConstPtr& c);
 
     void PublishMergedPointCloud(const PointCloud::ConstPtr combined_pc);
 
@@ -59,9 +59,9 @@ class PointCloudMerger {
     // Approximate time policy queue size to synchronize point clouds
     int pcld_queue_size_{10};
     
+    message_filters::Subscriber<sensor_msgs::PointCloud2>* pcld0_sub_;
     message_filters::Subscriber<sensor_msgs::PointCloud2>* pcld1_sub_;
-    message_filters::Subscriber<sensor_msgs::PointCloud2>* pcld2_sub_;
-    message_filters::Subscriber<sensor_msgs::PointCloud2>* pcld3_sub_;  
+    message_filters::Subscriber<sensor_msgs::PointCloud2>* pcld2_sub_;  
     
     // 2 VLPs
     typedef message_filters::sync_policies::ApproximateTime<
@@ -78,9 +78,17 @@ class PointCloudMerger {
     typedef message_filters::Synchronizer<PcldSyncPolicy3> PcldSynchronizer3;
     std::unique_ptr<PcldSynchronizer3> pcld_synchronizer3;
 
-    // Failure detection subscriber 
+    // Failure detection ----------------------------------------------------
     ros::Subscriber failure_detection_sub_;
     void FailureDetectionCallback(const std_msgs::Int8& sensor_id); 
+    /*
+    Convention: 
+      - 0:TOP
+      - 1:FRONT
+      - 2:REAR 
+    */
+   
+   // -----------------------------------------------------------------------
 
 };
 
