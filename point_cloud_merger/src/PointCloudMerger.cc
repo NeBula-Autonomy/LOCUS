@@ -4,7 +4,8 @@ namespace pu = parameter_utils;
 
 PointCloudMerger::PointCloudMerger(): 
   b_use_random_filter_(false),
-  b_use_radius_filter_(false) {}
+  b_use_radius_filter_(false), 
+  number_of_broken_devices_(0) {}
 
 PointCloudMerger::~PointCloudMerger() {}
 
@@ -142,4 +143,6 @@ void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combin
 
 void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id) {
   ROS_INFO_STREAM("PointCloudMerger - Received failure detection of sensor " << sensor_id);
+  number_of_broken_devices_++; 
+  ROS_INFO_STREAM("Number of broken devices is: " << number_of_broken_devices_);
 } 
