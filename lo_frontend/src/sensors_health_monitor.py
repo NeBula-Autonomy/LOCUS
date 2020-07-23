@@ -9,12 +9,15 @@ Author:
 
 import rospy
 import threading 
+from std_msgs.msg import Int8
 from sensor_msgs.msg import PointCloud2
 
 
 
 def sensor_timeout(id):
+    global failure_detection_pub
     print("Detected failure in sensor " + str(id))
+    failure_detection_pub.publish(id)
 
 
 
@@ -27,6 +30,10 @@ def sensor_callback(msg, sensor_id):
 
 
 rospy.init_node("sensors_health_monitor")
+
+
+
+failure_detection_pub = rospy.Publisher("failure_detection", Int8, queue_size=1)
 
 
 
