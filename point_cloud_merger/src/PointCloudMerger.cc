@@ -45,6 +45,8 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
 
   ros::NodeHandle nl(n);
 
+  failure_detection_sub_ = nl.subscribe("failure_detection", 10, &PointCloudMerger::FailureDetectionCallback, this); 
+
   pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld", 10);
   pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl, "pcld2", 10);  
 
@@ -137,3 +139,7 @@ void PointCloudMerger::ThreePointCloudCallback(const sensor_msgs::PointCloud2::C
 void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combined_pc) {
   if (merged_pcld_pub_.getNumSubscribers() != 0) merged_pcld_pub_.publish(*combined_pc);
 }
+
+void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id) {
+  ROS_INFO_STREAM("PointCloudMerger - Received failure detection of sensor " << sensor_id);
+} 

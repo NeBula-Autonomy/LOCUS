@@ -2,6 +2,7 @@
 #define POINT_CLOUD_MERGER_H
 
 #include <ros/ros.h>
+#include <std_msgs/Int8.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
@@ -76,6 +77,10 @@ class PointCloudMerger {
       sensor_msgs::PointCloud2> PcldSyncPolicy3;
     typedef message_filters::Synchronizer<PcldSyncPolicy3> PcldSynchronizer3;
     std::unique_ptr<PcldSynchronizer3> pcld_synchronizer3;
+
+    // Failure detection subscriber 
+    ros::Subscriber failure_detection_sub_;
+    void FailureDetectionCallback(const std_msgs::Int8& sensor_id); 
 
 };
 

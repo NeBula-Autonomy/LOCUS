@@ -14,10 +14,10 @@ from sensor_msgs.msg import PointCloud2
 
 
 
-def sensor_timeout(id):
+def sensor_timeout(sensor_id):
     global failure_detection_pub
-    print("Detected failure in sensor " + str(id))
-    failure_detection_pub.publish(id)
+    print("Detected failure in sensor " + str(sensor_id))
+    failure_detection_pub.publish(sensor_id)
 
 
 
