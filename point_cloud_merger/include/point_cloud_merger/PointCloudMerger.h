@@ -66,9 +66,9 @@ class PointCloudMerger {
     // 2 VLPs
     typedef message_filters::sync_policies::ApproximateTime<
       sensor_msgs::PointCloud2, 
-      sensor_msgs::PointCloud2> PcldSyncPolicy;
-    typedef message_filters::Synchronizer<PcldSyncPolicy> PcldSynchronizer;
-    std::unique_ptr<PcldSynchronizer> pcld_synchronizer;
+      sensor_msgs::PointCloud2> PcldSyncPolicy2;
+    typedef message_filters::Synchronizer<PcldSyncPolicy2> PcldSynchronizer2;
+    std::unique_ptr<PcldSynchronizer2> pcld_synchronizer_2_;
 
     // 3 VLPs
     typedef message_filters::sync_policies::ApproximateTime<
@@ -76,7 +76,7 @@ class PointCloudMerger {
       sensor_msgs::PointCloud2, 
       sensor_msgs::PointCloud2> PcldSyncPolicy3;
     typedef message_filters::Synchronizer<PcldSyncPolicy3> PcldSynchronizer3;
-    std::unique_ptr<PcldSynchronizer3> pcld_synchronizer3;
+    std::unique_ptr<PcldSynchronizer3> pcld_synchronizer_3_;
 
     // Failure detection ----------------------------------------------------
     ros::Subscriber failure_detection_sub_;
