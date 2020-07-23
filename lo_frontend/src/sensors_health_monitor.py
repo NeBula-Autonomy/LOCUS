@@ -34,24 +34,21 @@ def sensor_callback(msg, sensor_id):
 
 
 rospy.init_node("sensors_health_monitor")
-
-
-
+robot_name = rospy.get_namespace().split('/')[1]
 failure_detection_pub = rospy.Publisher("failure_detection", Int8, queue_size=1)
 
 
 
-topics = ["/husky4/velodyne_points/transformed", 
-          "/husky4/velodyne_rear/velodyne_points/transformed",
-          "/husky4/velodyne_front/velodyne_points/transformed"]
-
-
-
 timers = []
-timeout_threshold = 3
+timeout_threshold = 5
+topics = ["velodyne_points/transformed", 
+          "velodyne_rear/velodyne_points/transformed",
+          "velodyne_front/velodyne_points/transformed"]
+
+
 
 for i in range(len(topics)): 
-    rospy.Subscriber(topics[i], PointCloud2, sensor_callback, i)
+    rospy.Subscriber("/" + robot_name + "/" + topics[i], PointCloud2, sensor_callback, i)
     timers.append(threading.Timer(timeout_threshold, sensor_timeout, args=(i,)))
 
 

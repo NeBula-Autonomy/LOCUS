@@ -110,7 +110,7 @@
             </rosparam>
         </node>
 
-        <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo">
+        <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo" output="screen">
             <rosparam file="$(find point_cloud_merger)/config/parameters.yaml"/>
             <remap from="~pcld" to="$(arg pc_trans_in_1)"/>
             <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
