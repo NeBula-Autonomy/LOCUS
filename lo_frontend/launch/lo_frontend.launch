@@ -3,7 +3,7 @@
     <arg name="robot_namespace" default="robot"/>
 
     <!--TODO: Parse from yaml -->
-    <arg name="number_of_velodynes" default="3" />
+    <arg name="number_of_velodynes" value="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
 
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
@@ -105,8 +105,9 @@
             </rosparam>
         </node>
 
-        <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo">
+        <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo" output="screen">
             <rosparam file="$(find point_cloud_merger)/config/parameters.yaml"/>
+            <param name="merging/number_of_velodynes" value="$(arg number_of_velodynes)"/>
             <remap from="~pcld" to="$(arg pc_trans_in_1)"/>
             <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
             <remap from="~pcld3" to="$(arg pc_trans_in_3)"/>
