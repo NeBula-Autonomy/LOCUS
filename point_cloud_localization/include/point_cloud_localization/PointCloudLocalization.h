@@ -37,6 +37,7 @@
 #ifndef POINT_CLOUD_LOCALIZATION_H
 #define POINT_CLOUD_LOCALIZATION_H
 
+#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -138,7 +139,10 @@ private:
   void PublishPose(const geometry_utils::Transform3& pose,
                    const Eigen::Matrix<double, 6, 6>& covariance,
                    const ros::Publisher& pub);
-  
+
+  void PublishOdometry(const geometry_utils::Transform3& odometry, 
+                       const Eigen::Matrix<double, 6, 6>& covariance);
+
   // Publish condition number of ICP covariance matrix
   void PublishConditionNumber(double& k, const ros::Publisher& pub);
 
@@ -219,6 +223,12 @@ private:
   --------------------*/
 
   bool b_is_flat_ground_assumption_;
+
+  /*--------------------
+  Odometry publishment   
+  --------------------*/
+
+  ros::Publisher odometry_pub_;
 
 };
 
