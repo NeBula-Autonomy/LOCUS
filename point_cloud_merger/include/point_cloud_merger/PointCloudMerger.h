@@ -89,19 +89,19 @@ class PointCloudMerger {
 
     typedef message_filters::sync_policies::ApproximateTime<
       sensor_msgs::PointCloud2, 
-      sensor_msgs::PointCloud2> PcldSyncPolicy2;
+      sensor_msgs::PointCloud2> TwoPcldSyncPolicy;
 
     typedef message_filters::sync_policies::ApproximateTime<
       sensor_msgs::PointCloud2, 
       sensor_msgs::PointCloud2, 
-      sensor_msgs::PointCloud2> PcldSyncPolicy3;
+      sensor_msgs::PointCloud2> ThreePcldSyncPolicy;
 
-    typedef message_filters::Synchronizer<PcldSyncPolicy2> PcldSynchronizer2;
+    typedef message_filters::Synchronizer<TwoPcldSyncPolicy> TwoPcldSynchronizer;
 
-    typedef message_filters::Synchronizer<PcldSyncPolicy3> PcldSynchronizer3;
+    typedef message_filters::Synchronizer<ThreePcldSyncPolicy> ThreePcldSynchronizer;
     
-    std::unique_ptr<PcldSynchronizer2> pcld_synchronizer_2_;
-    std::unique_ptr<PcldSynchronizer3> pcld_synchronizer_3_;
+    std::unique_ptr<TwoPcldSynchronizer> pcld_synchronizer_2_;
+    std::unique_ptr<ThreePcldSynchronizer> pcld_synchronizer_3_;
 
     // ---------------------------------------------------------------------------------
 

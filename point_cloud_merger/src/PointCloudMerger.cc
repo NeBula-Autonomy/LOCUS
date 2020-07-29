@@ -53,15 +53,15 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
 
   if (number_of_velodynes_==2) {
     ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
-    pcld_synchronizer_2_ = std::unique_ptr<PcldSynchronizer2>(
-      new PcldSynchronizer2(PcldSyncPolicy2(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
+    pcld_synchronizer_2_ = std::unique_ptr<TwoPcldSynchronizer>(
+      new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
     pcld_synchronizer_2_->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
   }
   else if (number_of_velodynes_==3) {
     ROS_INFO("PointCloudMerger - 3 VLPs merging requested");
     pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl_, "pcld2", 10);
-    pcld_synchronizer_3_ = std::unique_ptr<PcldSynchronizer3>(
-      new PcldSynchronizer3(PcldSyncPolicy3(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
+    pcld_synchronizer_3_ = std::unique_ptr<ThreePcldSynchronizer>(
+      new ThreePcldSynchronizer(ThreePcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
     pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
     
     id_to_sub_map_.insert({ 0, pcld0_sub_});
@@ -210,8 +210,8 @@ void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id)
   // TODO: Generalize [now assuming to kill: i) REAR, then ii) FRONT]
 
   if (number_of_active_devices_ == 2) {
-    pcld_synchronizer_2_ = std::unique_ptr<PcldSynchronizer2>(
-        new PcldSynchronizer2(PcldSyncPolicy2(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
+    pcld_synchronizer_2_ = std::unique_ptr<TwoPcldSynchronizer>(
+        new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
     pcld_synchronizer_2_->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
   }
   else if (number_of_active_devices_ == 1) {
