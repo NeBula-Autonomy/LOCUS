@@ -54,13 +54,7 @@
             <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
 
         </node>
-
-        <node pkg="topic_tools" type="transform" name="pose_to_odom" respawn="true" output="screen"
-            args="/$(arg robot_namespace)/lo_frontend/localization_integrated_estimate
-                    /$(arg robot_namespace)/lo_frontend/odometry nav_msgs/Odometry
-                    'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
-        </node>
-   
+ 
         <node pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link"
