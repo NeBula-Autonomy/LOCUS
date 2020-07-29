@@ -188,7 +188,7 @@ void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combin
 
 
 void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id) {
-
+  
   /*
   CONVENTION:
      - 0:TOP
@@ -204,7 +204,7 @@ void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id)
     - Minimize number of i) synchronizers and ii) PointCloudCallback
   */
   
-  ROS_INFO_STREAM("PointCloudMerger - Received failure detection of sensor " << sensor_id);
+  ROS_INFO("PointCloudMerger - Received failure detection of sensor %d", sensor_id.data);
   number_of_active_devices_--; 
 
   // TODO: Generalize [now assuming to kill: i) REAR, then ii) FRONT]
