@@ -505,7 +505,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
   }
 
-  if (b_add_first_scan_to_key_) {
+  if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
     localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
     mapper_.InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
     localization_.UpdateTimestamp(stamp);

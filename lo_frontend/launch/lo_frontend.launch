@@ -3,7 +3,7 @@
     <arg name="robot_namespace" default="robot"/>
 
     <!--TODO: Parse from yaml -->
-    <arg name="number_of_velodynes" default="3" />
+    <arg name="number_of_velodynes" value="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
 
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
@@ -55,17 +55,10 @@
 
         </node>
 
-
         <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
             <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
         </node>
-
-        <node pkg="topic_tools" type="transform" name="pose_to_odom" respawn="true" output="screen"
-            args="/$(arg robot_namespace)/lo_frontend/localization_integrated_estimate
-                    /$(arg robot_namespace)/lo_frontend/odometry nav_msgs/Odometry
-                    'nav_msgs.msg.Odometry(header=m.header, pose=m.pose)' --import nav_msgs geometry_msgs">
-        </node>
-   
+ 
         <node pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link"

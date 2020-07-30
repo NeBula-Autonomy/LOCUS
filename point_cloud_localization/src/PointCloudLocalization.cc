@@ -125,6 +125,8 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "observability_marker", 10, false);
   observability_vector_pub_ =
       nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
+  odometry_pub_ = 
+      nl.advertise<nav_msgs::Odometry>("odometry", 10, false);   
   return true;
 }
 
@@ -300,10 +302,12 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
     PublishPose(
         incremental_estimate_, icp_covariance, incremental_estimate_pub_);
     PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+    PublishOdometry(integrated_estimate_, icp_covariance);
   } else {
     PublishPose(
         incremental_estimate_, icp_covariance, incremental_estimate_pub_);
     PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
+    PublishOdometry(integrated_estimate_, icp_covariance);
   }
 
   // Publish transform between fixed frame and localization frame
@@ -537,6 +541,7 @@ void PointCloudLocalization::PublishPoseNoUpdate() {
   covariance = Eigen::MatrixXd::Zero(6, 6);
   PublishPose(incremental_estimate_, covariance, incremental_estimate_pub_);
   PublishPose(integrated_estimate_, covariance, integrated_estimate_pub_);
+  PublishOdometry(integrated_estimate_, covariance);
 }
 
 void PointCloudLocalization::PublishConditionNumber(double& k,
@@ -679,4 +684,20 @@ void PointCloudLocalization::ComputeDiagonalAndUpperRightOfAi(
   A_i.block(0, 0, 3, 3) = ai_cross_ni * (ai_cross_ni.transpose());
   A_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
   A_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
+}
+
+void PointCloudLocalization::PublishOdometry(
+  const geometry_utils::Transform3& odometry, 
+  const Eigen::Matrix<double, 6, 6>& covariance) {
+  nav_msgs::Odometry odometry_msg; 
+  odometry_msg.header.stamp = stamp_; 
+  odometry_msg.header.frame_id = fixed_frame_id_;
+  odometry_msg.pose.pose.position = gr::ToRosPoint(odometry.translation);
+  odometry_msg.pose.pose.orientation = gr::ToRosQuat(gu::RToQuat(odometry.rotation));
+  for (size_t i = 0; i < 36; i++) {
+    size_t row = static_cast<size_t>(i / 6);
+    size_t col = i % 6;
+    odometry_msg.pose.covariance[i] = covariance(row, col);
+  }
+  odometry_pub_.publish(odometry_msg); 
 }
