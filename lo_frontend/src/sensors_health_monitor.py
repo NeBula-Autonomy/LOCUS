@@ -7,6 +7,8 @@ Description:
     - A general-purpose sensor health monitor 
 Author: 
     - Matteo Palieri (palierimatteo@gmail.com)
+TODO: 
+    - Add startup handling 
 """
 
 

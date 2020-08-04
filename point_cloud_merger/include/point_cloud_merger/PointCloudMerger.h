@@ -110,16 +110,17 @@ class PointCloudMerger {
 
 
     // Failure detection ----------------------------------------------------
-    ros::Subscriber failure_detection_sub_;
-    void FailureDetectionCallback(const std_msgs::Int8& sensor_id); 
     /*
     Convention: 
       - 0:TOP
       - 1:FRONT
       - 2:REAR 
     */
+    ros::Subscriber failure_detection_sub_;
+    void FailureDetectionCallback(const std_msgs::Int8& sensor_id); 
     int number_of_active_devices_; 
     std::map<int, MessageFilterSub> id_to_sub_map_;
+    std::vector<int> alive_keys_ {0, 1, 2}; 
   
     // -----------------------------------------------------------------------
 

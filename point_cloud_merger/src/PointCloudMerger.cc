@@ -63,7 +63,7 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
     pcld_synchronizer_3_ = std::unique_ptr<ThreePcldSynchronizer>(
       new ThreePcldSynchronizer(ThreePcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
     pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
-    
+
     id_to_sub_map_.insert({ 0, pcld0_sub_});
     id_to_sub_map_.insert({ 1, pcld1_sub_});
     id_to_sub_map_.insert({ 2, pcld2_sub_});
@@ -188,37 +188,29 @@ void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combin
 
 
 void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id) {
-  
-  /*
-  CONVENTION:
-     - 0:TOP
-     - 1:FRONT
-     - 2:REAR
-  
-  NOTE: 
-    - First Basic Implementation
-    - Preliminary assumption is: dead once, dead forever  
 
+  /*
   TODO: 
     - Implement ResurrectionDetection as well in sensors_health_monitor.py 
     - Minimize number of i) synchronizers and ii) PointCloudCallback
   */
   
   ROS_INFO("PointCloudMerger - Received failure detection of sensor %d", sensor_id.data);
-  number_of_active_devices_--; 
 
-  // TODO: Generalize [now assuming to kill: i) REAR, then ii) FRONT]
+  alive_keys_.erase(std::remove(alive_keys_.begin(), alive_keys_.end(), sensor_id.data), alive_keys_.end()); 
+  number_of_active_devices_ = alive_keys_.size(); 
 
   if (number_of_active_devices_ == 2) {
     pcld_synchronizer_2_ = std::unique_ptr<TwoPcldSynchronizer>(
-        new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
+      new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), *id_to_sub_map_[alive_keys_[0]], *id_to_sub_map_[alive_keys_[1]]));
     pcld_synchronizer_2_->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
   }
   else if (number_of_active_devices_ == 1) {
-    standard_pcld_sub_ = nl_.subscribe("pcld0", 1, &PointCloudMerger::OnePointCloudCallback, this);
-  } 
-  else if (number_of_active_devices_ == 0) {
-    ROS_ERROR("PointCloudMerger - No active lidar sensors");
+    auto topic = "pcld" + std::to_string(alive_keys_[0]);
+    standard_pcld_sub_ = nl_.subscribe(topic, 1, &PointCloudMerger::OnePointCloudCallback, this);
+  }
+  else if (number_of_active_devices_ == 0) {    
+    ROS_ERROR("PointCloudMerger - No active lidar sensors");  
   }
      
 } 
