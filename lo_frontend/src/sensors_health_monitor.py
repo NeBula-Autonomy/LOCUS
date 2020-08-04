@@ -7,8 +7,6 @@ Description:
     - A general-purpose sensor health monitor 
 Author: 
     - Matteo Palieri (palierimatteo@gmail.com)
-TODO: 
-    - Add startup handling 
 """
 
 
@@ -29,7 +27,11 @@ def sensor_timeout(sensor_id):
 
 
 def sensor_callback(msg, sensor_id):
-    global timers 
+    global timers, first_msg_received
+    if not first_msg_received: 
+        for timer in timers: 
+            timer.start()
+        first_msg_received = True 
     timers[sensor_id].cancel()
     timers[sensor_id] = threading.Timer(timeout_threshold, sensor_timeout, args=(sensor_id,)) 
     timers[sensor_id].start()
@@ -42,8 +44,9 @@ failure_detection_pub = rospy.Publisher("failure_detection", Int8, queue_size=1)
 
 
 
+first_msg_received = False 
 timers = []
-timeout_threshold = 10
+timeout_threshold = 2
 topics = ["velodyne_points/transformed", 
           "velodyne_front/velodyne_points/transformed", 
           "velodyne_rear/velodyne_points/transformed"]
@@ -53,11 +56,6 @@ topics = ["velodyne_points/transformed",
 for i in range(len(topics)): 
     rospy.Subscriber("/" + robot_name + "/" + topics[i], PointCloud2, sensor_callback, i)
     timers.append(threading.Timer(timeout_threshold, sensor_timeout, args=(i,)))
-
-
-
-for timer in timers: 
-    timer.start()
 
 
 
