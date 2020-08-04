@@ -117,11 +117,14 @@ class PointCloudMerger {
       - 2:REAR 
     */
     ros::Subscriber failure_detection_sub_;
+    ros::Subscriber resurrection_detection_sub_;
     void FailureDetectionCallback(const std_msgs::Int8& sensor_id); 
+    void ResurrectionDetectionCallback(const std_msgs::Int8& sensor_id); 
     int number_of_active_devices_; 
     std::map<int, MessageFilterSub> id_to_sub_map_;
     std::vector<int> alive_keys_ {0, 1, 2}; 
-  
+    message_filters::Connection two_sync_connection_; 
+    message_filters::Connection three_sync_connection_; 
     // -----------------------------------------------------------------------
 
 

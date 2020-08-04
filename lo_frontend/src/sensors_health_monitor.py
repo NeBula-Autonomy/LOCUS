@@ -23,15 +23,21 @@ def sensor_timeout(sensor_id):
     failure_msg = Int8()
     failure_msg.data = sensor_id
     failure_detection_pub.publish(failure_msg)
+    dead_sensors.append(sensor_id)
 
 
 
 def sensor_callback(msg, sensor_id):
-    global timers, first_msg_received
+    global timers, first_msg_received, resurrection_detection_pub
     if not first_msg_received: 
         for timer in timers: 
             timer.start()
         first_msg_received = True 
+    if sensor_id in dead_sensors: 
+        dead_sensors.remove(sensor_id)
+        resurrection_msg = Int8()
+        resurrection_msg.data = sensor_id
+        resurrection_detection_pub.publish(resurrection_msg)
     timers[sensor_id].cancel()
     timers[sensor_id] = threading.Timer(timeout_threshold, sensor_timeout, args=(sensor_id,)) 
     timers[sensor_id].start()
@@ -41,12 +47,15 @@ def sensor_callback(msg, sensor_id):
 rospy.init_node("sensors_health_monitor")
 robot_name = rospy.get_namespace().split('/')[1]
 failure_detection_pub = rospy.Publisher("failure_detection", Int8, queue_size=1)
+resurrection_detection_pub = rospy.Publisher("resurrection_detection", Int8, queue_size=1)
+
 
 
 
 first_msg_received = False 
+dead_sensors = []
 timers = []
-timeout_threshold = 2
+timeout_threshold = 1
 topics = ["velodyne_points/transformed", 
           "velodyne_front/velodyne_points/transformed", 
           "velodyne_rear/velodyne_points/transformed"]

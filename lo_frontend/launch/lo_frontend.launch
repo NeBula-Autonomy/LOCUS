@@ -57,6 +57,7 @@
 
         <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
             <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
+            <remap from="resurrection_detection" to="point_cloud_merger_lo/resurrection_detection"/>
         </node>
  
         <node pkg="nodelet"
