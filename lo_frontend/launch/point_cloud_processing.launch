@@ -3,7 +3,7 @@
     <arg name="robot_namespace" default="robot"/>
 
     <!--TODO: Parse from yaml -->
-    <arg name="number_of_velodynes" value="3" />
+    <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
 
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
@@ -16,45 +16,6 @@
 
     <group ns="$(arg robot_namespace)">
    
-        <node launch-prefix="gdb -ex 'set print thread-events off' -ex run --args"
-            pkg="lo_frontend"
-            name="lo_frontend"
-            type="lo_frontend_node"
-            output="screen">
-           
-            <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
-            <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
-            <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom"/>
-            <remap from="~POSE_TOPIC" to="not_currently_used"/>
-
-            <param name="b_publish_tfs" value="false"/>
-            <param name="robot_name" value="$(arg robot_namespace)"/>
-            <param name="tf_prefix" value="$(arg robot_namespace)"/>
-
-            <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
-            <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
-            <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
-            <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>
-            <rosparam file="$(find point_cloud_localization)/config/parameters.yaml"/>
-            <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
-
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky1')" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky1')" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky2')" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky2')" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'husky3')" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'husky3')" />
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky4')" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'telemax1')" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'telemax1')" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
-
-        </node>
- 
         <node pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link"
@@ -99,9 +60,8 @@
             </rosparam>
         </node>
 
-        <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo" output="screen">
+        <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo">
             <rosparam file="$(find point_cloud_merger)/config/parameters.yaml"/>
-            <param name="merging/number_of_velodynes" value="$(arg number_of_velodynes)"/>
             <remap from="~pcld" to="$(arg pc_trans_in_1)"/>
             <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
             <remap from="~pcld3" to="$(arg pc_trans_in_3)"/>
@@ -123,9 +83,5 @@
         </node>
        
     </group>
-
-    <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
-        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-    </include>
  
 </launch>

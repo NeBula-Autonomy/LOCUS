@@ -1,8 +1,5 @@
 merging:
 
-  # VLPs settigs 
-  number_of_velodynes: 3
-
   # RANDOM DOWNSAMPLE FILTER
   b_use_random_filter: false
   # Percentage for random filter
