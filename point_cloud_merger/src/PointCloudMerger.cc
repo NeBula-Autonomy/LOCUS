@@ -242,31 +242,4 @@ void PointCloudMerger::ResurrectionDetectionCallback(const std_msgs::Int8& senso
      
 } 
 
-
-
-void PointCloudMerger::ResurrectionDetectionCallback(const std_msgs::Int8& sensor_id) {
-  
-  ROS_INFO("PointCloudMerger - Received resurrection detection of sensor %d", sensor_id.data);
-
-  alive_keys_.push_back(sensor_id.data);
-  number_of_active_devices_ = alive_keys_.size(); 
-
-  if (number_of_active_devices_ == 3) {
-    two_sync_connection_.disconnect();
-  }
-  else if (number_of_active_devices_ == 2) {
-    standard_pcld_sub_.shutdown(); 
-    pcld_synchronizer_2_ = std::unique_ptr<TwoPcldSynchronizer>(
-      new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), 
-                                                *id_to_sub_map_[alive_keys_[0]], 
-                                                *id_to_sub_map_[alive_keys_[1]]));
-    two_sync_connection_ = pcld_synchronizer_2_->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
-  }
-  else if (number_of_active_devices_ == 1) {
-    auto topic = "pcld" + std::to_string(alive_keys_[0]);
-    standard_pcld_sub_ = nl_.subscribe(topic, 1, &PointCloudMerger::OnePointCloudCallback, this);
-  }
-     
-} 
-
 // ------------------------------------------------------------------------------------------------------------------
