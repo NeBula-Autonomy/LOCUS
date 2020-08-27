@@ -51,14 +51,18 @@ resurrection_detection_pub = rospy.Publisher("resurrection_detection", Int8, que
 
 
 
-
 first_msg_received = False 
 dead_sensors = []
 timers = []
 timeout_threshold = 1
+
+
+
+number_of_velodynes = rospy.get_param("/" + robot_name + "/point_cloud_merger_lo/merging/number_of_velodynes")
 topics = ["velodyne_points/transformed", 
-          "velodyne_front/velodyne_points/transformed", 
-          "velodyne_rear/velodyne_points/transformed"]
+          "velodyne_front/velodyne_points/transformed"]
+if number_of_velodynes == 3: 
+    topics.append("velodyne_rear/velodyne_points/transformed")
 
 
 
