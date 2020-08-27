@@ -104,7 +104,7 @@ class PointCloudMerger {
     void ResurrectionDetectionCallback(const std_msgs::Int8& sensor_id); 
     int number_of_active_devices_; 
     std::map<int, MessageFilterSub> id_to_sub_map_;
-    std::vector<int> alive_keys_ {0, 1, 2}; 
+    std::vector<int> alive_keys_; 
     message_filters::Connection two_sync_connection_; 
     // ------------------------------------------------------------------------
 

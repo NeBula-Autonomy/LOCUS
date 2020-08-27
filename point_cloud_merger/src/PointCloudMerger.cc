@@ -53,6 +53,7 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
   pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl_, "pcld1", 10);  
   id_to_sub_map_.insert({ 0, pcld0_sub_});
   id_to_sub_map_.insert({ 1, pcld1_sub_});
+  alive_keys_ = {0, 1};
 
   if (number_of_velodynes_==2) {
     ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
@@ -66,6 +67,7 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
     pcld_synchronizer_3_ = std::unique_ptr<ThreePcldSynchronizer>(
       new ThreePcldSynchronizer(ThreePcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
     pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
+    alive_keys_.push_back(2);
     id_to_sub_map_.insert({ 2, pcld2_sub_});  
   }
   else {
