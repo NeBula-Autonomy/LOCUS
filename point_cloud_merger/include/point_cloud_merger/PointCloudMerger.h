@@ -27,6 +27,19 @@ class PointCloudMerger {
     bool Initialize(const ros::NodeHandle& n);
 
     typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
+    typedef message_filters::Subscriber<sensor_msgs::PointCloud2>* MessageFilterSub; 
+    
+    typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::PointCloud2, 
+      sensor_msgs::PointCloud2> TwoPcldSyncPolicy;
+
+    typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::PointCloud2, 
+      sensor_msgs::PointCloud2, 
+      sensor_msgs::PointCloud2> ThreePcldSyncPolicy;
+
+    typedef message_filters::Synchronizer<TwoPcldSyncPolicy> TwoPcldSynchronizer;
+    typedef message_filters::Synchronizer<ThreePcldSyncPolicy> ThreePcldSynchronizer;
 
   private:
   
@@ -34,11 +47,7 @@ class PointCloudMerger {
     bool RegisterCallbacks(const ros::NodeHandle& n);
     bool CreatePublishers(const ros::NodeHandle& n);
 
-
-
-
-
-    // TODO: Reduce---------------------------------------------------------------------
+    // TODO: Reduce ----------------------------------------------------------
 
     void OnePointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& a);
     
@@ -49,11 +58,7 @@ class PointCloudMerger {
                                  const sensor_msgs::PointCloud2::ConstPtr& b, 
                                  const sensor_msgs::PointCloud2::ConstPtr& c);
 
-    // ---------------------------------------------------------------------------------
-
-
-
-
+    // -----------------------------------------------------------------------
 
     void PublishMergedPointCloud(const PointCloud::ConstPtr combined_pc);
 
@@ -71,50 +76,27 @@ class PointCloudMerger {
     unsigned int radius_knn_;
 
     int pcld_queue_size_{10}; // Approximate time policy queue size to synchronize point clouds
-    
-    typedef message_filters::Subscriber<sensor_msgs::PointCloud2>* MessageFilterSub; 
-
+  
     MessageFilterSub pcld0_sub_;
     MessageFilterSub pcld1_sub_;
     MessageFilterSub pcld2_sub_;  
 
     ros::NodeHandle nl_;
     ros::Subscriber standard_pcld_sub_; 
-    
 
-
-
-
-    // TODO: Reduce---------------------------------------------------------------------
-
-    typedef message_filters::sync_policies::ApproximateTime<
-      sensor_msgs::PointCloud2, 
-      sensor_msgs::PointCloud2> TwoPcldSyncPolicy;
-
-    typedef message_filters::sync_policies::ApproximateTime<
-      sensor_msgs::PointCloud2, 
-      sensor_msgs::PointCloud2, 
-      sensor_msgs::PointCloud2> ThreePcldSyncPolicy;
-
-    typedef message_filters::Synchronizer<TwoPcldSyncPolicy> TwoPcldSynchronizer;
-
-    typedef message_filters::Synchronizer<ThreePcldSyncPolicy> ThreePcldSynchronizer;
+    // TODO: Reduce ----------------------------------------------------------
     
     std::unique_ptr<TwoPcldSynchronizer> pcld_synchronizer_2_;
     std::unique_ptr<ThreePcldSynchronizer> pcld_synchronizer_3_;
 
-    // ---------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------
 
-
-
-
-
-    // Failure detection ----------------------------------------------------
     /*
+    Failure detection --------------------------------------------------------
     Convention: 
-      - 0:TOP
-      - 1:FRONT
-      - 2:REAR 
+                - 0:TOP
+                - 1:FRONT
+                - 2:REAR 
     */
     ros::Subscriber failure_detection_sub_;
     ros::Subscriber resurrection_detection_sub_;
@@ -124,11 +106,7 @@ class PointCloudMerger {
     std::map<int, MessageFilterSub> id_to_sub_map_;
     std::vector<int> alive_keys_ {0, 1, 2}; 
     message_filters::Connection two_sync_connection_; 
-    // -----------------------------------------------------------------------
-
-
-
-
+    // ------------------------------------------------------------------------
 
 };
 

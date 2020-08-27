@@ -51,6 +51,8 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
 
   pcld0_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl_, "pcld0", 10);
   pcld1_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl_, "pcld1", 10);  
+  id_to_sub_map_.insert({ 0, pcld0_sub_});
+  id_to_sub_map_.insert({ 1, pcld1_sub_});
 
   if (number_of_velodynes_==2) {
     ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
@@ -64,11 +66,7 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
     pcld_synchronizer_3_ = std::unique_ptr<ThreePcldSynchronizer>(
       new ThreePcldSynchronizer(ThreePcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
     pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
-
-    id_to_sub_map_.insert({ 0, pcld0_sub_});
-    id_to_sub_map_.insert({ 1, pcld1_sub_});
-    id_to_sub_map_.insert({ 2, pcld2_sub_});
-  
+    id_to_sub_map_.insert({ 2, pcld2_sub_});  
   }
   else {
     ROS_WARN("PointCloudMerger - number_of_velodynes_ !=2 and !=3");
@@ -84,10 +82,6 @@ bool PointCloudMerger::CreatePublishers(const ros::NodeHandle& n) {
   merged_pcld_pub_ = nl.advertise<PointCloud>("combined_point_cloud", 10, false);
   return true;
 }
-
-
-
-
 
 // TODO: Reduce---------------------------------------------------------------------------------
 
@@ -176,17 +170,9 @@ void PointCloudMerger::ThreePointCloudCallback(const sensor_msgs::PointCloud2::C
 
 // ---------------------------------------------------------------------------------------------
 
-
-
-
-
 void PointCloudMerger::PublishMergedPointCloud(const PointCloud::ConstPtr combined_pc) {
   if (merged_pcld_pub_.getNumSubscribers() != 0) merged_pcld_pub_.publish(*combined_pc);
 }
-
-
-
-
 
 // TODO: Unify ------------------------------------------------------------------------------------------------------
 
@@ -214,8 +200,6 @@ void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id)
   }
      
 } 
-
-
 
 void PointCloudMerger::ResurrectionDetectionCallback(const std_msgs::Int8& sensor_id) {
   
