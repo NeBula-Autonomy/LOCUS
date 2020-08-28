@@ -107,6 +107,7 @@ class PointCloudMerger {
     std::map<int, MessageFilterSub> id_to_sub_map_;
     std::vector<int> alive_keys_; 
     message_filters::Connection two_sync_connection_; 
+    message_filters::Connection three_sync_connection_;
     // ------------------------------------------------------------------------
 
 };

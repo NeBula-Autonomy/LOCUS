@@ -59,14 +59,14 @@ bool PointCloudMerger::RegisterCallbacks(const ros::NodeHandle& n) {
     ROS_INFO("PointCloudMerger - 2 VLPs merging requested");
     pcld_synchronizer_2_ = std::unique_ptr<TwoPcldSynchronizer>(
       new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_));
-    pcld_synchronizer_2_->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
+    two_sync_connection_ = pcld_synchronizer_2_->registerCallback(&PointCloudMerger::TwoPointCloudCallback, this);
   }
   else if (number_of_velodynes_==3) {
     ROS_INFO("PointCloudMerger - 3 VLPs merging requested");
     pcld2_sub_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nl_, "pcld2", 10);
     pcld_synchronizer_3_ = std::unique_ptr<ThreePcldSynchronizer>(
       new ThreePcldSynchronizer(ThreePcldSyncPolicy(pcld_queue_size_), *pcld0_sub_, *pcld1_sub_, *pcld2_sub_));
-    pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
+    three_sync_connection_ = pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
     alive_keys_.push_back(2);
     id_to_sub_map_.insert({ 2, pcld2_sub_});  
   }
@@ -186,6 +186,7 @@ void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id)
   number_of_active_devices_ = alive_keys_.size(); 
 
   if (number_of_active_devices_ == 2) {
+    three_sync_connection_.disconnect();
     pcld_synchronizer_2_ = std::unique_ptr<TwoPcldSynchronizer>(
       new TwoPcldSynchronizer(TwoPcldSyncPolicy(pcld_queue_size_), 
                               *id_to_sub_map_[alive_keys_[0]], 
@@ -198,7 +199,8 @@ void PointCloudMerger::FailureDetectionCallback(const std_msgs::Int8& sensor_id)
     standard_pcld_sub_ = nl_.subscribe(topic, 1, &PointCloudMerger::OnePointCloudCallback, this); 
   }
   else if (number_of_active_devices_ == 0) {    
-    ROS_ERROR("PointCloudMerger - No active lidar sensors"); 
+    ROS_ERROR("PointCloudMerger - No active lidar sensors");
+    standard_pcld_sub_.shutdown(); 
   }
      
 } 
@@ -212,6 +214,12 @@ void PointCloudMerger::ResurrectionDetectionCallback(const std_msgs::Int8& senso
 
   if (number_of_active_devices_ == 3) {
     two_sync_connection_.disconnect();
+    pcld_synchronizer_3_ = std::unique_ptr<ThreePcldSynchronizer>(
+      new ThreePcldSynchronizer(ThreePcldSyncPolicy(pcld_queue_size_), 
+                                                *id_to_sub_map_[alive_keys_[0]], 
+                                                *id_to_sub_map_[alive_keys_[1]],
+                                                *id_to_sub_map_[alive_keys_[2]]));
+    three_sync_connection_ = pcld_synchronizer_3_->registerCallback(&PointCloudMerger::ThreePointCloudCallback, this);
   }
   else if (number_of_active_devices_ == 2) {
     standard_pcld_sub_.shutdown(); 
