@@ -25,8 +25,9 @@ class PointCloudMerger {
     ~PointCloudMerger();
 
     bool Initialize(const ros::NodeHandle& n);
-
-    typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
+    
+    typedef pcl::PointXYZI Point; 
+    typedef pcl::PointCloud<Point> PointCloud;
     typedef message_filters::Subscriber<sensor_msgs::PointCloud2>* MessageFilterSub; 
     
     typedef message_filters::sync_policies::ApproximateTime<

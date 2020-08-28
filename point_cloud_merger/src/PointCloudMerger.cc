@@ -95,13 +95,13 @@ void PointCloudMerger::OnePointCloudCallback(const sensor_msgs::PointCloud2::Con
 
   if (b_use_random_filter_){
     const int n_points = static_cast<int>((1.0 - decimate_percentage_) * cloud->size());
-    pcl::RandomSample<pcl::PointXYZI> random_filter;
+    pcl::RandomSample<Point> random_filter;
     random_filter.setSample(n_points);
     random_filter.setInputCloud(cloud);
     random_filter.filter(*cloud);
   }
   if (b_use_radius_filter_){
-    pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
+    pcl::RadiusOutlierRemoval<Point> rad;
     rad.setInputCloud(cloud);
     rad.setRadiusSearch(radius_);
     rad.setMinNeighborsInRadius(radius_knn_);
@@ -123,13 +123,13 @@ void PointCloudMerger::TwoPointCloudCallback(const sensor_msgs::PointCloud2::Con
 
   if (b_use_random_filter_){
     const int n_points = static_cast<int>((1.0 - decimate_percentage_) * sum->size());
-    pcl::RandomSample<pcl::PointXYZI> random_filter;
+    pcl::RandomSample<Point> random_filter;
     random_filter.setSample(n_points);
     random_filter.setInputCloud(sum);
     random_filter.filter(*sum);
   }
   if (b_use_radius_filter_){
-    pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
+    pcl::RadiusOutlierRemoval<Point> rad;
     rad.setInputCloud(sum);
     rad.setRadiusSearch(radius_);
     rad.setMinNeighborsInRadius(radius_knn_);
@@ -153,13 +153,13 @@ void PointCloudMerger::ThreePointCloudCallback(const sensor_msgs::PointCloud2::C
   
   if (b_use_random_filter_){
     const int n_points = static_cast<int>((1.0 - decimate_percentage_) * sum->size());
-    pcl::RandomSample<pcl::PointXYZI> random_filter;
+    pcl::RandomSample<Point> random_filter;
     random_filter.setSample(n_points);
     random_filter.setInputCloud(sum);
     random_filter.filter(*sum);
   }
   if (b_use_radius_filter_){
-    pcl::RadiusOutlierRemoval<pcl::PointXYZI> rad;
+    pcl::RadiusOutlierRemoval<Point> rad;
     rad.setInputCloud(sum);
     rad.setRadiusSearch(radius_);
     rad.setMinNeighborsInRadius(radius_knn_);
