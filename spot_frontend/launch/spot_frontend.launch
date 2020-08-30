@@ -59,10 +59,10 @@
       <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
       <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'telemax1')" />
       <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'telemax1')" />
-      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'spot1')" />
-      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'spot1')" />
-      <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'spot2')" />
-      <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'spot2')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
+      <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
+      <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
 
     </node>
 
