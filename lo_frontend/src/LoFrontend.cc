@@ -527,12 +527,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
   mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
-  diagnostic_msgs::DiagnosticStatus diag_localization;
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
 
   diagnostic_msgs::DiagnosticStatus diagnostics_localization = localization_.GetDiagnostics();
   if (diagnostics_localization.level == 0)
-    odometry_.PublishAll();
+    localization_.PublishAll();
 
   if (b_enable_computation_time_profiling_) {
     auto scan_to_submap_end = ros::Time::now(); 
@@ -583,8 +582,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   diagnostic_array.header.stamp = ros::Time::now();
   diagnostic_array.header.frame_id = name_;
   diagnostics_pub_.publish(diagnostic_array);
-
-  std::cout << __LINE__ << std::endl;
 }
 
 bool LoFrontend::CheckNans(const Imu &imu_msg) {
