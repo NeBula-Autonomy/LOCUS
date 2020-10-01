@@ -25,6 +25,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
 
 class LoFrontend {
 
@@ -60,12 +62,13 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  ros::Subscriber lidar_sub_;  
-  ros::Subscriber imu_sub_;   
-  ros::Subscriber odom_sub_;  
-  ros::Subscriber pose_sub_;    
+  ros::Subscriber lidar_sub_;
+  ros::Subscriber imu_sub_;
+  ros::Subscriber odom_sub_;
+  ros::Subscriber pose_sub_;
 
-  ros::Publisher base_frame_pcld_pub_; 
+  ros::Publisher base_frame_pcld_pub_;
+  ros::Publisher diagnostics_pub_;
 
   void LidarCallback(const PointCloud::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
