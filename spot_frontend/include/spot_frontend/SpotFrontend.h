@@ -157,6 +157,11 @@ private:
   std::string gt_point_cloud_filename_;
   bool b_run_with_gt_point_cloud_;
   void InitWithGTPointCloud(const std::string filename); 
+
+  /* -------------------------
+  Diagnostics
+  ------------------------- */
+  bool publish_diagnostics_;
 };
 
 #endif 

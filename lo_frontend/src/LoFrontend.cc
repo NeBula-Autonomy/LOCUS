@@ -32,7 +32,8 @@ LoFrontend::LoFrontend():
   b_pose_stamped_has_been_received_(false),  
   b_imu_frame_is_correct_(false), 
   b_is_open_space_(false),
-  b_run_with_gt_point_cloud_(false) {}
+  b_run_with_gt_point_cloud_(false),
+  publish_diagnostics_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -123,6 +124,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
+  pu::Get("publish_diagnostics", publish_diagnostics_);
   return true;
 }
 
@@ -575,13 +577,16 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
   
   // Publish diagnostics
-  diagnostic_msgs::DiagnosticArray diagnostic_array;
-  diagnostic_array.status.push_back(diagnostics_odometry);
-  diagnostic_array.status.push_back(diagnostics_localization);
-  diagnostic_array.header.seq++;
-  diagnostic_array.header.stamp = ros::Time::now();
-  diagnostic_array.header.frame_id = name_;
-  diagnostics_pub_.publish(diagnostic_array);
+  if (publish_diagnostics_)
+  {
+    diagnostic_msgs::DiagnosticArray diagnostic_array;
+    diagnostic_array.status.push_back(diagnostics_odometry);
+    diagnostic_array.status.push_back(diagnostics_localization);
+    diagnostic_array.header.seq++;
+    diagnostic_array.header.stamp = ros::Time::now();
+    diagnostic_array.header.frame_id = name_;
+    diagnostics_pub_.publish(diagnostic_array);
+  }
 }
 
 bool LoFrontend::CheckNans(const Imu &imu_msg) {
