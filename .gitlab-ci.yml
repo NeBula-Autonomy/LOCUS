@@ -1,45 +1,10 @@
-cache:
-  key: ${CI_PROJECT_NAME}-${CI_PIPELINE_ID}-${CI_COMMIT_REF_SLUG}
-  paths:
-    - catkin_ws
-
-stages:
-  - setup
-  - lint
-  - build_and_test
-
-setup:
-  stage: setup
-  script:
-    - mkdir -p catkin_ws/src/${CI_PROJECT_NAME}
-    - catkin config -w catkin_ws --extend /opt/ros/subt
-
-    # Copy target repository
-    - rsync -av ${CI_PROJECT_DIR}/* catkin_ws/src/${CI_PROJECT_NAME}/ --exclude catkin_ws
-
-    # Pull dependencies if specified in .gitlab-ci-repos.yml file
-    - "[ -f .gitlab-ci-repos.yml ] && vcs import catkin_ws/src < .gitlab-ci-repos.yml || true"
-    - vcs pull catkin_ws/src
-
-build_and_test:
-  stage: build_and_test
-  script:
-    - cd catkin_ws
-    - catkin clean --yes
-
-    # Build
-    - catkin build --summarize --no-status --force-color --no-notify
-    - source devel/setup.bash && true || true
-
-    # Run tests
-    - catkin run_tests --no-status --force-color --no-notify
-    - catkin_test_results
-  artifacts:
-    reports:
-      junit: catkin_ws/build/*/test_results/**/*.xml
+include:
+  - project: rollocopter/core/core_environment
+    file: shared/ci/default-ci.yml
 
 catkin_lint:
-  stage: lint
   script:
-    # Check package.xml and CMakeLists.txt
-    - catkin lint catkin_ws/src/${CI_PROJECT_NAME} --color=always --explain --ignore cmake_build_type --ignore unconfigured_system_depend
+    # Override default lint setting
+    - catkin lint . --color=always --explain
+        --ignore cmake_build_type
+        --ignore unconfigured_system_depend
