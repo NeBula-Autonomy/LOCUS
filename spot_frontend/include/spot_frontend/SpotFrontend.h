@@ -36,6 +36,8 @@ Authors:
 #include <tf2_ros/transform_listener.h>
 #include <message_filters/subscriber.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
 
 class SpotFrontend {
 
@@ -79,6 +81,7 @@ private:
   void LidarCallback(const PointCloud::ConstPtr& msg);
 
   ros::Publisher base_frame_pcld_pub_; 
+  ros::Publisher diagnostics_pub_;
 
   template <typename T>
   int CheckBufferSize(const T& buffer) const;
@@ -154,6 +157,11 @@ private:
   std::string gt_point_cloud_filename_;
   bool b_run_with_gt_point_cloud_;
   void InitWithGTPointCloud(const std::string filename); 
+
+  /* -------------------------
+  Diagnostics
+  ------------------------- */
+  bool publish_diagnostics_;
 };
 
 #endif 

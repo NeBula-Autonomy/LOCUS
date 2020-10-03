@@ -37,3 +37,5 @@ b_enable_computation_time_profiling: false
 
 b_run_with_gt_point_cloud: false
 gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
+
+publish_diagnostics: false

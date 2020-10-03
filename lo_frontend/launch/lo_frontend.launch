@@ -30,6 +30,8 @@
             <!-- <remap from="~ODOM_TOPIC" to="wheel_odom"/> -->
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
+            <remap from="/diagnostics" to="hero/diagnostics"/>
+
             <param name="b_publish_tfs" value="false"/>
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>

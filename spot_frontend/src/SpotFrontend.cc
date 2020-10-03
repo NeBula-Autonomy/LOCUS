@@ -24,7 +24,8 @@ SpotFrontend::SpotFrontend():
   odometry_number_of_calls_(0), 
   b_odometry_has_been_received_(false),
   b_is_open_space_(false), 
-  tf_buffer_authority_("transform_odometry") {}
+  tf_buffer_authority_("transform_odometry"),
+  publish_diagnostics_(false) {}
 
 SpotFrontend::~SpotFrontend() {}
 
@@ -101,6 +102,7 @@ bool SpotFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
+  pu::Get("publish_diagnostics", publish_diagnostics_);
   return true;
 }
 
@@ -163,6 +165,7 @@ bool SpotFrontend::CreatePublishers(const ros::NodeHandle& n) {
   lidar_callback_duration_pub_ = nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
   scan_to_scan_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
   scan_to_submap_duration_pub_ = nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
+  diagnostics_pub_ = nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   return true;
 }
 
@@ -238,6 +241,9 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
   }
+  diagnostic_msgs::DiagnosticStatus diagnostics_odometry = odometry_.GetDiagnostics();
+  if (diagnostics_odometry.level == 0)
+    odometry_.PublishAll();
 
   if (b_enable_computation_time_profiling_) {
     auto scan_to_scan_end = ros::Time::now(); 
@@ -266,7 +272,11 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   mapper_.ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());   
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
-  
+
+  diagnostic_msgs::DiagnosticStatus diagnostics_localization = localization_.GetDiagnostics();
+  if (diagnostics_localization.level == 0)
+    localization_.PublishAll();
+
   if (b_enable_computation_time_profiling_) {
     auto scan_to_submap_end = ros::Time::now(); 
     auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start; 
@@ -307,7 +317,18 @@ void SpotFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec()); 
     lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);  
   }
-  
+
+  // Publish diagnostics
+  if (publish_diagnostics_)
+  {
+    diagnostic_msgs::DiagnosticArray diagnostic_array;
+    diagnostic_array.status.push_back(diagnostics_odometry);
+    diagnostic_array.status.push_back(diagnostics_localization);
+    diagnostic_array.header.seq++;
+    diagnostic_array.header.stamp = ros::Time::now();
+    diagnostic_array.header.frame_id = name_;
+    diagnostics_pub_.publish(diagnostic_array);
+  }
 }
 
 tf::Transform SpotFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
