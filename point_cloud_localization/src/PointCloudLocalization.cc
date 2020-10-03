@@ -480,16 +480,16 @@ bool PointCloudLocalization::ComputeICPCovariance(
   eigensolver.compute(*covariance);
   Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
   Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
-  double lower_bound = 0;     // Should be positive semidef
+  double lower_bound = 0.001;     // Should be positive semidef
   double upper_bound = params_.icp_max_covariance;
   if (eigen_values.size() < 6) {
     *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
     ROS_ERROR("Failed to find eigen values when computing icp covariance");
     return false;
   }
-  for (size_t i = 0; i < eigen_values.size(); i++) {
-    if (eigen_values(i) < lower_bound) eigen_values(i) = lower_bound;
-    if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
+  for (size_t i = 0; i < 6; i++) {
+    if (eigen_values[i] < lower_bound) eigen_values[i] = lower_bound;
+    if (eigen_values[i] > upper_bound) eigen_values[i] = upper_bound;
   }
   // Update covariance matrix after bound
   *covariance =
