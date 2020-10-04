@@ -9,23 +9,24 @@ Authors:
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
-SpotFrontend::SpotFrontend(): 
-  b_add_first_scan_to_key_(true),
-  counter_(0), 
-  b_pcld_received_(false),
-  msg_filtered_(new PointCloud()),
-  msg_transformed_(new PointCloud()),
-  msg_neighbors_(new PointCloud()),
-  msg_base_(new PointCloud()),
-  msg_fixed_(new PointCloud()), 
-  mapper_unused_fixed_(new PointCloud()),
-  mapper_unused_out_(new PointCloud()), 
-  b_use_odometry_integration_(false), 
-  odometry_number_of_calls_(0), 
-  b_odometry_has_been_received_(false),
-  b_is_open_space_(false), 
-  tf_buffer_authority_("transform_odometry"),
-  publish_diagnostics_(false) {}
+SpotFrontend::SpotFrontend()
+  : b_add_first_scan_to_key_(true),
+    counter_(0),
+    b_pcld_received_(false),
+    msg_filtered_(new PointCloud()),
+    msg_transformed_(new PointCloud()),
+    msg_neighbors_(new PointCloud()),
+    msg_base_(new PointCloud()),
+    msg_fixed_(new PointCloud()),
+    mapper_unused_fixed_(new PointCloud()),
+    mapper_unused_out_(new PointCloud()),
+    b_use_odometry_integration_(false),
+    odometry_number_of_calls_(0),
+    b_odometry_has_been_received_(false),
+    b_is_open_space_(false),
+    tf_buffer_authority_("transform_odometry"),
+    b_run_rolling_map_buffer_(false),
+    publish_diagnostics_(false) {}
 
 SpotFrontend::~SpotFrontend() {}
 
@@ -102,7 +103,15 @@ bool SpotFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
-  pu::Get("publish_diagnostics", publish_diagnostics_);
+  if (!pu::Get("publish_diagnostics", publish_diagnostics_))
+    return false;
+  if (!pu::Get("b_run_rolling_map_buffer", b_run_rolling_map_buffer_))
+    return false;
+
+  if (b_run_rolling_map_buffer_) {
+    mapper_.SetRollingMapBufferOn();
+  }
+
   return true;
 }
 
