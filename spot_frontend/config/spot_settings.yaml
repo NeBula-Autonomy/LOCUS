@@ -9,7 +9,7 @@ map_publishment:
   b_publish_map: true
   meters: 1
 
-b_run_rolling_map_buffer: false
+b_run_rolling_map_buffer: true
 
 queues: 
   lidar_queue_size: 1

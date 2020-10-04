@@ -125,15 +125,16 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if(!pu::Get("gt_point_cloud_filename", gt_point_cloud_filename_))
     return false;
-  pu::Get("publish_diagnostics", publish_diagnostics_);
-  return true;
-
+  if (!pu::Get("publish_diagnostics", publish_diagnostics_))
+    return false;
   if (!pu::Get("b_run_rolling_map_buffer", b_run_rolling_map_buffer_))
     return false;
 
   if (b_run_rolling_map_buffer_) {
     mapper_.SetRollingMapBufferOn();
   }
+
+  return true;
 }
 
 bool LoFrontend::SetDataIntegrationMode() {  
