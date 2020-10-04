@@ -118,9 +118,9 @@ private:
   PointCloudOdometry odometry_;
   PointCloudLocalization localization_;
   PointCloudMapper mapper_;
-  bool b_run_rolling_map_buffer_
+  bool b_run_rolling_map_buffer_;
 
-      bool b_publish_map_;
+  bool b_publish_map_;
   int counter_;
   int map_publishment_meters_;
   
