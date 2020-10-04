@@ -31,6 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   pcl_ros
   multithreaded_gicp
+  diagnostic_msgs
 )
 
 catkin_package(
@@ -43,6 +44,7 @@ catkin_package(
     visualization_msgs
     tf2_ros
     pcl_ros
+    diagnostic_msgs
 )
 
 include_directories(
