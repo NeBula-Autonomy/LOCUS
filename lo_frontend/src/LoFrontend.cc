@@ -9,31 +9,32 @@ Authors:
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
-LoFrontend::LoFrontend(): 
-  b_add_first_scan_to_key_(true),
-  counter_(0), 
-  b_pcld_received_(false),
-  msg_filtered_(new PointCloud()),
-  msg_transformed_(new PointCloud()),
-  msg_neighbors_(new PointCloud()),
-  msg_base_(new PointCloud()),
-  msg_fixed_(new PointCloud()), 
-  mapper_unused_fixed_(new PointCloud()),
-  mapper_unused_out_(new PointCloud()), 
-  b_use_imu_integration_(false), 
-  b_use_imu_yaw_integration_(false),
-  b_use_odometry_integration_(false), 
-  b_use_pose_stamped_integration_(false),
-  imu_number_of_calls_(0),
-  odometry_number_of_calls_(0), 
-  pose_stamped_number_of_calls_(0), 
-  b_imu_has_been_received_(false), 
-  b_odometry_has_been_received_(false),
-  b_pose_stamped_has_been_received_(false),  
-  b_imu_frame_is_correct_(false), 
-  b_is_open_space_(false),
-  b_run_with_gt_point_cloud_(false),
-  publish_diagnostics_(false) {}
+LoFrontend::LoFrontend()
+  : b_add_first_scan_to_key_(true),
+    counter_(0),
+    b_pcld_received_(false),
+    msg_filtered_(new PointCloud()),
+    msg_transformed_(new PointCloud()),
+    msg_neighbors_(new PointCloud()),
+    msg_base_(new PointCloud()),
+    msg_fixed_(new PointCloud()),
+    mapper_unused_fixed_(new PointCloud()),
+    mapper_unused_out_(new PointCloud()),
+    b_use_imu_integration_(false),
+    b_use_imu_yaw_integration_(false),
+    b_use_odometry_integration_(false),
+    b_use_pose_stamped_integration_(false),
+    imu_number_of_calls_(0),
+    odometry_number_of_calls_(0),
+    pose_stamped_number_of_calls_(0),
+    b_imu_has_been_received_(false),
+    b_odometry_has_been_received_(false),
+    b_pose_stamped_has_been_received_(false),
+    b_imu_frame_is_correct_(false),
+    b_is_open_space_(false),
+    b_run_with_gt_point_cloud_(false),
+    b_run_rolling_map_buffer_(false),
+    publish_diagnostics_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -126,6 +127,13 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   pu::Get("publish_diagnostics", publish_diagnostics_);
   return true;
+
+  if (!pu::Get("b_run_rolling_map_buffer", b_run_rolling_map_buffer_))
+    return false;
+
+  if (b_run_rolling_map_buffer_) {
+    mapper_.SetRollingMapBufferOn();
+  }
 }
 
 bool LoFrontend::SetDataIntegrationMode() {  

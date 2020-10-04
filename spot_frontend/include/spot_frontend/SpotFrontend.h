@@ -95,8 +95,9 @@ private:
   
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
-  PointCloudLocalization localization_; 
-  PointCloudMapper mapper_;   
+  PointCloudLocalization localization_;
+  PointCloudMapper mapper_;
+  bool b_run_rolling_map_buffer_;
 
   bool b_publish_map_;
   int counter_;
