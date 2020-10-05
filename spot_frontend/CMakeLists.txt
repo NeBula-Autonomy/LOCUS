@@ -38,6 +38,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   message_generation
+  diagnostic_msgs
 )
 
 find_package(OpenMP)
@@ -64,6 +65,7 @@ catkin_package(
     core_msgs
     geometry_msgs
     nav_msgs
+    diagnostic_msgs
   DEPENDS
     Boost
 )

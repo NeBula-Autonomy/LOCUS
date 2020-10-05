@@ -30,6 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   eigen_conversions
   multithreaded_gicp
+  diagnostic_msgs
 )
 
 catkin_package(
@@ -46,6 +47,7 @@ catkin_package(
     tf
     eigen_conversions
     multithreaded_gicp
+    diagnostic_msgs
 )
 
 # find_package(PCL 1.7 REQUIRED)

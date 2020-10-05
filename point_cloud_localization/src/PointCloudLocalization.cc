@@ -19,6 +19,7 @@ PointCloudLocalization::~PointCloudLocalization() {}
 
 bool PointCloudLocalization::Initialize(const ros::NodeHandle& n) {
   name_ = ros::names::append(n.getNamespace(), "PointCloudLocalization");
+  is_healthy_ = false;
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
@@ -126,7 +127,7 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
   observability_vector_pub_ =
       nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
   odometry_pub_ = 
-      nl.advertise<nav_msgs::Odometry>("odometry", 10, false);   
+      nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   return true;
 }
 
@@ -223,6 +224,7 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
                                                PointCloud* aligned_query) {
   if (aligned_query == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
+    is_healthy_ = false;
     return false;
   }
 
@@ -285,40 +287,22 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   integrated_estimate_ =
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
 
-  Eigen::Matrix<double, 6, 6> icp_covariance;
   if (params_.compute_icp_observability) {
     // Compute ICP obersvability (for lidar slip detection)
     Eigen::Matrix<double, 6, 6> eigenvectors_new;
     Eigen::Matrix<double, 6, 1> eigenvalues_new;
-    Eigen::Matrix<double, 6, 6> A;
+    observability_matrix_ = Eigen::Matrix<double, 6, 6>::Zero();
     ComputeIcpObservability(
-        query, reference, &eigenvectors_new, &eigenvalues_new, &A);
-    PublishObservableDirections(A);
+        query, reference, &eigenvectors_new, &eigenvalues_new, &observability_matrix_);
   }
 
-  if (params_.compute_icp_covariance) {
-    // Compute the covariance matrix for the estimated transform
-    ComputeICPCovariance(icpAlignedPointsLocalization_, T, &icp_covariance);
-    PublishPose(
-        incremental_estimate_, icp_covariance, incremental_estimate_pub_);
-    PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
-    PublishOdometry(integrated_estimate_, icp_covariance);
-  } else {
-    PublishPose(
-        incremental_estimate_, icp_covariance, incremental_estimate_pub_);
-    PublishPose(integrated_estimate_, icp_covariance, integrated_estimate_pub_);
-    PublishOdometry(integrated_estimate_, icp_covariance);
-  }
+  // Compute the covariance matrix for the estimated transform
+  icp_covariance_ = Eigen::Matrix<double, 6, 6>::Zero();
+  if (params_.compute_icp_covariance)
+    ComputeICPCovariance(icpAlignedPointsLocalization_, T, &icp_covariance_);
 
-  // Publish transform between fixed frame and localization frame
-  if (b_publish_tfs_) {
-    geometry_msgs::TransformStamped tf;
-    tf.transform = gr::ToRosTransform(integrated_estimate_);
-    tf.header.stamp = stamp_;
-    tf.header.frame_id = fixed_frame_id_;
-    tf.child_frame_id = base_frame_id_;
-    tfbr_.sendTransform(tf);
-  }
+  // TODO: Improve the healthy check.
+  is_healthy_ = true;
 
   return true;
 }
@@ -480,16 +464,16 @@ bool PointCloudLocalization::ComputeICPCovariance(
   eigensolver.compute(*covariance);
   Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
   Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
-  double lower_bound = 0;     // Should be positive semidef
+  double lower_bound = 0.001;     // Should be positive semidef
   double upper_bound = params_.icp_max_covariance;
   if (eigen_values.size() < 6) {
     *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
     ROS_ERROR("Failed to find eigen values when computing icp covariance");
     return false;
   }
-  for (size_t i = 0; i < eigen_values.size(); i++) {
-    if (eigen_values(i) < lower_bound) eigen_values(i) = lower_bound;
-    if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
+  for (size_t i = 0; i < 6; i++) {
+    if (eigen_values[i] < lower_bound) eigen_values[i] = lower_bound;
+    if (eigen_values[i] > upper_bound) eigen_values[i] = upper_bound;
   }
   // Update covariance matrix after bound
   *covariance =
@@ -506,10 +490,31 @@ bool PointCloudLocalization::ComputeICPCovariance(
   // The covariance matrix is a symmetric matrix, so its  singular  values  are
   // the absolute values of its nonzero eigenvalues Condition number is the
   // ratio of the largest and smallest eigenvalues.
-  double condition_number = singular_values(0) / singular_values(5);
-  PublishConditionNumber(condition_number, condition_number_pub_);
+  condition_number_ = singular_values(0) / singular_values(5);
 
   return true;
+}
+
+void PointCloudLocalization::PublishAll() {
+  if (params_.compute_icp_observability)
+    PublishObservableDirections(observability_matrix_);
+
+  if (params_.compute_icp_covariance)
+    PublishConditionNumber(condition_number_, condition_number_pub_);
+
+  PublishPose(incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
+  PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
+  PublishOdometry(integrated_estimate_, icp_covariance_);
+
+  // Publish transform between fixed frame and localization frame
+  if (b_publish_tfs_) {
+    geometry_msgs::TransformStamped tf;
+    tf.transform = gr::ToRosTransform(integrated_estimate_);
+    tf.header.stamp = stamp_;
+    tf.header.frame_id = fixed_frame_id_;
+    tf.child_frame_id = base_frame_id_;
+    tfbr_.sendTransform(tf);
+  }
 }
 
 void PointCloudLocalization::PublishPose(
@@ -537,11 +542,8 @@ void PointCloudLocalization::PublishPose(
 
 void PointCloudLocalization::PublishPoseNoUpdate() {
   // Convert pose estimates to ROS format and publish
-  Eigen::Matrix<double, 6, 6> covariance;
-  covariance = Eigen::MatrixXd::Zero(6, 6);
-  PublishPose(incremental_estimate_, covariance, incremental_estimate_pub_);
-  PublishPose(integrated_estimate_, covariance, integrated_estimate_pub_);
-  PublishOdometry(integrated_estimate_, covariance);
+  icp_covariance_ = Eigen::MatrixXd::Zero(6, 6);
+  PublishAll();
 }
 
 void PointCloudLocalization::PublishConditionNumber(double& k,
@@ -700,4 +702,22 @@ void PointCloudLocalization::PublishOdometry(
     odometry_msg.pose.covariance[i] = covariance(row, col);
   }
   odometry_pub_.publish(odometry_msg); 
+}
+
+diagnostic_msgs::DiagnosticStatus PointCloudLocalization::GetDiagnostics() {
+    diagnostic_msgs::DiagnosticStatus diag_status;
+    diag_status.name = name_;
+
+    if (is_healthy_)
+    {
+      diag_status.level = 0; // OK
+      diag_status.message = "Healthy";
+    }
+    else
+    {
+      diag_status.level = 2; // ERROR
+      diag_status.message = "Non healthy - Null output in MeasurementUpdate.";
+    }
+
+    return diag_status;
 }
