@@ -25,6 +25,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
 
 class LoFrontend {
 
@@ -60,12 +62,13 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  ros::Subscriber lidar_sub_;  
-  ros::Subscriber imu_sub_;   
-  ros::Subscriber odom_sub_;  
-  ros::Subscriber pose_sub_;    
+  ros::Subscriber lidar_sub_;
+  ros::Subscriber imu_sub_;
+  ros::Subscriber odom_sub_;
+  ros::Subscriber pose_sub_;
 
-  ros::Publisher base_frame_pcld_pub_; 
+  ros::Publisher base_frame_pcld_pub_;
+  ros::Publisher diagnostics_pub_;
 
   void LidarCallback(const PointCloud::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
@@ -113,8 +116,9 @@ private:
   
   PointCloudFilter filter_;
   PointCloudOdometry odometry_;
-  PointCloudLocalization localization_; 
-  PointCloudMapper mapper_;   
+  PointCloudLocalization localization_;
+  PointCloudMapper mapper_;
+  bool b_run_rolling_map_buffer_;
 
   bool b_publish_map_;
   int counter_;
@@ -203,6 +207,11 @@ private:
   std::string gt_point_cloud_filename_;
   bool b_run_with_gt_point_cloud_;
   void InitWithGTPointCloud(const std::string filename);
+
+  /* -------------------------
+  Diagnostics
+  ------------------------- */
+  bool publish_diagnostics_;
 
 };
 

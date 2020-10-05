@@ -54,6 +54,7 @@
 #include <parameter_utils/ParameterUtils.h>
 #include <tf/transform_datatypes.h>
 #include <pcl_ros/transforms.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
 
 class PointCloudOdometry {
 
@@ -93,6 +94,11 @@ public:
   void DisablePoseStampedIntegration();
 
   void SetFlatGroundAssumptionValue(const bool& value); 
+
+  void PublishAll();
+
+  // Diagnostics
+  diagnostic_msgs::DiagnosticStatus GetDiagnostics();
 
 private:
 
@@ -170,6 +176,8 @@ private:
   
   bool b_is_flat_ground_assumption_;
 
+  // Diagnostics
+  bool is_healthy_;
 };
 
 #endif
