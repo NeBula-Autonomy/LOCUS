@@ -59,6 +59,8 @@
             <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
             <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'handheld1')" />
             <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'handheld1')" />
+            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'xmaxx1')" />
+            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'xmaxx1')" />
 
         </node>
  
