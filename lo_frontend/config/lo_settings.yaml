@@ -9,6 +9,8 @@ map_publishment:
   b_publish_map: true
   meters: 1
 
+b_run_rolling_map_buffer: false
+
 queues: 
   lidar_queue_size: 1
   imu_queue_size: 10000
@@ -37,3 +39,5 @@ b_enable_computation_time_profiling: false
 
 b_run_with_gt_point_cloud: false
 gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
+
+publish_diagnostics: false

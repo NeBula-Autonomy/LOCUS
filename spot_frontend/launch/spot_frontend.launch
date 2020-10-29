@@ -27,6 +27,8 @@
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
       <remap from="~ODOMETRY_TOPIC" to="visual_odom"/>
 
+      <remap from="/diagnostics" to="hero/diagnostics"/>
+
       <param name="robot_name" value="$(arg robot_namespace)"/>
       <param name="tf_prefix" value="$(arg robot_namespace)"/>
 

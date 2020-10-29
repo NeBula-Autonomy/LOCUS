@@ -30,6 +30,8 @@
             <!-- <remap from="~ODOM_TOPIC" to="wheel_odom"/> -->
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
+            <remap from="/diagnostics" to="hero/diagnostics"/>
+
             <param name="b_publish_tfs" value="false"/>
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
@@ -51,12 +53,14 @@
             <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'husky4')" />
             <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'telemax1')" />
             <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'telemax1')" />
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'spot1')" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'spot1')" />
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'spot2')" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'spot2')" />
+            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot1')" />
+            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot1')" />
+            <param name="localization/num_threads" value="1" if="$(eval robot_namespace == 'spot2')" />
+            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
             <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'handheld1')" />
             <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'handheld1')" />
+            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'xmaxx1')" />
+            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'xmaxx1')" />
 
         </node>
  

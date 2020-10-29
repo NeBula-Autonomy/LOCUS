@@ -28,6 +28,7 @@ PointCloudOdometry::~PointCloudOdometry() {}
 bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
   ROS_INFO("PointCloudOdometry - Initialize");
   name_ = ros::names::append(n.getNamespace(), "PointCloudOdometry");
+  is_healthy_ = false;
   if (!LoadParameters(n)) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
@@ -213,6 +214,7 @@ bool PointCloudOdometry::UpdateICP() {
   }
   else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
+    is_healthy_ = false;
     return false;
   }  
   else {
@@ -234,6 +236,7 @@ bool PointCloudOdometry::UpdateICP() {
   }
   else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
+    is_healthy_ = false;
     return false;
   }
   
@@ -264,11 +267,10 @@ bool PointCloudOdometry::UpdateICP() {
       incremental_estimate_.rotation.ToEulerZYX().Norm());
   }
 
-  PublishPose(incremental_estimate_, incremental_estimate_pub_);
-  PublishPose(integrated_estimate_, integrated_estimate_pub_);
+  // TODO: Improve the healthy check.
+  is_healthy_ = true;
   
   return true;
-
 }
 
 void PointCloudOdometry::SetFlatGroundAssumptionValue(const bool& value) {
@@ -293,7 +295,12 @@ bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
   out = query_;
   return true;
 }
- 
+
+void PointCloudOdometry::PublishAll() {
+  PublishPose(incremental_estimate_, incremental_estimate_pub_);
+  PublishPose(integrated_estimate_, integrated_estimate_pub_);
+}
+
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
                                      const ros::Publisher& pub) {
   if (pub.getNumSubscribers() == 0) return;
@@ -302,4 +309,22 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
   ros_pose.header.frame_id = fixed_frame_id_;
   ros_pose.header.stamp = stamp_;
   pub.publish(ros_pose);
+}
+
+diagnostic_msgs::DiagnosticStatus PointCloudOdometry::GetDiagnostics() {
+    diagnostic_msgs::DiagnosticStatus diag_status;
+    diag_status.name = name_;
+
+    if (is_healthy_)
+    {
+      diag_status.level = 0; // OK
+      diag_status.message = "Healthy";
+    }
+    else
+    {
+      diag_status.level = 2; // ERROR
+      diag_status.message = "Non healthy - Null output in MeasurementUpdate.";
+    }
+
+    return diag_status;
 }

@@ -54,6 +54,7 @@
 #include <std_msgs/Float64.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
 
 using pcl::PointCloud;
 using pcl::PointXYZI;
@@ -115,6 +116,9 @@ class PointCloudLocalization {
   geometry_utils::Transform3 incremental_estimate_;
   geometry_utils::Transform3 integrated_estimate_;
 
+  // Publish All
+  void PublishAll();
+
   // Publish for first pose
   void PublishPoseNoUpdate();
 
@@ -128,7 +132,10 @@ class PointCloudLocalization {
   PointCloud icpAlignedPointsLocalization_;
 
   void SetFlatGroundAssumptionValue(const bool& value);
- 
+
+  // Diagnostics
+  diagnostic_msgs::DiagnosticStatus GetDiagnostics();
+
 private:
 
   // Node initialization
@@ -230,6 +237,15 @@ private:
 
   ros::Publisher odometry_pub_;
 
+  // ICP covariance
+  Eigen::Matrix<double, 6, 6> icp_covariance_;
+  double condition_number_;
+
+  // Observability matrix
+  Eigen::Matrix<double, 6, 6> observability_matrix_;
+
+  // Diagnostics
+  bool is_healthy_;
 };
 
 #endif
