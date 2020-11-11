@@ -35,14 +35,17 @@ bool PointCloudLocalization::Initialize(const ros::NodeHandle& n) {
 }
 
 bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
-  // Load frame ids
-  if (!pu::Get("frame_id/fixed", fixed_frame_id_)) return false;
-  if (!pu::Get("frame_id/base", base_frame_id_)) return false;
+  ROS_INFO("PointCloudLocalization - LoadParameters");
 
-  // Load initial position
   double init_x = 0.0, init_y = 0.0, init_z = 0.0;
   double init_qx = 0.0, init_qy = 0.0, init_qz = 0.0, init_qw = 1.0;
   bool b_have_fiducial = true;
+
+  if (!pu::Get("frame_id/fixed", fixed_frame_id_)) 
+    return false;
+  if (!pu::Get("frame_id/base", base_frame_id_)) 
+    return false;
+
   if (!pu::Get("fiducial_calibration/position/x", init_x))
     b_have_fiducial = false;
   if (!pu::Get("fiducial_calibration/position/y", init_y))
@@ -57,52 +60,57 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
     b_have_fiducial = false;
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
-  if (!b_have_fiducial) {
-    ROS_WARN("Can't find fiducials, using origin");
-  }
 
-  // Convert initial quaternion to Roll/Pitch/Yaw
-  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
-  gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
-  gu::Rot3 m1;
-  m1 = gu::QuatToR(q);
-  init_roll = m1.Roll();
-  init_pitch = m1.Pitch();
-  init_yaw = m1.Yaw();
-
-  integrated_estimate_.translation = gu::Vec3(init_x, init_y, init_z);
-  integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
-
-  // Load algorithm parameters
-  if (!pu::Get("localization/compute_icp_covariance",
-               params_.compute_icp_covariance))
+  if (!pu::Get("localization/compute_icp_covariance", params_.compute_icp_covariance))
     return false;
   if (!pu::Get("localization/icp_max_covariance", params_.icp_max_covariance))
     return false;
-  if (!pu::Get("localization/compute_icp_observability",
-               params_.compute_icp_observability))
+  if (!pu::Get("localization/compute_icp_observability", params_.compute_icp_observability))
     return false;
-  if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) return false;
-  if (!pu::Get("localization/corr_dist", params_.corr_dist)) return false;
-  if (!pu::Get("localization/iterations", params_.iterations)) return false;
+  if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) 
+    return false;
+  if (!pu::Get("localization/corr_dist", params_.corr_dist)) 
+    return false;
+  if (!pu::Get("localization/iterations", params_.iterations)) 
+    return false;
   if (!pu::Get("localization/transform_thresholding", transform_thresholding_))
     return false;
-  if (!pu::Get("localization/num_threads", params_.num_threads)) return false;
-  if (!pu::Get("localization/enable_timing_output",
-               params_.enable_timing_output))
+  if (!pu::Get("localization/num_threads", params_.num_threads)) 
     return false;
-  if (!pu::Get("localization/max_translation", max_translation_)) return false;
-  if (!pu::Get("localization/max_rotation", max_rotation_)) return false;
+  if (!pu::Get("localization/enable_timing_output", params_.enable_timing_output))
+    return false;
+  if (!pu::Get("localization/max_translation", max_translation_)) 
+    return false;
+  if (!pu::Get("localization/max_rotation", max_rotation_)) 
+    return false;
   if (!pu::Get("localization/normal_search_radius", params_.normal_radius_))
     return false;
   if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
     return false;
-  /*
-  if (!pu::Get("localization/max_power", max_power_))
-    return false;
-  */
 
   pu::Get("b_publish_tfs", b_publish_tfs_);
+
+  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
+  gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
+  gu::Rot3 R;
+  R = gu::QuatToR(q);
+  init_roll = R.Roll();
+  init_pitch = R.Pitch();
+  init_yaw = R.Yaw();
+
+  integrated_estimate_.translation = gu::Vec3(init_x, init_y, init_z);
+  integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
+
+  if (b_is_flat_ground_assumption_) {
+    integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+  }
+
+  if (!b_have_fiducial) {
+    ROS_WARN("Can't find fiducials, using origin");
+  }
+  else {
+    ROS_INFO_STREAM("Using:\n" << integrated_estimate_);
+  }
 
   return true;
 }
