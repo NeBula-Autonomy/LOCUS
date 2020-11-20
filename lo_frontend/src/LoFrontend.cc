@@ -134,6 +134,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     mapper_.SetRollingMapBufferOn();
   }
 
+  mapper_.SetClientName("LOCUS");
+
   return true;
 }
 
@@ -553,6 +555,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
   
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
+
+  Eigen::Vector3f current_robot_position(3); 
+  current_robot_position << current_pose.translation.data[0], 
+                            current_pose.translation.data[1], 
+                            current_pose.translation.data[2]; 
+  mapper_.SetCurrentRobotPosition(current_robot_position); 
+
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   
   if (delta.translation().norm()>translation_threshold_kf_ ||
