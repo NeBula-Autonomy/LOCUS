@@ -41,3 +41,5 @@ b_run_with_gt_point_cloud: false
 gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
 
 publish_diagnostics: false
+
+msw_box_filter_size: 50

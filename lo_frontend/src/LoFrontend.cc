@@ -129,12 +129,15 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_run_rolling_map_buffer", b_run_rolling_map_buffer_))
     return false;
+  if (!pu::Get("msw_box_filter_size", msw_box_filter_size_))
+    return false;
 
   if (b_run_rolling_map_buffer_) {
     mapper_.SetRollingMapBufferOn();
   }
 
   mapper_.SetClientName("LOCUS");
+  mapper_.SetBoxFilterSize(msw_box_filter_size_);
 
   return true;
 }

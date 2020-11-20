@@ -213,6 +213,11 @@ private:
   ------------------------- */
   bool publish_diagnostics_;
 
+  /*--------------------------
+  Map Sliding Window 2 
+  --------------------------*/
+  int msw_box_filter_size_;
+
 };
 
 #endif 
