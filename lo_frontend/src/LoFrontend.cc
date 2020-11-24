@@ -34,7 +34,8 @@ LoFrontend::LoFrontend()
     b_is_open_space_(false),
     b_run_with_gt_point_cloud_(false),
     b_run_rolling_map_buffer_(false),
-    publish_diagnostics_(false) {}
+    publish_diagnostics_(false), 
+    b_asked_to_refresh_(false) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -561,15 +562,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
-  Eigen::Vector3f current_robot_position(3); 
-  current_robot_position << current_pose.translation.data[0], 
-                            current_pose.translation.data[1], 
-                            current_pose.translation.data[2]; 
-  mapper_.SetCurrentRobotPosition(current_robot_position); 
 
 
-
-  // Velocity-triggerred MSW2 ------------------------------------------------------------
+  // Map Sliding Window 2 ------------------------------------------------------------
 
   gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
   ros::Duration delta_t =  stamp - previous_stamp_; 
@@ -578,11 +573,27 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto rotational_velocity = (2*acos(delta_s.rotation().toQuaternion().w())*180.0/M_PI) / delta_t.toSec();                  
 
   if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 2) {
-    ROS_WARN("Robot not moving");
+    if (!b_asked_to_refresh_) {
+      mapper_.Refresh();
+      last_refresh_pose_ = current_pose;
+      b_asked_to_refresh_ = true;
+    }
+    else {
+      if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > 10) {
+        mapper_.Refresh();
+        last_refresh_pose_ = current_pose;
+      }  
+    } 
   } 
 
   previous_stamp_ = stamp; 
   previous_pose_ = current_pose; 
+
+  Eigen::Vector3f current_robot_position(3); 
+  current_robot_position << current_pose.translation.data[0], 
+                            current_pose.translation.data[1], 
+                            current_pose.translation.data[2]; 
+  mapper_.SetCurrentRobotPosition(current_robot_position); 
 
   // -------------------------------------------------------------------------------------
 

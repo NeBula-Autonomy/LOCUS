@@ -42,4 +42,4 @@ gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
 
 publish_diagnostics: false
 
-msw_box_filter_size: 50
+msw_box_filter_size: 15

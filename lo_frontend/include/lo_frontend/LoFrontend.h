@@ -218,7 +218,10 @@ private:
   --------------------------*/
   int msw_box_filter_size_;
   geometry_utils::Transform3 previous_pose_; 
+  geometry_utils::Transform3 last_refresh_pose_;
   ros::Time previous_stamp_; 
+  bool b_asked_to_refresh_;
+
 };
 
 #endif 
