@@ -532,6 +532,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     localization_.PublishPoseNoUpdate();
     b_add_first_scan_to_key_ = false;
     last_keyframe_pose_ = localization_.GetIntegratedEstimate();
+    previous_pose_ = localization_.GetIntegratedEstimate();
+    previous_stamp_ = stamp; 
     return;
   }
 
@@ -564,6 +566,27 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                             current_pose.translation.data[1], 
                             current_pose.translation.data[2]; 
   mapper_.SetCurrentRobotPosition(current_robot_position); 
+
+
+
+  // Velocity-triggerred MSW2 ------------------------------------------------------------
+
+  gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
+  ros::Duration delta_t =  stamp - previous_stamp_; 
+
+  auto translational_velocity = delta_s.translation().norm() / delta_t.toSec();               
+  auto rotational_velocity = (2*acos(delta_s.rotation().toQuaternion().w())*180.0/M_PI) / delta_t.toSec();                  
+
+  if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 2) {
+    ROS_WARN("Robot not moving");
+  } 
+
+  previous_stamp_ = stamp; 
+  previous_pose_ = current_pose; 
+
+  // -------------------------------------------------------------------------------------
+
+
 
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   

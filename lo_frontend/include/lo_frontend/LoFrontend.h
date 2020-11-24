@@ -217,7 +217,8 @@ private:
   Map Sliding Window 2 
   --------------------------*/
   int msw_box_filter_size_;
-
+  geometry_utils::Transform3 previous_pose_; 
+  ros::Time previous_stamp_; 
 };
 
 #endif 
