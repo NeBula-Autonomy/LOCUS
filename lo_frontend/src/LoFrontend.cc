@@ -137,7 +137,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     mapper_.SetRollingMapBufferOn();
   }
 
-  mapper_.SetClientName("LOCUS");
   mapper_.SetBoxFilterSize(msw_box_filter_size_);
 
   return true;
@@ -561,44 +560,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
   
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
-
-
-
-  // Map Sliding Window 2 ------------------------------------------------------------
-
-  gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
-  ros::Duration delta_t =  stamp - previous_stamp_; 
-
-  auto translational_velocity = delta_s.translation().norm() / delta_t.toSec();               
-  auto rotational_velocity = (2*acos(delta_s.rotation().toQuaternion().w())*180.0/M_PI) / delta_t.toSec();                  
-
-  if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 2) {
-    if (!b_asked_to_refresh_) {
-      mapper_.Refresh();
-      last_refresh_pose_ = current_pose;
-      b_asked_to_refresh_ = true;
-    }
-    else {
-      if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > 10) {
-        mapper_.Refresh();
-        last_refresh_pose_ = current_pose;
-      }  
-    } 
-  } 
-
-  previous_stamp_ = stamp; 
-  previous_pose_ = current_pose; 
-
-  Eigen::Vector3f current_robot_position(3); 
-  current_robot_position << current_pose.translation.data[0], 
-                            current_pose.translation.data[1], 
-                            current_pose.translation.data[2]; 
-  mapper_.SetCurrentRobotPosition(current_robot_position); 
-
-  // -------------------------------------------------------------------------------------
-
-
-
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   
   if (delta.translation().norm()>translation_threshold_kf_ ||
@@ -616,6 +577,45 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     } 
     last_keyframe_pose_ = current_pose;
   }
+
+  // Map Sliding Window 2 -----------------------------------------------------------------------------------------
+
+  Eigen::Vector3f current_robot_position(3); 
+  current_robot_position << current_pose.translation.data[0], 
+                            current_pose.translation.data[1], 
+                            current_pose.translation.data[2]; 
+  mapper_.SetCurrentRobotPosition(current_robot_position); 
+
+  gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
+  ros::Duration delta_t =  stamp - previous_stamp_; 
+  auto translational_velocity = delta_s.translation().norm() / delta_t.toSec();               
+  auto rotational_velocity = (2*acos(delta_s.rotation().toQuaternion().w())*180.0/M_PI) / delta_t.toSec();                  
+
+  if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 1) {
+    ROS_INFO("Robot not moving");
+    if (!b_asked_to_refresh_) {
+      ROS_WARN("Refreshing mapper for the first time");
+      mapper_.Refresh();
+      mapper_.PublishMap();
+      last_refresh_pose_ = current_pose;
+      std::cout << "last_refresh_pose_: " << last_refresh_pose_ << std::endl; 
+      b_asked_to_refresh_ = true;
+    }
+    else {
+      if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > 10) {
+        ROS_WARN("Refreshing mapper");
+        mapper_.Refresh();
+        mapper_.PublishMap();
+        last_refresh_pose_ = current_pose;
+        std::cout << "last_refresh_pose_" << last_refresh_pose_ << std::endl; 
+      }  
+    } 
+  } 
+
+  previous_stamp_ = stamp; 
+  previous_pose_ = current_pose; 
+
+  // -------------------------------------------------------------------------------------------------------------
 
   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
     PointCloud base_frame_pcld = *msg;
