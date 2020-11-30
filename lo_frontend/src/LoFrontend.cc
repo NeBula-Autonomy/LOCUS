@@ -579,16 +579,29 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     last_keyframe_pose_ = current_pose;
   }
 
-  // Map Sliding Window 2 -----------------------------------------------------------------------------------------
+  // Map Sliding Window 2 -------------------------------------------------------------------------------------------------------
 
-  if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > 10) {
+  gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
+  ros::Duration delta_t =  stamp - previous_stamp_; 
+    
+  if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > 5) {
 
-    gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
-    ros::Duration delta_t =  stamp - previous_stamp_; 
     auto translational_velocity = delta_s.translation().norm() / delta_t.toSec();               
     auto rotational_velocity = (2*acos(delta_s.rotation().toQuaternion().w())*180.0/M_PI) / delta_t.toSec(); 
+    if (std::isnan(rotational_velocity)) rotational_velocity = 0;
+      
+    translational_velocity_buffer_.push_back(translational_velocity);
+    rotational_velocity_buffer_.push_back(rotational_velocity);
+    
+    auto avg_translational_velocity = GetVectorAverage(translational_velocity_buffer_);
+    auto avg_rotational_velocity = GetVectorAverage(rotational_velocity_buffer_); 
+    
+    if (translational_velocity_buffer_.size() > 10) translational_velocity_buffer_.erase(translational_velocity_buffer_.begin()); 
+    if (rotational_velocity_buffer_.size() > 10) rotational_velocity_buffer_.erase(rotational_velocity_buffer_.begin()); 
 
-    if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 1) {
+    if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 1 && 
+        avg_translational_velocity < 0.1 && avg_rotational_velocity < 1.5 ) {
+
       Eigen::Vector3f current_robot_position(3); 
       current_robot_position << current_pose.translation.data[0], 
                                 current_pose.translation.data[1], 
@@ -597,6 +610,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       mapper_.Refresh();
       mapper_.PublishMap();
       last_refresh_pose_ = current_pose;
+    
     }
 
   }
@@ -604,9 +618,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   previous_stamp_ = stamp; 
   previous_pose_ = current_pose; 
 
-  // TODO: Add avg velocity check and parametrize  
-
-  // -------------------------------------------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------------------------------------------------------
 
   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
     PointCloud base_frame_pcld = *msg;
@@ -698,4 +710,8 @@ void LoFrontend::InitWithGTPointCloud(const std::string filename) {
   mapper_.InsertPoints(gt_pc_ptr, unused.get());
 
   ROS_INFO("Completed addition of GT point cloud to map");
+}
+
+double LoFrontend::GetVectorAverage(const std::vector<double>& vector) {
+  return vector.empty()? 0.0 : std::accumulate(vector.begin(), vector.end(), 0.0) / vector.size();   
 }

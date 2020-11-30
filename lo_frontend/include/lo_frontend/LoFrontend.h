@@ -220,6 +220,9 @@ private:
   geometry_utils::Transform3 previous_pose_; 
   geometry_utils::Transform3 last_refresh_pose_;
   ros::Time previous_stamp_; 
+  std::vector<double> translational_velocity_buffer_; 
+  std::vector<double> rotational_velocity_buffer_;
+  double GetVectorAverage(const std::vector<double>& vector); 
 
 };
 
