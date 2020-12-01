@@ -601,16 +601,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 1 && 
         avg_translational_velocity < 0.1 && avg_rotational_velocity < 1.5 ) {
-
-      Eigen::Vector3f current_robot_position(3); 
-      current_robot_position << current_pose.translation.data[0], 
-                                current_pose.translation.data[1], 
-                                current_pose.translation.data[2]; 
-      mapper_.SetCurrentRobotPosition(current_robot_position); 
-      mapper_.Refresh();
-      mapper_.PublishMap();
-      last_refresh_pose_ = current_pose;
-    
+        mapper_.Refresh(current_pose); 
+        mapper_.PublishMap();
+        last_refresh_pose_ = current_pose; 
     }
 
   }
