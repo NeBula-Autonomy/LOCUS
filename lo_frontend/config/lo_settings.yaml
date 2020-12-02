@@ -13,14 +13,14 @@ b_run_rolling_map_buffer: false
 
 queues: 
   lidar_queue_size: 1
-  imu_queue_size: 10000
-  odom_queue_size: 1000 
-  pose_queue_size: 1000
+  imu_queue_size: 100
+  odom_queue_size: 100 
+  pose_queue_size: 100
 
 buffers: 
-  imu_buffer_size_limit: 1000
-  odometry_buffer_size_limit: 1000
-  pose_stamped_buffer_size_limit: 1000
+  imu_buffer_size_limit: 100
+  odometry_buffer_size_limit: 100
+  pose_stamped_buffer_size_limit: 100
 
 # DATA INTEGRATION 
   # 0   ---> no integration 
@@ -42,4 +42,8 @@ gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
 
 publish_diagnostics: false
 
-msw_box_filter_size: 20
+box_filter_size: 25
+velocity_buffer_size: 10
+translation_threshold_msw: 5 
+rotational_velocity_threshold: 1
+translational_velocity_threshold: 0.1 

@@ -216,7 +216,11 @@ private:
   /*--------------------------
   Map Sliding Window 2 
   --------------------------*/
-  int msw_box_filter_size_;
+  int box_filter_size_;
+  int velocity_buffer_size_;
+  int translation_threshold_msw_; 
+  double rotational_velocity_threshold_; 
+  double translational_velocity_threshold_;
   geometry_utils::Transform3 previous_pose_; 
   geometry_utils::Transform3 last_refresh_pose_;
   ros::Time previous_stamp_; 

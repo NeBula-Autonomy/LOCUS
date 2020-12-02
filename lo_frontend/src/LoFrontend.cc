@@ -131,14 +131,22 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_run_rolling_map_buffer", b_run_rolling_map_buffer_))
     return false;
-  if (!pu::Get("msw_box_filter_size", msw_box_filter_size_))
+  if (!pu::Get("box_filter_size", box_filter_size_))
     return false;
-    
+  if (!pu::Get("velocity_buffer_size", velocity_buffer_size_))
+    return false;
+  if (!pu::Get("translation_threshold_msw", translation_threshold_msw_))
+    return false;
+  if (!pu::Get("rotational_velocity_threshold", rotational_velocity_threshold_))
+    return false;
+  if (!pu::Get("translational_velocity_threshold", translational_velocity_threshold_))
+    return false;
+
   if (b_run_rolling_map_buffer_) {
     mapper_.SetRollingMapBufferOn();
   }
 
-  mapper_.SetBoxFilterSize(msw_box_filter_size_);
+  mapper_.SetBoxFilterSize(box_filter_size_);
 
   return true;
 }
@@ -584,7 +592,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   gtsam::Pose3 delta_s = ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
   ros::Duration delta_t =  stamp - previous_stamp_; 
     
-  if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > 5) {
+  if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose)).translation().norm() > translation_threshold_msw_) {
 
     auto translational_velocity = delta_s.translation().norm() / delta_t.toSec();               
     auto rotational_velocity = (2*acos(delta_s.rotation().toQuaternion().w())*180.0/M_PI) / delta_t.toSec(); 
@@ -596,11 +604,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     auto avg_translational_velocity = GetVectorAverage(translational_velocity_buffer_);
     auto avg_rotational_velocity = GetVectorAverage(rotational_velocity_buffer_); 
     
-    if (translational_velocity_buffer_.size() > 10) translational_velocity_buffer_.erase(translational_velocity_buffer_.begin()); 
-    if (rotational_velocity_buffer_.size() > 10) rotational_velocity_buffer_.erase(rotational_velocity_buffer_.begin()); 
+    if (translational_velocity_buffer_.size() > velocity_buffer_size_) translational_velocity_buffer_.erase(translational_velocity_buffer_.begin()); 
+    if (rotational_velocity_buffer_.size() > velocity_buffer_size_) rotational_velocity_buffer_.erase(rotational_velocity_buffer_.begin()); 
 
-    if (translational_velocity < 0.1 && !std::isnan(rotational_velocity) && rotational_velocity < 1 && 
-        avg_translational_velocity < 0.1 && avg_rotational_velocity < 1.5 ) {
+    if (translational_velocity < translational_velocity_threshold_ && !std::isnan(rotational_velocity) && rotational_velocity < rotational_velocity_threshold_ && 
+        avg_translational_velocity < translational_velocity_threshold_ && avg_rotational_velocity < rotational_velocity_threshold_ ) {
         mapper_.Refresh(current_pose); 
         mapper_.PublishMap();
         last_refresh_pose_ = current_pose; 
