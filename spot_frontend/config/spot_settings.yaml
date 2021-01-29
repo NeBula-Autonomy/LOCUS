@@ -36,3 +36,9 @@ b_run_with_gt_point_cloud: false
 gt_point_cloud_filename: /home/costar/data/loeval/alpha_both_floors.pcd
 
 publish_diagnostics: false
+
+box_filter_size: 25
+velocity_buffer_size: 10
+translation_threshold_msw: 5 
+rotational_velocity_threshold: 1
+translational_velocity_threshold: 0.1 
