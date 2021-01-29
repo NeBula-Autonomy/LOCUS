@@ -46,14 +46,14 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
 bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   ROS_INFO("PointCloudOdometry - LoadParameters");
 
+  double init_x = 0.0, init_y = 0.0, init_z = 0.0;
+  double init_qx = 0.0, init_qy = 0.0, init_qz = 0.0, init_qw = 1.0;
+  bool b_have_fiducial = true;
+
   if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
   if (!pu::Get("frame_id/odometry", odometry_frame_id_))
     return false;
-
-  double init_x = 0.0, init_y = 0.0, init_z = 0.0;
-  double init_qx = 0.0, init_qy = 0.0, init_qz = 0.0, init_qw = 1.0;
-  bool b_have_fiducial = true;
 
   if (!pu::Get("fiducial_calibration/position/x", init_x))
     b_have_fiducial = false;
@@ -69,26 +69,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     b_have_fiducial = false;
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
-
-  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
-  gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
-  gu::Rot3 m1;
-  m1 = gu::QuatToR(q);
-  init_roll = m1.Roll();
-  init_pitch = m1.Pitch();
-  init_yaw = m1.Yaw();
-
-  gu::Transform3 init;
-  init.translation = gu::Vec3(init_x, init_y, init_z);
-  init.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
-  integrated_estimate_ = init;
-
-  if (!b_have_fiducial) {
-    ROS_WARN("Can't find fiducials, using origin");
-  } 
-  else {
-    ROS_INFO_STREAM("Have loaded fiducial pose, using:\n" << init);
-  }
 
   if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon))
     return false;
@@ -106,10 +86,33 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("icp/enable_timing_output", params_.enable_timing_output)) 
     return false;
+
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
   if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
     return false;
+
+  double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
+  gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
+  gu::Rot3 R;
+  R = gu::QuatToR(q);
+  init_roll = R.Roll();
+  init_pitch = R.Pitch();
+  init_yaw = R.Yaw();
+
+  integrated_estimate_.translation = gu::Vec3(init_x, init_y, init_z);
+  integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
+
+  if (b_is_flat_ground_assumption_) {
+    integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+  }
+
+  if (!b_have_fiducial) {
+    ROS_WARN("Can't find fiducials, using origin");
+  } 
+  else {
+    ROS_INFO_STREAM("Using:\n" << integrated_estimate_);
+  }
    
   return true;
 }
