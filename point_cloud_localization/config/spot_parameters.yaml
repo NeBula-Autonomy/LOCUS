@@ -1,7 +1,10 @@
 localization:
 
   # Compute ICP covariance and condition number
-  compute_icp_covariance: false
+  compute_icp_covariance: true
+  # 0: point to point 1: point to plane
+  icp_covariance_method: 1
+
   icp_max_covariance: 1000
 
   # Compute ICP observability 
