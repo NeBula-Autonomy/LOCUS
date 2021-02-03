@@ -21,7 +21,7 @@
           output="screen">
       
       <!-- tf pub -->
-      <param name="b_publish_tfs" value="false"/>
+      <param name="b_publish_tfs" value="true"/>
 
       <!-- Topics -->
       <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
