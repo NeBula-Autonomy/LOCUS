@@ -63,6 +63,8 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
 
   if (!pu::Get("localization/compute_icp_covariance", params_.compute_icp_covariance))
     return false;
+  if (!pu::Get("localization/icp_covariance_method", params_.icp_covariance_method))
+    return false;
   if (!pu::Get("localization/icp_max_covariance", params_.icp_max_covariance))
     return false;
   if (!pu::Get("localization/compute_icp_observability", params_.compute_icp_observability))
@@ -306,9 +308,21 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   // Compute the covariance matrix for the estimated transform
   icp_covariance_ = Eigen::Matrix<double, 6, 6>::Zero();
-  if (params_.compute_icp_covariance)
-    ComputeICPCovariance(icpAlignedPointsLocalization_, T, &icp_covariance_);
-
+  if (params_.compute_icp_covariance) {
+    switch (params_.icp_covariance_method) {
+      case (0):
+        ComputePoint2PointICPCovariance(
+            icpAlignedPointsLocalization_, T, &icp_covariance_);
+        break;
+      case (1):
+        ComputePoint2PlaneICPCovariance(
+            icpAlignedPointsLocalization_, T, &icp_covariance_);
+        break;
+      default:
+        ROS_ERROR(
+            "Unknown method for ICP covariance calculation. Check config. ");
+    }
+  }
   // TODO: Improve the healthy check.
   is_healthy_ = true;
 
@@ -336,9 +350,9 @@ void PointCloudLocalization::ComputeIcpObservability(
   PointNormal::Ptr old_normals(new PointNormal);   // pc with normals
   PointCloud::Ptr new_normalized(new PointCloud);  // pc whose points have been
                                                    // rearranged.
-  addNormal(new_cloud, new_normals, params_.normal_radius_);
-  addNormal(old_cloud, old_normals, params_.normal_radius_);
-  normalizePCloud(new_cloud, new_normalized);
+  addNormal(*new_cloud, new_normals, params_.normal_radius_);
+  addNormal(*old_cloud, old_normals, params_.normal_radius_);
+  normalizePCloud(*new_cloud, new_normalized);
 
   // Check input pointers not null
   if (not eigenvectors_ptr or not eigenvalues_ptr) {
@@ -353,7 +367,7 @@ void PointCloudLocalization::ComputeIcpObservability(
   *A_ptr = Ap;
 }
 
-bool PointCloudLocalization::ComputeICPCovariance(
+bool PointCloudLocalization::ComputePoint2PointICPCovariance(
     const PointCloud& pointCloud,
     const Eigen::Matrix4f& T,
     Eigen::Matrix<double, 6, 6>* covariance) {
@@ -491,6 +505,72 @@ bool PointCloudLocalization::ComputeICPCovariance(
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
       *covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
   // Eigen::JacobiSVD<Eigen::MatrixXd> svd( covariance, Eigen::ComputeFullV |
+  // Eigen::ComputeFullU);
+
+  // Extract the singular values from SVD
+  auto singular_values = svd.singularValues();
+  // The covariance matrix is a symmetric matrix, so its  singular  values  are
+  // the absolute values of its nonzero eigenvalues Condition number is the
+  // ratio of the largest and smallest eigenvalues.
+  condition_number_ = singular_values(0) / singular_values(5);
+
+  return true;
+}
+
+bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
+    const PointCloud& pointCloud,
+    const Eigen::Matrix4f& T,
+    Eigen::Matrix<double, 6, 6>* covariance) {
+  // Get normals
+  PointNormal::Ptr pcl_normals(new PointNormal);   // pc with normals
+  PointCloud::Ptr pcl_normalized(new PointCloud);  // pc whose points have been
+                                                   // rearranged.
+  addNormal(pointCloud, pcl_normals, params_.normal_radius_);
+  normalizePCloud(pointCloud, pcl_normalized);
+
+  *covariance = Eigen::Matrix<double, 6, 6>::Zero();
+  Eigen::Matrix<double, 6, 6> H_i = Eigen::Matrix<double, 6, 6>::Zero();
+
+  Eigen::Vector3d a_i, n_i;
+
+  for (uint32_t i = 0; i < pointCloud.size(); i++) {
+    a_i << pcl_normalized->points[i].x, pcl_normalized->points[i].y,
+        pcl_normalized->points[i].z;
+    n_i << pcl_normals->points[i].normal_x, pcl_normals->points[i].normal_y,
+        pcl_normals->points[i].normal_z;
+    Eigen::Vector3d ai_cross_ni = (a_i.cross(n_i));
+
+    H_i.block(0, 0, 3, 3) = ai_cross_ni * (ai_cross_ni.transpose());
+    H_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
+    H_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
+    if (!H_i.hasNaN()) *covariance += H_i;
+  }
+
+  covariance->block(3, 0, 3, 3) = covariance->block(0, 3, 3, 3).transpose();
+  // Here bound the covariance using eigen values
+  Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
+  eigensolver.compute(*covariance);
+  Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
+  Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
+  double lower_bound = 0.001;  // Should be positive semidef
+  double upper_bound = params_.icp_max_covariance;
+  if (eigen_values.size() < 6) {
+    *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
+    ROS_ERROR("Failed to find eigen values when computing icp covariance");
+    return false;
+  }
+  for (size_t i = 0; i < eigen_values.size(); i++) {
+    if (eigen_values(i) < lower_bound) eigen_values(i) = lower_bound;
+    if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
+  }
+  // Update covariance matrix after bound
+  *covariance = eigen_vectors * eigen_values.asDiagonal() *
+                eigen_vectors.inverse() * icpFitnessScore_;
+
+  // Compute the SVD of the covariance matrix
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+      *covariance, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  // Eigen::JacobiSVD<Eigen::MatrixXd> svd( Ap, Eigen::ComputeFullV |
   // Eigen::ComputeFullU);
 
   // Extract the singular values from SVD
