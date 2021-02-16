@@ -1,3 +1,9 @@
+/*
+Authors: 
+  - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
+  - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+*/
+
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
@@ -20,13 +26,21 @@
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
-#include <core_msgs/PoseAndScan.h>
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
+
+#include <tf/message_filter.h>
+#include <tf2_ros/message_filter.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
+#include <message_filters/subscriber.h>
+#include <sensor_msgs/PointCloud2.h>
 
 class LoFrontend {
 
@@ -49,9 +63,11 @@ public:
   LoFrontend();
   ~LoFrontend();
 
-  bool Initialize(const ros::NodeHandle& n, bool from_log);
+  bool Initialize(const ros::NodeHandle& n, bool from_log);  
 
 private:
+
+  const std::string tf_buffer_authority_; 
 
   std::string name_;
   bool b_verbose_;
@@ -62,13 +78,15 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  ros::Subscriber lidar_sub_;
+  ros::Subscriber lidar_sub_; // TODO SPOT: message_filters::Subscriber<PointCloud> lidar_sub_; ros::Subscriber lidar_ros_sub_;
   ros::Subscriber imu_sub_;
-  ros::Subscriber odom_sub_;
+  ros::Subscriber odom_sub_; // TODO SPOT: ros::Subscriber odometry_sub_;
   ros::Subscriber pose_sub_;
 
   ros::Publisher base_frame_pcld_pub_;
   ros::Publisher diagnostics_pub_;
+ 
+  tf2_ros::MessageFilter<PointCloud> *lidar_odometry_filter_;
 
   void LidarCallback(const PointCloud::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
@@ -81,7 +99,7 @@ private:
   int pose_queue_size_; 
 
   ImuBuffer imu_buffer_;
-  OdometryBuffer odometry_buffer_;
+  OdometryBuffer odometry_buffer_; // TODO SPOT:  tf2_ros::Buffer odometry_buffer_;
   PoseStampedBuffer pose_stamped_buffer_;
   
   int imu_buffer_size_limit_; 
@@ -107,6 +125,7 @@ private:
   std::string fixed_frame_id_; 
   std::string base_frame_id_; 
   std::string imu_frame_id_;
+  std::string bd_odom_frame_id_;
   
   bool LoadCalibrationFromTfTree();
   tf::TransformListener imu_T_base_listener_;
@@ -163,7 +182,7 @@ private:
   bool b_odometry_has_been_received_;
   int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
-  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; 
+  tf::Transform GetOdometryDelta(const Odometry& odometry_msg) const; // TODO SPOT: tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
 
   // PoseStamped 
   bool b_use_pose_stamped_integration_;
