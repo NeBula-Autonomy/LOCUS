@@ -455,18 +455,9 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const
   return true; 
 }
 
-tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
-  tf::Transform odometry_pose;
-  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-  auto odometry_delta = odometry_pose_previous_.inverseTimes(odometry_pose);
-  return odometry_delta;
+tf::Transform LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
+  return odometry_pose_previous_.inverseTimes(odometry_pose);
 }
-/*
-TODO SPOT: 
-tf::Transform SpotFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
-  return odometry_pose_previous_.inverseTimes(odometry_pose);;
-}
-*/
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
 
@@ -514,7 +505,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       b_odometry_has_been_received_= true;
       return;
     }
-    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
+
+    tf::Transform odometry_pose;
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
+    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose)); 
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
     /*
     TODO SPOT: 
