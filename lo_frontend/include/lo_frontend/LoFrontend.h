@@ -78,9 +78,11 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  ros::Subscriber lidar_sub_; // TODO SPOT: message_filters::Subscriber<PointCloud> lidar_sub_; ros::Subscriber lidar_ros_sub_;
+  message_filters::Subscriber<PointCloud> lidar_sub_mf_; 
+  
+  ros::Subscriber lidar_sub_; 
   ros::Subscriber imu_sub_;
-  ros::Subscriber odom_sub_; // TODO SPOT: ros::Subscriber odometry_sub_;
+  ros::Subscriber odom_sub_; 
   ros::Subscriber pose_sub_;
 
   ros::Publisher base_frame_pcld_pub_;
@@ -99,8 +101,10 @@ private:
   int pose_queue_size_; 
 
   ImuBuffer imu_buffer_;
-  OdometryBuffer odometry_buffer_; // TODO SPOT:  tf2_ros::Buffer odometry_buffer_;
+  OdometryBuffer odometry_buffer_; 
   PoseStampedBuffer pose_stamped_buffer_;
+
+  tf2_ros::Buffer tf2_ros_odometry_buffer_;
   
   int imu_buffer_size_limit_; 
   int odometry_buffer_size_limit_;

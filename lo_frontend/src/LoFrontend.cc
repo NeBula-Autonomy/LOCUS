@@ -226,14 +226,14 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   /*
   TODO SPOT: 
   if (b_use_odometry_integration_) {
-    odometry_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
-    lidar_sub_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
-    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_, odometry_buffer_, bd_odom_frame_id_, 10, nl); 
+    odom_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
+    lidar_sub_mf_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
+    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl); 
     lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
   }
   else {
     ROS_WARN("Running pure LO in SpotFrontend as no data integration has been requested");
-    lidar_ros_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this); 
+    lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this); 
   }  
   fga_sub_ = nl.subscribe("SPOT_FGA_TOPIC", 1, &SpotFrontend::FlatGroundAssumptionCallback, this); 
   */
@@ -288,7 +288,7 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
   odometry.header = odometry_msg->header;
   odometry.header.frame_id = odometry_msg->header.frame_id;
   odometry.child_frame_id = odometry_msg->child_frame_id;
-  odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
+  tf2_ros_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
   */
 
 }
@@ -519,7 +519,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     /*
     TODO SPOT: 
     // TODO: Deactivate if VO dies
-    auto t = odometry_buffer_.lookupTransform(bd_odom_frame_id_, base_frame_id_, stamp);
+    auto t = tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_, base_frame_id_, stamp);
     tf::Transform tf_transform;
     tf::Vector3 tf_translation;
     tf::Quaternion tf_quaternion;
