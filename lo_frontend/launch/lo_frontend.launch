@@ -70,11 +70,11 @@
 
         </node>
 
-        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
+        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen" if="$(eval number_of_velodynes > 1)"> 
             <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
             <remap from="resurrection_detection" to="point_cloud_merger_lo/resurrection_detection"/>
         </node>
- 
+
         <node pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link"
