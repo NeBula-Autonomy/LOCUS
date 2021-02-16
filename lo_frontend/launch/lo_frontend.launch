@@ -141,9 +141,7 @@
             output_frame: $(arg robot_namespace)/base_link
             </rosparam>
         </node>
-
-        <!-- TODO SPOT: no PoseStamped to Odometry conversion in launch -->    
-       
+      
     </group>
 
     <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">

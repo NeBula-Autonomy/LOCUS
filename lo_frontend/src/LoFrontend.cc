@@ -275,28 +275,27 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
   if (b_verbose_) ROS_INFO("LoFrontend - OdometryCallback"); 
-  if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
-      odometry_buffer_.erase(odometry_buffer_.begin());
-  }   
-  if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) {
-      ROS_WARN("LoFrontend - OdometryCallback - Unable to store message in buffer");
+  if (robot_type_ != "spot") {
+    if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
+        odometry_buffer_.erase(odometry_buffer_.begin());
+    }   
+    if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) {
+        ROS_WARN("LoFrontend - OdometryCallback - Unable to store message in buffer");
+    }
   }
-
-  /*
-  TODO SPOT: 
-  geometry_msgs::TransformStamped odometry;
-  geometry_msgs::Vector3 t;
-  t.x = odometry_msg->pose.pose.position.x;
-  t.y = odometry_msg->pose.pose.position.y;
-  t.z = odometry_msg->pose.pose.position.z; 
-  odometry.transform.translation = t;
-  odometry.transform.rotation = odometry_msg->pose.pose.orientation;
-  odometry.header = odometry_msg->header;
-  odometry.header.frame_id = odometry_msg->header.frame_id;
-  odometry.child_frame_id = odometry_msg->child_frame_id;
-  tf2_ros_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
-  */
-
+  else {
+    geometry_msgs::TransformStamped odometry;
+    geometry_msgs::Vector3 t;
+    t.x = odometry_msg->pose.pose.position.x;
+    t.y = odometry_msg->pose.pose.position.y;
+    t.z = odometry_msg->pose.pose.position.z; 
+    odometry.transform.translation = t;
+    odometry.transform.rotation = odometry_msg->pose.pose.orientation;
+    odometry.header = odometry_msg->header;
+    odometry.header.frame_id = odometry_msg->header.frame_id;
+    odometry.child_frame_id = odometry_msg->child_frame_id;
+    tf2_ros_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
+  }
 }
 
 void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg) {
@@ -552,7 +551,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
   }
   else {
-    // TODO: Switch to LO if VO dies 
+    // TODO: Switch to pure LO if VO dies 
     auto t = tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_, base_frame_id_, stamp);
     tf::Transform tf_transform;
     tf::Vector3 tf_translation;
