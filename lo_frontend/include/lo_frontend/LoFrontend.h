@@ -67,6 +67,8 @@ public:
 
 private:
 
+  std::string robot_type_;
+
   const std::string tf_buffer_authority_; 
 
   std::string name_;

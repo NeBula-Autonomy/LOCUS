@@ -42,6 +42,12 @@ LoFrontend::~LoFrontend() {}
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend - Initialize");  
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");  
+
+  if (n.getNamespace().find("husky") != std::string::npos) {robot_type_ = "husky";}
+  else if (n.getNamespace().find("spot") != std::string::npos) {robot_type_ = "spot";}
+  else {ROS_WARN("robot_type_ is neither husky or spot"); return false;}
+  std::cerr << "Robot type is: " << robot_type_ << std::endl; 
+
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
     return false;
@@ -204,40 +210,40 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
   return CreatePublishers(n);
 }
 
-bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
+bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {  
   ROS_INFO("LoFrontend - RegisterOnlineCallbacks");  
-  ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
+  ROS_INFO("%s: Registering online callbacks.", name_.c_str());   
   nl_ = ros::NodeHandle(n);
-  lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
-  if (b_use_imu_integration_) {
-    ROS_INFO("Registering ImuCallback");
-    imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
-  }
-  if (b_use_odometry_integration_) {
-    ROS_INFO("Registering OdometryCallback");
-    odom_sub_ = nl_.subscribe("ODOM_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
-  }  
-  if (b_use_pose_stamped_integration_) {
-    ROS_INFO("Registering PoseStampedCallback");
-    pose_sub_ = nl_.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
-  }  
-  fga_sub_ = nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);  
-  
-  /*
-  TODO SPOT: 
-  if (b_use_odometry_integration_) {
-    odom_sub_ = nl.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &SpotFrontend::OdometryCallback, this);   
-    lidar_sub_mf_.subscribe(nl, "LIDAR_TOPIC", lidar_queue_size_);
-    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl); 
-    lidar_odometry_filter_->registerCallback(boost::bind(&SpotFrontend::LidarCallback, this, _1));  
+
+  if (robot_type_ != "spot") {
+    lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
+    if (b_use_imu_integration_) {
+      ROS_INFO("Registering ImuCallback");
+      imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
+    }
+    if (b_use_odometry_integration_) {
+      ROS_INFO("Registering OdometryCallback");
+      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
+    }  
+    if (b_use_pose_stamped_integration_) {
+      ROS_INFO("Registering PoseStampedCallback");
+      pose_sub_ = nl_.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
+    }   
   }
   else {
-    ROS_WARN("Running pure LO in SpotFrontend as no data integration has been requested");
-    lidar_sub_ = nl.subscribe("LIDAR_TOPIC", lidar_queue_size_, &SpotFrontend::LidarCallback, this); 
-  }  
-  fga_sub_ = nl.subscribe("SPOT_FGA_TOPIC", 1, &SpotFrontend::FlatGroundAssumptionCallback, this); 
-  */
+    if (b_use_odometry_integration_) {
+      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this);   
+      lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
+      lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_); 
+      lidar_odometry_filter_->registerCallback(boost::bind(&LoFrontend::LidarCallback, this, _1));  
+    }
+    else {
+      lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this); 
+    } 
+  }
   
+  fga_sub_ = nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this); 
+
   return CreatePublishers(n);
 }
 

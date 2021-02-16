@@ -15,7 +15,7 @@
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
       <!-- remap from="~IMU_TOPIC" to="/blam_slam/vn100/imu"/ -->
-      <!-- <remap from="~ODOM_TOPIC" to="hero/lion/odom"/> -->
+      <!-- <remap from="~ODOMETRY_TOPIC" to="hero/lion/odom"/> -->
       <remap from="~POSE_TOPIC" to="/Robot_7/pose"/>
 
       <!-- Initial pose -->
