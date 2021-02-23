@@ -244,7 +244,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - ImuCallback"); 
   if (!b_imu_frame_is_correct_) CheckImuFrame(imu_msg);  
   if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
       imu_buffer_.erase(imu_buffer_.begin());
@@ -259,7 +258,6 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 }
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - OdometryCallback"); 
   if (robot_type_ != "spot") {
     if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
         odometry_buffer_.erase(odometry_buffer_.begin());
@@ -284,7 +282,6 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
 }
 
 void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - PoseStampedCallback"); 
   if (CheckBufferSize(pose_stamped_buffer_) > pose_stamped_buffer_size_limit_) {
       pose_stamped_buffer_.erase(pose_stamped_buffer_.begin());
   }   
@@ -294,7 +291,6 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
 }
 
 void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
-  if (b_verbose_) ROS_INFO_STREAM("LoFrontend - CheckImuFrame");                           
   if (b_convert_imu_to_base_link_frame_) {    
     if (imu_msg->header.frame_id.find("vn100") != std::string::npos) {
       ROS_INFO("Received imu_msg is correctly expressed in imu frame");
@@ -318,7 +314,6 @@ void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
 }
 
 Eigen::Quaterniond LoFrontend::GetImuQuaternion(const Imu& imu_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - GetImuQuaternion"); 
   Eigen::Quaterniond imu_quaternion = Eigen::Quaterniond(double(imu_msg.orientation.w), 
                                                          double(imu_msg.orientation.x),  
                                                          double(imu_msg.orientation.y), 
@@ -369,7 +364,6 @@ bool LoFrontend::LoadCalibrationFromTfTree() {
 }
 
 gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
-  if(b_verbose_) ROS_INFO("LoFrontend - ToGtsam");
   gtsam::Vector3 t;
   t(0) = pose.translation(0);
   t(1) = pose.translation(1);
@@ -388,7 +382,6 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 
 template <typename T1, typename T2>
 bool LoFrontend::InsertMsgInBuffer(const T1& msg, T2& buffer) {
-  if(b_verbose_) ROS_INFO("LoFrontend - InsertMsgInBuffer");  
   auto initial_size = buffer.size();    
   auto current_time = msg->header.stamp.toSec();    
   buffer.insert({current_time, *msg});
@@ -403,13 +396,11 @@ bool LoFrontend::InsertMsgInBuffer(const T1& msg, T2& buffer) {
 
 template <typename T>
 int LoFrontend::CheckBufferSize(const T& buffer) const {
-  if(b_verbose_) ROS_INFO("LoFrontend - ChechBufferSize");    
   return buffer.size();
 }
 
 template <typename T1, typename T2>
 bool LoFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const {
-  if (b_verbose_) ROS_INFO("LoFrontend - GetMsgAtTime"); 
   if (buffer.size() == 0) {
     return false;
   }
