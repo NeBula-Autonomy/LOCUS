@@ -20,6 +20,7 @@ LoFrontend::LoFrontend()
     msg_fixed_(new PointCloud()),
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
+    b_is_spot_ (false),
     b_interpolate_ (false), 
     b_use_imu_integration_(false),
     b_use_imu_yaw_integration_(false),
@@ -44,10 +45,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend - Initialize");  
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");  
 
-  if (n.getNamespace().find("husky") != std::string::npos) {robot_type_ = "husky";}
-  else if (n.getNamespace().find("spot") != std::string::npos) {robot_type_ = "spot";}
-  else {ROS_WARN("robot_type_ is neither husky or spot"); return false;}
-  std::cerr << "Robot type is: " << robot_type_ << std::endl; 
+  if (n.getNamespace().find("spot") != std::string::npos) b_is_spot_ = true;   
 
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
@@ -182,6 +180,7 @@ bool LoFrontend::SetDataIntegrationMode() {
       ROS_INFO("Odometry integration requested");
       b_use_odometry_integration_ = true;
       odometry_.EnableOdometryIntegration();
+      if (b_is_spot_) b_interpolate_ = true; 
       break;
     case 4: 
       ROS_ERROR("PoseStamped integration not currently supported");

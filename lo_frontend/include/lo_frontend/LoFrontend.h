@@ -256,6 +256,7 @@ private:
   /*--------------------------------
   Low-rate VO interpolation for spot 
   --------------------------------*/
+  bool b_is_spot_; 
   bool b_interpolate_; 
 
 };
