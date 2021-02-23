@@ -258,13 +258,11 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 }
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
-  if (robot_type_ != "spot") {
-    if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
-        odometry_buffer_.erase(odometry_buffer_.begin());
-    }   
-    if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) {
-        ROS_WARN("LoFrontend - OdometryCallback - Unable to store message in buffer");
-    }
+  if (!b_interpolate_) {
+    if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_)
+      odometry_buffer_.erase(odometry_buffer_.begin());       
+    if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) 
+      ROS_WARN("LoFrontend - OdometryCallback - Unable to store message in buffer");
   }
   else {
     geometry_msgs::TransformStamped odometry;
@@ -272,12 +270,12 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     t.x = odometry_msg->pose.pose.position.x;
     t.y = odometry_msg->pose.pose.position.y;
     t.z = odometry_msg->pose.pose.position.z; 
-    odometry.transform.translation = t;
+    odometry.transform.translation = t; 
     odometry.transform.rotation = odometry_msg->pose.pose.orientation;
     odometry.header = odometry_msg->header;
     odometry.header.frame_id = odometry_msg->header.frame_id;
     odometry.child_frame_id = odometry_msg->child_frame_id;
-    tf2_ros_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false); 
+    tf2_ros_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false);     
   }
 }
 
