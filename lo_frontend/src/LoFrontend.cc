@@ -466,7 +466,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
-  if (robot_type_ != "spot") {
+  if (!b_interpolate_) {
     if (b_use_odometry_integration_) {
       Odometry odometry_msg;
       if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
@@ -518,7 +518,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
         odometry_.SetImuDelta(GetImuDelta());
       }
       imu_quaternion_previous_ = imu_quaternion;
-    }  
+    }
   }
   else {
     // TODO: Switch to pure LO if VO dies 
