@@ -183,14 +183,11 @@ bool LoFrontend::SetDataIntegrationMode() {
       odometry_.EnableOdometryIntegration();
       break;
     case 4: 
-      ROS_INFO("PoseStamped integration requested");
-      b_use_pose_stamped_integration_ = true;
-      odometry_.EnablePoseStampedIntegration();
-      break;    
+      ROS_ERROR("PoseStamped integration not currently supported");
+      return false;   
     default:
       ROS_ERROR("Default case to be handled");
-      return false;
-      break;   
+      return false;   
   }
   return true;
 }
@@ -224,11 +221,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
     if (b_use_odometry_integration_) {
       ROS_INFO("Registering OdometryCallback");
       odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
-    }  
-    if (b_use_pose_stamped_integration_) {
-      ROS_INFO("Registering PoseStampedCallback");
-      pose_sub_ = nl_.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
-    }   
+    }    
   }
   else {
     if (b_use_odometry_integration_) {
@@ -545,10 +538,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       }
       imu_quaternion_previous_ = imu_quaternion;
     }  
-    else if (b_use_pose_stamped_integration_) {
-      ROS_ERROR("To be implemented - b_use_pose_stamped_integration_"); 
-      return;
-    }
   }
   else {
     // TODO: Switch to pure LO if VO dies 
