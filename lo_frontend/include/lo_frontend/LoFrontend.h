@@ -253,6 +253,11 @@ private:
   std::vector<double> rotational_velocity_buffer_;
   double GetVectorAverage(const std::vector<double>& vector); 
 
+  /*--------------------------------
+  Low-rate VO interpolation for spot 
+  --------------------------------*/
+  bool b_interpolate_; 
+
 };
 
 #endif 

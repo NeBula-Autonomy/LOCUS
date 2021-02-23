@@ -20,6 +20,7 @@ LoFrontend::LoFrontend()
     msg_fixed_(new PointCloud()),
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
+    b_interpolate_ (false), 
     b_use_imu_integration_(false),
     b_use_imu_yaw_integration_(false),
     b_use_odometry_integration_(false),
@@ -212,27 +213,18 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());   
   nl_ = ros::NodeHandle(n);
 
-  if (robot_type_ != "spot") {
+  if (!b_interpolate_) {
     lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
-    if (b_use_imu_integration_) {
-      ROS_INFO("Registering ImuCallback");
+    if (data_integration_mode_ == 1 || data_integration_mode_ == 2) 
       imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
-    }
-    if (b_use_odometry_integration_) {
-      ROS_INFO("Registering OdometryCallback");
-      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
-    }    
+    else if (data_integration_mode_ == 3)
+      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this);
   }
   else {
-    if (b_use_odometry_integration_) {
-      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this);   
-      lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
-      lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_); 
-      lidar_odometry_filter_->registerCallback(boost::bind(&LoFrontend::LidarCallback, this, _1));  
-    }
-    else {
-      lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this); 
-    } 
+    odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this);   
+    lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
+    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_); 
+    lidar_odometry_filter_->registerCallback(boost::bind(&LoFrontend::LidarCallback, this, _1));   
   }
   
   fga_sub_ = nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this); 
