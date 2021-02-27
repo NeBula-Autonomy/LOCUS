@@ -20,7 +20,6 @@ LoFrontend::LoFrontend()
     msg_fixed_(new PointCloud()),
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
-    b_is_spot_ (false),
     b_interpolate_ (false), 
     b_use_imu_integration_(false),
     b_use_imu_yaw_integration_(false),
@@ -43,9 +42,7 @@ LoFrontend::~LoFrontend() {}
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend - Initialize");  
-  name_ = ros::names::append(n.getNamespace(), "lo_frontend");  
-
-  if (n.getNamespace().find("spot") != std::string::npos) b_is_spot_ = true;   
+  name_ = ros::names::append(n.getNamespace(), "lo_frontend");    
 
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
@@ -149,6 +146,12 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("translational_velocity_threshold", translational_velocity_threshold_))
     return false;
+  if (!pu::Get("b_interpolate", b_interpolate_)) 
+    return false; 
+  
+  if ((n.getNamespace().find("spot") != std::string::npos) && (data_integration_mode_ == 0)) 
+    b_interpolate_ = false; 
+  ROS_INFO_STREAM("b_interpolate_: " << b_interpolate_);
 
   if (b_run_rolling_map_buffer_) {
     mapper_.SetRollingMapBufferOn();
@@ -180,7 +183,6 @@ bool LoFrontend::SetDataIntegrationMode() {
       ROS_INFO("Odometry integration requested");
       b_use_odometry_integration_ = true;
       odometry_.EnableOdometryIntegration();
-      if (b_is_spot_) b_interpolate_ = true; 
       break;
     case 4: 
       ROS_ERROR("PoseStamped integration not currently supported");

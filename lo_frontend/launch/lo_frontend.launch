@@ -22,8 +22,11 @@
             output="screen">
            
             <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
-            <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
-            <remap from="~ODOMETRY_TOPIC" to="hero/wio_ekf/odom"/>
+
+            <remap from="~ODOMETRY_TOPIC" to="visual_odom" if="$(eval robot_namespace.startswith('spot'))"/>
+            <remap from="~ODOMETRY_TOPIC" to="hero/wio_ekf/odom" if="$(eval robot_namespace.startswith('husky'))"/>
+
+            <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>            
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
             
             <!-- TODO SPOT -->
@@ -37,6 +40,10 @@
             <param name="b_publish_tfs" value="true"/>
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
+
+            <param name="b_interpolate" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
+            <param name="b_interpolate" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+
 
             <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
             <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
