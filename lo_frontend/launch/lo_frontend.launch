@@ -15,7 +15,7 @@
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
-    <arg unless="$(arg b_use_multiple_pc)" name="pc_input" value="velodyne_points/transformed"/>
+    <arg unless="$(arg b_use_multiple_pc)" name="pc_input" value="body_filter/output"/>
 
     <!-- 0:TOP, 1:FRONT, 2:REAR -->
     <arg name="pc_trans_in_0" default="velodyne_points/transformed"/>
@@ -148,7 +148,8 @@
               name="body_filter"
               args="load traversability_filters/BodyFilter $(arg nodelet_manager) $(arg nodelet_args)"
               respawn="$(arg respawn)">
-          <remap from="~input" to="combined_point_cloud"/>
+          <remap from="~input" to="combined_point_cloud" if="$(arg b_use_multiple_pc)"/>
+          <remap from="~input" to="velodyne_points/transformed" unless="$(arg b_use_multiple_pc)"/>
         </node>
 
         <node if="$(arg b_use_multiple_pc)" pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
