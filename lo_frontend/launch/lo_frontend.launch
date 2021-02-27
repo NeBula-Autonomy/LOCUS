@@ -28,9 +28,6 @@
 
             <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>            
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
-            
-            <!-- TODO SPOT -->
-            <!--remap from="~ODOMETRY_TOPIC" to="visual_odom"/-->
 
             <!-- For Sim -->
             <!-- <remap from="~ODOMETRY_TOPIC" to="wheel_odom"/> -->         

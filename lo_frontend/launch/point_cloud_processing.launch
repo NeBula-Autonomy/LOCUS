@@ -2,7 +2,6 @@
  
     <arg name="robot_namespace" default="robot"/>
 
-    <!--TODO: Parse from yaml -->
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
 
