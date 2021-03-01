@@ -14,7 +14,7 @@
 
       <!-- Topics -->
       <remap from="~pcld" to="velodyne_points/transformed"/>
-      <!-- <remap from="~ODOM_TOPIC/husky/lion/odom" to="hero/lion/odom"/> -->
+      <!-- <remap from="~ODOMETRY_TOPIC/husky/lion/odom" to="hero/lion/odom"/> -->
       <remap from="~IMU_TOPIC" to="/vn100/imu"/>
 
       <!-- Initial pose -->
