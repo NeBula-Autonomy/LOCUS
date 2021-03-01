@@ -31,6 +31,8 @@ class LoFrontendTest : public ::testing::Test {
              "point_cloud_mapper)/config/parameters.yaml"); 
       system("rosparam set icp/num_threads 1");
       system("rosparam set localization/num_threads 1");
+      system("rosparam set b_publish_tfs true");
+      system("rosparam set b_interpolate false");
       
     }
 
@@ -56,8 +58,8 @@ class LoFrontendTest : public ::testing::Test {
       lf.PoseStampedCallback(pose_stamped_msg);     
     }
 
-    tf::Transform GetOdometryDelta(const nav_msgs::Odometry& odometry_msg) const {
-       return lf.GetOdometryDelta(odometry_msg);
+    tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const {
+       return lf.GetOdometryDelta(odometry_pose);
     }
 
     Eigen::Matrix3d GetImuDelta() {

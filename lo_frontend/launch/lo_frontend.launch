@@ -37,12 +37,15 @@
             output="screen">
            
             <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
-            <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>
-            <!-- <remap from="~IMU_TOPIC" to="/vn100/imu"/> -->
-            <remap from="~ODOM_TOPIC" to="hero/wio_ekf/odom"/>
-            <!-- For Sim -->
-            <!-- <remap from="~ODOM_TOPIC" to="wheel_odom"/> -->
+
+            <remap from="~ODOMETRY_TOPIC" to="visual_odom" if="$(eval robot_namespace.startswith('spot'))"/>
+            <remap from="~ODOMETRY_TOPIC" to="hero/wio_ekf/odom" if="$(eval robot_namespace.startswith('husky'))"/>
+
+            <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>            
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
+
+            <!-- For Sim -->
+            <!-- <remap from="~ODOMETRY_TOPIC" to="wheel_odom"/> -->         
 
             <remap from="/diagnostics" to="hero/diagnostics"/>
 
@@ -50,11 +53,19 @@
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
 
+            <param name="b_interpolate" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
+            <param name="b_interpolate" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+
+
             <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
             <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_localization)/config/parameters.yaml"/>
+            
+            <!-- TODO SPOT -->
+            <!-- rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml"/-->
+
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
             <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky1')" />
@@ -78,11 +89,11 @@
 
         </node>
 
-        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
+        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen" if="$(eval number_of_velodynes > 1)"> 
             <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
             <remap from="resurrection_detection" to="point_cloud_merger_lo/resurrection_detection"/>
         </node>
- 
+
         <node pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link"
@@ -164,7 +175,7 @@
             output_frame: $(arg robot_namespace)/base_link
             </rosparam>
         </node>
-       
+      
     </group>
 
     <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
