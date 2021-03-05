@@ -34,7 +34,7 @@
 
             <remap from="/diagnostics" to="hero/diagnostics"/>
 
-            <param name="b_publish_tfs" value="true"/>
+            <param name="b_publish_tfs" value="false"/>
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
 
