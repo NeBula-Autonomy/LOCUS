@@ -2,11 +2,20 @@
  
     <arg name="robot_namespace" default="robot"/>
 
+    <arg name="use_gdb" default="true"/>
+    <arg name="nodelet_manager" value="nodelet_manager"/>
+    <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg use_gdb)"/>
+    <arg name="launch_prefix" value="" unless="$(arg use_gdb)"/>
+    <arg name="nodelet_args" value="--no-bond"/>
+    <arg name="respawn" value="false" if="$(arg use_gdb)"/>
+    <arg name="respawn" value="true" unless="$(arg use_gdb)"/>
+    <arg name="robot_type" value="husky" if="$(eval robot_namespace.startswith('husky'))"/>
+    <arg name="robot_type" value="spot"  if="$(eval robot_namespace.startswith('spot'))"/> 
+
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
-
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
-    <arg unless="$(arg b_use_multiple_pc)" name="pc_input" value="velodyne_points/transformed"/>
+    <arg unless="$(arg b_use_multiple_pc)" name="pc_input" value="body_filter/output"/>
 
     <!-- 0:TOP, 1:FRONT, 2:REAR -->
     <arg name="pc_trans_in_0" default="velodyne_points/transformed"/>
@@ -14,6 +23,12 @@
     <arg name="pc_trans_in_2" default="velodyne_rear/velodyne_points/transformed"/>
 
     <group ns="$(arg robot_namespace)">
+
+      <!-- Load parameters -->
+      <rosparam file="$(find ugv_traversability)/config/pointcloud_proc.yaml" 
+                subst_value="true"/>
+      <rosparam file="$(find ugv_traversability)/config/pointcloud_proc_$(arg robot_type).yaml"
+                subst_value="true"/>
    
         <node
             pkg="lo_frontend"
@@ -130,11 +145,26 @@
             <remap from="~pcld1" to="$(arg pc_trans_in_1)"/>
             <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
             <remap from="~combined_point_cloud" to="combined_point_cloud"/>
+        </node>    
+
+        <node pkg="nodelet"
+              type="nodelet"
+              name="$(arg nodelet_manager)"
+              launch-prefix="$(arg launch_prefix)"
+              args="manager"
+              respawn="$(arg respawn)"/>
+        
+        <node pkg="nodelet"
+              type="nodelet"
+              name="body_filter"
+              args="load traversability_filters/BodyFilter $(arg nodelet_manager) $(arg nodelet_args)"
+              respawn="$(arg respawn)">
+          <remap from="~input" to="combined_point_cloud" if="$(arg b_use_multiple_pc)"/>
+          <remap from="~input" to="velodyne_points/transformed" unless="$(arg b_use_multiple_pc)"/>
         </node>
 
-        <node if="$(arg b_use_multiple_pc)" pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" respawn="true"/>
-        <node if="$(arg b_use_multiple_pc)" pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid pcl_manager" output="screen" respawn="true">
-            <remap from="~input" to="combined_point_cloud" />
+        <node if="$(arg b_use_multiple_pc)" pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
+            <remap from="~input" to="body_filter/output" />
             <remap from="~output" to="combined_point_cloud_filtered" />
             <rosparam subst_value="true">
             filter_field_name: z
