@@ -2,13 +2,14 @@
 
 void addNormal(const pcl::PointCloud<pcl::PointXYZI>& cloud,
                pcl::PointCloud<pcl::PointNormal>::Ptr& cloud_with_normals,
-               const int search_radius) {
+               const int k_nearest_neighbours) {
   pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
   cloud_with_normals.reset(new pcl::PointCloud<pcl::PointNormal>);
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz(
       new pcl::PointCloud<pcl::PointXYZ>);
   // Convert point cloud XYZI to XYZ
-  for (int i; i < cloud.size(); i++) {
+
+  for (size_t i = 0; i < cloud.size(); i++) {
     pcl::PointXYZ point;
     point.x = cloud.points[i].x;
     point.y = cloud.points[i].y;
@@ -21,12 +22,15 @@ void addNormal(const pcl::PointCloud<pcl::PointXYZI>& cloud,
   searchTree->setInputCloud(cloud_xyz);
 
   pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normalEstimator(
-      4);  // parallel
-  // pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimator; //not
+      4); // parallel
+  // TODO: if it's commented out => we don't use it => time to remove ?
+  // pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normalEstimator;
+  // not
   // parallel
+
   normalEstimator.setInputCloud(cloud_xyz);
   normalEstimator.setSearchMethod(searchTree);
-  normalEstimator.setKSearch(search_radius);
+  normalEstimator.setKSearch(k_nearest_neighbours);
   normalEstimator.compute(*normals);
 
   pcl::concatenateFields(*cloud_xyz, *normals, *cloud_with_normals);
@@ -59,27 +63,27 @@ void normalizePCloud(const pcl::PointCloud<pcl::PointXYZI>& cloud,
   // checkIfPCloudIsNormalized(pclptr_normalized);  //
 }
 
-void doEigenDecomp6x6(Eigen::Matrix<double, 6, 6>& data,
+void doEigenDecomp6x6(const Eigen::Matrix<double, 6, 6>& data,
                       Eigen::Matrix<double, 6, 1>& eigenvalues,
                       Eigen::Matrix<double, 6, 6>& eigenvectors) {
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> eigensolver(data);
   if (eigensolver.info() == Eigen::Success) {
     eigenvalues = eigensolver.eigenvalues();
     eigenvectors =
-        eigensolver.eigenvectors();  // the eigenvectors are the columns
+        eigensolver.eigenvectors(); // the eigenvectors are the columns
   } else {
     std::cout << "Eigen failed to do the eigendecomp" << std::endl;
   }
 }
 
-void doEigenDecomp3x3(Eigen::Matrix<double, 3, 3>& data,
+void doEigenDecomp3x3(const Eigen::Matrix<double, 3, 3>& data,
                       Eigen::Matrix<double, 3, 1>& eigenvalues,
                       Eigen::Matrix<double, 3, 3>& eigenvectors) {
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 3, 3>> eigensolver(data);
   if (eigensolver.info() == Eigen::Success) {
     eigenvalues = eigensolver.eigenvalues();
     eigenvectors =
-        eigensolver.eigenvectors();  // the eigenvectors are the columns
+        eigensolver.eigenvectors(); // the eigenvectors are the columns
   } else {
     std::cout << "Eigen failed to do the eigendecomp" << std::endl;
   }

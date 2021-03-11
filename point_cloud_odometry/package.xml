@@ -3,7 +3,7 @@
 
   <name>point_cloud_odometry</name>
   <version>0.0.0</version>
-  <description>The point_cloud_odometry package</description>
+  <description>Provides an interface for point cloud odometry based on gicp, implemented in a parallel way.</description>
   <author email="eanelson@eecs.berkeley.edu">Erik Nelson</author>
   <maintainer email="eanelson@eecs.berkeley.edu">Erik Nelson</maintainer>
   <license>GPLv2</license>

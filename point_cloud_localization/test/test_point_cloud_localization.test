@@ -1,0 +1,6 @@
+<launch>
+  <test test-name="test_point_cloud_localization"
+        pkg="point_cloud_localization"
+        type="test_point_cloud_localization"
+        time-limit="300.0"/>
+</launch>

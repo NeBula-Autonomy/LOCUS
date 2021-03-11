@@ -1,0 +1,6 @@
+<launch>
+  <test test-name="test_point_cloud_odometry"
+        pkg="point_cloud_odometry"
+        type="test_point_cloud_odometry"
+        time-limit="300.0"/>
+</launch>
