@@ -18,18 +18,18 @@ Utilitiy functions for point cloud localization and ICP
 
 void addNormal(const pcl::PointCloud<pcl::PointXYZI>& cloud,
                pcl::PointCloud<pcl::PointNormal>::Ptr& cloud_with_normals,
-               const int search_radius);
+               const int k_nearest_neighbours);
 
 // returns a point cloud whose centroid is the origin, and that the mean of the
 // distances to the origin is 1
 void normalizePCloud(const pcl::PointCloud<pcl::PointXYZI>& cloud,
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pclptr_normalized);
 
-void doEigenDecomp6x6(Eigen::Matrix<double, 6, 6>& data,
+void doEigenDecomp6x6(const Eigen::Matrix<double, 6, 6>& data,
                       Eigen::Matrix<double, 6, 1>& eigenvalues,
                       Eigen::Matrix<double, 6, 6>& eigenvectors);
 
-void doEigenDecomp3x3(Eigen::Matrix<double, 3, 3>& data,
+void doEigenDecomp3x3(const Eigen::Matrix<double, 3, 3>& data,
                       Eigen::Matrix<double, 3, 1>& eigenvalues,
                       Eigen::Matrix<double, 3, 3>& eigenvectors);
 #endif

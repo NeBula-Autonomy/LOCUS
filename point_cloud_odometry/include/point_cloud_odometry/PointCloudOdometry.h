@@ -37,29 +37,27 @@
 #ifndef POINT_CLOUD_ODOMETRY_H
 #define POINT_CLOUD_ODOMETRY_H
 
-#include <ros/ros.h>
-#include <std_msgs/Float64.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_utils/Transform3.h>
-#include <pcl_ros/point_cloud.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf/transform_broadcaster.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <multithreaded_gicp/gicp.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <pcl/search/impl/search.hpp>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
+#include <geometry_utils/Transform3.h>
+#include <multithreaded_gicp/gicp.h>
+#include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
-#include <tf/transform_datatypes.h>
+#include <pcl/search/impl/search.hpp>
+#include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
-#include <diagnostic_msgs/DiagnosticStatus.h>
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float64.h>
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_datatypes.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 class PointCloudOdometry {
-
 public:
-
   typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
   PointCloudOdometry();
@@ -73,12 +71,12 @@ public:
   bool SetPoseStampedDelta(const tf::Transform& pose_stamped_delta);
 
   bool UpdateEstimate();
-  
+
   const geometry_utils::Transform3& GetIncrementalEstimate() const;
   const geometry_utils::Transform3& GetIntegratedEstimate() const;
   geometry_utils::Transform3 incremental_estimate_;
   geometry_utils::Transform3 integrated_estimate_;
-  
+
   bool GetLastPointCloud(PointCloud::Ptr& out) const;
   double icpFitnessScore_;
 
@@ -93,7 +91,7 @@ public:
   void DisableOdometryIntegration();
   void DisablePoseStampedIntegration();
 
-  void SetFlatGroundAssumptionValue(const bool& value); 
+  void SetFlatGroundAssumptionValue(const bool& value);
 
   void PublishAll();
 
@@ -101,7 +99,6 @@ public:
   diagnostic_msgs::DiagnosticStatus GetDiagnostics();
 
 private:
-
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
@@ -134,8 +131,8 @@ private:
   PointCloud::Ptr query_;
   PointCloud::Ptr reference_;
 
-  // Maximum acceptable translation and rotation tolerances 
-  // If transform_thresholding_ is set to false, 
+  // Maximum acceptable translation and rotation tolerances
+  // If transform_thresholding_ is set to false,
   // neither of these thresholds are considered
   bool transform_thresholding_;
   double max_translation_;
@@ -151,11 +148,13 @@ private:
     // Enable GICP timing information print logs
     bool enable_timing_output;
   } params_;
-  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI,
+                                                     pcl::PointXYZI>
+      icp_;
   bool SetupICP();
 
   /*--------------
-  Data integration 
+  Data integration
   --------------*/
 
   // Imu
@@ -163,7 +162,7 @@ private:
   Eigen::Matrix3d imu_delta_;
 
   // Odometry
-  bool b_use_odometry_integration_; 
+  bool b_use_odometry_integration_;
   tf::Transform odometry_delta_;
 
   // PoseStamped
@@ -171,13 +170,19 @@ private:
   tf::Transform pose_stamped_delta_;
 
   /*--------------------
-  Flat ground assumption  
+  Flat ground assumption
   --------------------*/
-  
+
   bool b_is_flat_ground_assumption_;
 
   // Diagnostics
   bool is_healthy_;
+
+  /*--------------------
+  Making some friends
+  --------------------*/
+
+  friend class PointCloudOdometryTest;
 };
 
 #endif
