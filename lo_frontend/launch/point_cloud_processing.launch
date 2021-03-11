@@ -2,26 +2,29 @@
  
     <arg name="robot_namespace" default="robot"/>
 
-    <!--TODO: Parse from yaml -->
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
 
     <arg if="$(arg b_use_multiple_pc)" name="pc_input" value="combined_point_cloud_filtered"/>
     <arg unless="$(arg b_use_multiple_pc)" name="pc_input" value="velodyne_points/transformed"/>
 
-    <arg name="vlp_throttle_freq" default="10.0"/>
-    <arg name="pc_trans_in_1" default="velodyne_points/transformed"/>
-    <arg name="pc_trans_in_2" default="velodyne_front/velodyne_points/transformed"/>
-    <arg name="pc_trans_in_3" default="velodyne_rear/velodyne_points/transformed"/>
+    <arg name="pc_trans_in_0" default="velodyne_points/transformed"/>
+    <arg name="pc_trans_in_1" default="velodyne_front/velodyne_points/transformed"/>
+    <arg name="pc_trans_in_2" default="velodyne_rear/velodyne_points/transformed"/>
 
     <group ns="$(arg robot_namespace)">
+
+        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
+            <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
+            <remap from="resurrection_detection" to="point_cloud_merger_lo/resurrection_detection"/>
+        </node>
    
         <node pkg="nodelet"
             type="nodelet"
             name="transform_points_base_link"
             args="standalone pcl/PassThrough">
             <remap from="~input" to="velodyne_points"/>
-            <remap from="~output" to="$(arg pc_trans_in_1)"/>
+            <remap from="~output" to="$(arg pc_trans_in_0)"/>
             <rosparam subst_value="true">
                 filter_field_name: z
                 filter_limit_min: -100
@@ -36,7 +39,7 @@
             name="transform_points_base_link_front"
             args="standalone pcl/PassThrough">
             <remap from="~input" to="velodyne_front/velodyne_points"/>
-            <remap from="~output" to="$(arg pc_trans_in_2)"/>
+            <remap from="~output" to="$(arg pc_trans_in_1)"/>
             <rosparam subst_value="true">
                 filter_field_name: z
                 filter_limit_min: -100
@@ -51,7 +54,7 @@
             name="transform_points_base_link_rear"
             args="standalone pcl/PassThrough">
             <remap from="~input" to="velodyne_rear/velodyne_points"/>
-            <remap from="~output" to="$(arg pc_trans_in_3)"/>
+            <remap from="~output" to="$(arg pc_trans_in_2)"/>
             <rosparam subst_value="true">
                 filter_field_name: z
                 filter_limit_min: -100
@@ -63,9 +66,9 @@
         <node if="$(arg b_use_multiple_pc)" pkg="point_cloud_merger" type="point_cloud_merger_node" name="point_cloud_merger_lo" output="screen">
             <rosparam file="$(find point_cloud_merger)/config/parameters.yaml"/>
             <param name="merging/number_of_velodynes" value="$(arg number_of_velodynes)"/>
-            <remap from="~pcld" to="$(arg pc_trans_in_1)"/>
+            <remap from="~pcld0" to="$(arg pc_trans_in_0)"/>
+            <remap from="~pcld1" to="$(arg pc_trans_in_1)"/>
             <remap from="~pcld2" to="$(arg pc_trans_in_2)"/>
-            <remap from="~pcld3" to="$(arg pc_trans_in_3)"/>
             <remap from="~combined_point_cloud" to="combined_point_cloud"/>
         </node>
 
