@@ -525,28 +525,15 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
   PointNormal::Ptr pcl_normals(new PointNormal);   // pc with normals
   PointCloud::Ptr pcl_normalized(new PointCloud);  // pc whose points have been
                                                    // rearranged.
+  Eigen::Matrix<double, 6, 6> Ap;
+
   addNormal(pointCloud, pcl_normals, params_.normal_radius_);
   normalizePCloud(pointCloud, pcl_normalized);
 
-  *covariance = Eigen::Matrix<double, 6, 6>::Zero();
-  Eigen::Matrix<double, 6, 6> H_i = Eigen::Matrix<double, 6, 6>::Zero();
+  ComputeAp_ForPoint2PlaneICP(pcl_normalized, pcl_normals, Ap);
 
-  Eigen::Vector3d a_i, n_i;
+  *covariance = icpFitnessScore_ * icpFitnessScore_ * Ap.inverse();
 
-  for (uint32_t i = 0; i < pointCloud.size(); i++) {
-    a_i << pcl_normalized->points[i].x, pcl_normalized->points[i].y,
-        pcl_normalized->points[i].z;
-    n_i << pcl_normals->points[i].normal_x, pcl_normals->points[i].normal_y,
-        pcl_normals->points[i].normal_z;
-    Eigen::Vector3d ai_cross_ni = (a_i.cross(n_i));
-
-    H_i.block(0, 0, 3, 3) = ai_cross_ni * (ai_cross_ni.transpose());
-    H_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
-    H_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
-    if (!H_i.hasNaN()) *covariance += H_i;
-  }
-
-  covariance->block(3, 0, 3, 3) = covariance->block(0, 3, 3, 3).transpose();
   // Here bound the covariance using eigen values
   Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
   eigensolver.compute(*covariance);
