@@ -20,6 +20,7 @@ LoFrontend::LoFrontend()
     msg_fixed_(new PointCloud()),
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
+    b_interpolate_ (false), 
     b_use_imu_integration_(false),
     b_use_imu_yaw_integration_(false),
     b_use_odometry_integration_(false),
@@ -34,13 +35,15 @@ LoFrontend::LoFrontend()
     b_is_open_space_(false),
     b_run_with_gt_point_cloud_(false),
     b_run_rolling_map_buffer_(false),
-    publish_diagnostics_(false) {}
+    publish_diagnostics_(false), 
+    tf_buffer_authority_("transform_odometry") {}
 
 LoFrontend::~LoFrontend() {}
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend - Initialize");  
-  name_ = ros::names::append(n.getNamespace(), "lo_frontend");  
+  name_ = ros::names::append(n.getNamespace(), "lo_frontend");    
+
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
     return false;
@@ -101,6 +104,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("frame_id/imu", imu_frame_id_)) 
     return false;
+  if (!pu::Get("frame_id/bd_odometry", bd_odom_frame_id_))
+    return false;
   if (!pu::Get("frame_conversions/b_convert_imu_to_base_link_frame", b_convert_imu_to_base_link_frame_)) 
     return false;
   if (!pu::Get("queues/lidar_queue_size", lidar_queue_size_)) 
@@ -141,13 +146,19 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("translational_velocity_threshold", translational_velocity_threshold_))
     return false;
+  if (!pu::Get("b_interpolate", b_interpolate_)) 
+    return false; 
+  
+  if ((n.getNamespace().find("spot") != std::string::npos) && (data_integration_mode_ == 0)) 
+    b_interpolate_ = false; 
+  ROS_INFO_STREAM("b_interpolate_: " << b_interpolate_);
 
   if (b_run_rolling_map_buffer_) {
     mapper_.SetRollingMapBufferOn();
   }
 
   mapper_.SetBoxFilterSize(box_filter_size_);
-
+  
   return true;
 }
 
@@ -174,14 +185,11 @@ bool LoFrontend::SetDataIntegrationMode() {
       odometry_.EnableOdometryIntegration();
       break;
     case 4: 
-      ROS_INFO("PoseStamped integration requested");
-      b_use_pose_stamped_integration_ = true;
-      odometry_.EnablePoseStampedIntegration();
-      break;    
+      ROS_ERROR("PoseStamped integration not currently supported");
+      return false;   
     default:
       ROS_ERROR("Default case to be handled");
-      return false;
-      break;   
+      return false;   
   }
   return true;
 }
@@ -201,24 +209,27 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
   return CreatePublishers(n);
 }
 
-bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
+bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {  
   ROS_INFO("LoFrontend - RegisterOnlineCallbacks");  
-  ROS_INFO("%s: Registering online callbacks.", name_.c_str());  
+  ROS_INFO("%s: Registering online callbacks.", name_.c_str());   
   nl_ = ros::NodeHandle(n);
-  lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
-  if (b_use_imu_integration_) {
-    ROS_INFO("Registering ImuCallback");
-    imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
+
+  if (!b_interpolate_) {
+    lidar_sub_ = nl_.subscribe("LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
+    if (data_integration_mode_ == 1 || data_integration_mode_ == 2) 
+      imu_sub_ = nl_.subscribe("IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
+    else if (data_integration_mode_ == 3)
+      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this);
   }
-  if (b_use_odometry_integration_) {
-    ROS_INFO("Registering OdometryCallback");
-    odom_sub_ = nl_.subscribe("ODOM_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this); 
-  }  
-  if (b_use_pose_stamped_integration_) {
-    ROS_INFO("Registering PoseStampedCallback");
-    pose_sub_ = nl_.subscribe("POSE_TOPIC", pose_queue_size_, &LoFrontend::PoseStampedCallback, this);
-  }  
-  fga_sub_ = nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);  
+  else {
+    odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC", odom_queue_size_, &LoFrontend::OdometryCallback, this);   
+    lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
+    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_); 
+    lidar_odometry_filter_->registerCallback(boost::bind(&LoFrontend::LidarCallback, this, _1));   
+  }
+  
+  fga_sub_ = nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this); 
+
   return CreatePublishers(n);
 }
 
@@ -234,7 +245,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
 }
 
 void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - ImuCallback"); 
   if (!b_imu_frame_is_correct_) CheckImuFrame(imu_msg);  
   if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
       imu_buffer_.erase(imu_buffer_.begin());
@@ -249,17 +259,28 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 }
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - OdometryCallback"); 
-  if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
-      odometry_buffer_.erase(odometry_buffer_.begin());
-  }   
-  if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) {
+  if (!b_interpolate_) {
+    if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_)
+      odometry_buffer_.erase(odometry_buffer_.begin());       
+    if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) 
       ROS_WARN("LoFrontend - OdometryCallback - Unable to store message in buffer");
+  }
+  else {
+    geometry_msgs::TransformStamped odometry;
+    geometry_msgs::Vector3 t;
+    t.x = odometry_msg->pose.pose.position.x;
+    t.y = odometry_msg->pose.pose.position.y;
+    t.z = odometry_msg->pose.pose.position.z; 
+    odometry.transform.translation = t; 
+    odometry.transform.rotation = odometry_msg->pose.pose.orientation;
+    odometry.header = odometry_msg->header;
+    odometry.header.frame_id = odometry_msg->header.frame_id;
+    odometry.child_frame_id = odometry_msg->child_frame_id;
+    tf2_ros_odometry_buffer_.setTransform(odometry, tf_buffer_authority_, false);     
   }
 }
 
 void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - PoseStampedCallback"); 
   if (CheckBufferSize(pose_stamped_buffer_) > pose_stamped_buffer_size_limit_) {
       pose_stamped_buffer_.erase(pose_stamped_buffer_.begin());
   }   
@@ -269,7 +290,6 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
 }
 
 void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
-  if (b_verbose_) ROS_INFO_STREAM("LoFrontend - CheckImuFrame");                           
   if (b_convert_imu_to_base_link_frame_) {    
     if (imu_msg->header.frame_id.find("vn100") != std::string::npos) {
       ROS_INFO("Received imu_msg is correctly expressed in imu frame");
@@ -293,7 +313,6 @@ void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
 }
 
 Eigen::Quaterniond LoFrontend::GetImuQuaternion(const Imu& imu_msg) {
-  if (b_verbose_) ROS_INFO("LoFrontend - GetImuQuaternion"); 
   Eigen::Quaterniond imu_quaternion = Eigen::Quaterniond(double(imu_msg.orientation.w), 
                                                          double(imu_msg.orientation.x),  
                                                          double(imu_msg.orientation.y), 
@@ -344,7 +363,6 @@ bool LoFrontend::LoadCalibrationFromTfTree() {
 }
 
 gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
-  if(b_verbose_) ROS_INFO("LoFrontend - ToGtsam");
   gtsam::Vector3 t;
   t(0) = pose.translation(0);
   t(1) = pose.translation(1);
@@ -363,7 +381,6 @@ gtsam::Pose3 LoFrontend::ToGtsam(const geometry_utils::Transform3& pose) const {
 
 template <typename T1, typename T2>
 bool LoFrontend::InsertMsgInBuffer(const T1& msg, T2& buffer) {
-  if(b_verbose_) ROS_INFO("LoFrontend - InsertMsgInBuffer");  
   auto initial_size = buffer.size();    
   auto current_time = msg->header.stamp.toSec();    
   buffer.insert({current_time, *msg});
@@ -378,13 +395,11 @@ bool LoFrontend::InsertMsgInBuffer(const T1& msg, T2& buffer) {
 
 template <typename T>
 int LoFrontend::CheckBufferSize(const T& buffer) const {
-  if(b_verbose_) ROS_INFO("LoFrontend - ChechBufferSize");    
   return buffer.size();
 }
 
 template <typename T1, typename T2>
 bool LoFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const {
-  if (b_verbose_) ROS_INFO("LoFrontend - GetMsgAtTime"); 
   if (buffer.size() == 0) {
     return false;
   }
@@ -420,11 +435,8 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const
   return true; 
 }
 
-tf::Transform LoFrontend::GetOdometryDelta(const Odometry& odometry_msg) const {
-  tf::Transform odometry_pose;
-  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-  auto odometry_delta = odometry_pose_previous_.inverseTimes(odometry_pose);
-  return odometry_delta;
+tf::Transform LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
+  return odometry_pose_previous_.inverseTimes(odometry_pose);
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {  
@@ -436,8 +448,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if(b_enable_computation_time_profiling_) {
     lidar_callback_start = ros::Time::now();
   }  
-
-  if (b_verbose_) ROS_INFO("LoFrontend - LidarCallback"); 
 
   if(!b_pcld_received_) {
     pcld_seq_prev_ = msg->header.seq;
@@ -457,61 +467,80 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
-  if (b_use_odometry_integration_) {
-    Odometry odometry_msg;
-    if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
-      odometry_number_of_calls_++;
-      if (odometry_number_of_calls_ > max_number_of_calls_) {
-        ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls");
-        SwitchToImuIntegration();
+  if (!b_interpolate_) {
+    if (b_use_odometry_integration_) {
+      Odometry odometry_msg;
+      if(!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+        ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given Lidar timestamp");
+        odometry_number_of_calls_++;
+        if (odometry_number_of_calls_ > max_number_of_calls_) {
+          ROS_WARN("Deactivating odometry_integration in LoFrontend as odometry_number_of_calls > max_number_of_calls");
+          SwitchToImuIntegration();
+        }
+        return;
       }
-      return;
+      odometry_number_of_calls_ = 0;
+      if (!b_odometry_has_been_received_) {
+        ROS_INFO("Receiving odometry for the first time");
+        tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+        b_odometry_has_been_received_= true;
+        return;
+      }
+      tf::Transform odometry_pose;
+      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
+      odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose)); 
+      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
     }
-    odometry_number_of_calls_ = 0;
+    else if(b_use_imu_integration_) {
+      Imu imu_msg;
+      if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
+        ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar timestamp");
+        imu_number_of_calls_++;
+        if (imu_number_of_calls_ > max_number_of_calls_) {
+          ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls");
+          b_use_imu_integration_ = false;
+          odometry_.DisableImuIntegration();
+        }
+        return;
+      }
+      imu_number_of_calls_ = 0;
+      auto imu_quaternion = GetImuQuaternion(imu_msg);
+      if (!b_imu_has_been_received_) {
+        ROS_INFO("Receiving imu for the first time");
+        imu_quaternion_previous_ = imu_quaternion;
+        b_imu_has_been_received_= true;
+        return;
+      }
+      imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion;
+      if (b_use_imu_yaw_integration_) {
+        odometry_.SetImuDelta(GetImuYawDelta());
+      }
+      else {
+        odometry_.SetImuDelta(GetImuDelta());
+      }
+      imu_quaternion_previous_ = imu_quaternion;
+    }
+  }
+  else {
+    // TODO: Switch to pure LO if VO dies 
+    auto t = tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_, base_frame_id_, stamp);
+    tf::Transform tf_transform;
+    tf::Vector3 tf_translation;
+    tf::Quaternion tf_quaternion;
+    tf::vector3MsgToTF(t.transform.translation, tf_translation);
+    tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion);
+    tf_transform.setOrigin(tf_translation);
+    tf_transform.setRotation(tf_quaternion);
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
-      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+      odometry_pose_previous_ = tf_transform;  
       b_odometry_has_been_received_= true;
       return;
     }
-    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_msg)); 
-    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+    odometry_.SetOdometryDelta(GetOdometryDelta(tf_transform)); 
+    odometry_pose_previous_ = tf_transform;
   }
-  else if(b_use_imu_integration_) {
-    Imu imu_msg;
-    if(!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
-      ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar timestamp");
-      imu_number_of_calls_++;
-      if (imu_number_of_calls_ > max_number_of_calls_) {
-        ROS_WARN("Deactivating imu_integration in LoFrontend as imu_number_of_calls > max_number_of_calls");
-        b_use_imu_integration_ = false;
-        odometry_.DisableImuIntegration();
-      }
-      return;
-    }
-    imu_number_of_calls_ = 0;
-    auto imu_quaternion = GetImuQuaternion(imu_msg);
-    if (!b_imu_has_been_received_) {
-      ROS_INFO("Receiving imu for the first time");
-      imu_quaternion_previous_ = imu_quaternion;
-      b_imu_has_been_received_= true;
-      return;
-    }
-    imu_quaternion_change_ = imu_quaternion_previous_.inverse()*imu_quaternion;
-    if (b_use_imu_yaw_integration_) {
-      odometry_.SetImuDelta(GetImuYawDelta());
-    }
-    else {
-      odometry_.SetImuDelta(GetImuDelta());
-    }
-    imu_quaternion_previous_ = imu_quaternion;
-  }  
-  else if (b_use_pose_stamped_integration_) {
-    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_"); 
-    return;
-  }
-  
+
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
   
@@ -567,7 +596,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec()); 
     scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
   }
-  
+
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
   

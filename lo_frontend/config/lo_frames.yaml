@@ -3,6 +3,7 @@ frame_id:
   base: $(arg robot_namespace)/base_link
   imu: $(arg robot_namespace)/vn100
   odometry: $(arg robot_namespace)/base_link_blam_odometry
+  bd_odometry: $(arg robot_namespace)/odom
   artifacts_in_global: true
 
 frame_conversions: 
