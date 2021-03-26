@@ -241,6 +241,7 @@ private:
   /*--------------------------
   Map Sliding Window 2 
   --------------------------*/
+  bool b_enable_msw_;
   int box_filter_size_;
   int velocity_buffer_size_;
   int translation_threshold_msw_; 
