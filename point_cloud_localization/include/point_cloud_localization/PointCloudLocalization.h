@@ -66,6 +66,7 @@ class PointCloudLocalization {
 
   typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
   typedef pcl::PointCloud<pcl::PointNormal> PointNormal;
+  typedef pcl::search::KdTree<pcl::PointXYZI> KdTree;
 
   PointCloudLocalization();
   ~PointCloudLocalization();
@@ -97,13 +98,18 @@ class PointCloudLocalization {
                                        const Eigen::Matrix4f& T,
                                        Eigen::Matrix<double, 6, 6>* covariance);
 
-  bool ComputePoint2PlaneICPCovariance(const PointCloud& pointCloud,
-                                       const Eigen::Matrix4f& T,
-                                       Eigen::Matrix<double, 6, 6>* covariance);
+  bool ComputePoint2PlaneICPCovariance(
+      const PointCloud& query_cloud,
+      const PointCloud& reference_cloud,
+      const std::vector<size_t>& correspondences,
+      const Eigen::Matrix4f& T,
+      Eigen::Matrix<double, 6, 6>* covariance);
 
   // Compute observability of ICP for two pointclouds
-  void ComputeIcpObservability(const PointCloud::Ptr& new_cloud,
-                               const PointCloud::Ptr& old_cloud,
+  void ComputeIcpObservability(const PointCloud& query_cloud,
+                               const PointCloud& reference_cloud,
+                               const std::vector<size_t>& correspondences,
+                               const Eigen::Matrix4f& T,
                                Eigen::Matrix<double, 6, 6>* eigenvectors_ptr,
                                Eigen::Matrix<double, 6, 1>* eigenvalues_ptr,
                                Eigen::Matrix<double, 6, 6>* A_ptr);
@@ -223,13 +229,11 @@ private:
   pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
   bool SetupICP();
 
-  void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr pcl_normalized,
-                                   const PointNormal::Ptr pcl_normals,
+  void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr query_normalized,
+                                   const PointNormal::Ptr reference_normals,
+                                   const std::vector<size_t>& correspondences,
+                                   const Eigen::Matrix4f& T,
                                    Eigen::Matrix<double, 6, 6>& Ap);
-
-  void ComputeDiagonalAndUpperRightOfAi(Eigen::Vector3d& a_i,
-                                        Eigen::Vector3d& n_i,
-                                        Eigen::Matrix<double, 6, 6>& A_i);
 
   /*--------------------
   Flat ground assumption  
