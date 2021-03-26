@@ -42,6 +42,7 @@ gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
 
 publish_diagnostics: false
 
+b_enable_msw: false
 box_filter_size: 25
 velocity_buffer_size: 10
 translation_threshold_msw: 5 
