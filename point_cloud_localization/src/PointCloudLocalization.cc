@@ -569,8 +569,8 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
     if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
   }
   // Update covariance matrix after bound
-  *covariance = eigen_vectors * eigen_values.asDiagonal() *
-                eigen_vectors.inverse() * icpFitnessScore_;
+  *covariance =
+      eigen_vectors * eigen_values.asDiagonal() * eigen_vectors.inverse();
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
