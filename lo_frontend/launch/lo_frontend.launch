@@ -11,6 +11,7 @@
     <arg name="respawn" value="true" unless="$(arg use_gdb)"/>
     <arg name="robot_type" value="husky" if="$(eval robot_namespace.startswith('husky'))"/>
     <arg name="robot_type" value="spot"  if="$(eval robot_namespace.startswith('spot'))"/> 
+    <arg name="robot_type" value="xmaxx"  if="$(eval robot_namespace.startswith('xmaxx'))"/> 
 
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
@@ -62,7 +63,7 @@
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>          
             <rosparam file="$(find point_cloud_localization)/config/parameters.yaml" if="$(eval robot_type == 'husky')"/>
-            <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot')"/>
+            <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot' or robot_type == 'xmaxx')"/>
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
             <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'husky1')" />
@@ -81,8 +82,8 @@
             <param name="icp/num_threads"          value="1" if="$(eval robot_namespace == 'spot2')" />
             <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'handheld1')" />
             <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'handheld1')" />
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace == 'xmaxx1')" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace == 'xmaxx1')" />
+            <param name="localization/num_threads" value="1" if="$(eval robot_type == 'xmaxx')" />
+            <param name="icp/num_threads"          value="1" if="$(eval robot_type == 'xmaxx')" />
 
         </node>
 
