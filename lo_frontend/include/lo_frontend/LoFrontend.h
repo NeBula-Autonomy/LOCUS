@@ -258,6 +258,15 @@ private:
   Low-rate odom interpolation flag
   -------------------------------*/
   bool b_interpolate_;
+
+  /*------------------------------
+  Lidar Scan Dropped Statistics 
+  -------------------------------*/
+  int scans_dropped_;
+  int statistics_time_window_;
+  ros::Time statistics_start_time_; 
+  std::string statistics_verbosity_level_; 
+
 };
 
 #endif

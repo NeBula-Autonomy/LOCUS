@@ -57,3 +57,7 @@ velocity_buffer_size: 10
 translation_threshold_msw: 5 
 rotational_velocity_threshold: 1
 translational_velocity_threshold: 0.1 
+
+# Statistics 
+statistics_time_window: 5
+statistics_verbosity_level: low # off, low, high
