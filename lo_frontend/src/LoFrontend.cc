@@ -35,7 +35,8 @@ LoFrontend::LoFrontend()
     b_is_open_space_(false),
     b_run_with_gt_point_cloud_(false),
     publish_diagnostics_(false),
-    tf_buffer_authority_("transform_odometry") {}
+    tf_buffer_authority_("transform_odometry"),
+    scans_dropped_(0) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -153,8 +154,11 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("rotational_velocity_threshold", rotational_velocity_threshold_))
     return false;
-  if (!pu::Get("translational_velocity_threshold",
-               translational_velocity_threshold_))
+  if (!pu::Get("translational_velocity_threshold", translational_velocity_threshold_))
+    return false;
+  if (!pu::Get("statistics_time_window", statistics_time_window_))
+    return false;
+  if (!pu::Get("statistics_verbosity_level", statistics_verbosity_level_))
     return false;
   if (!pu::Get("b_interpolate", b_interpolate_))
     return false;
@@ -475,13 +479,29 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   if (!b_pcld_received_) {
+    statistics_start_time_ = ros::Time::now();
     pcld_seq_prev_ = msg->header.seq;
     b_pcld_received_ = true;
-  } else {
+  } 
+  else { 
+
     if (msg->header.seq != pcld_seq_prev_ + 1) {
-      ROS_WARN("Lidar scan dropped");
+      scans_dropped_ = scans_dropped_ + 1;
+      if (statistics_verbosity_level_ == "high") ROS_WARN("Lidar scan dropped");
     }
-    pcld_seq_prev_ = msg->header.seq;
+
+    if (statistics_verbosity_level_ == "low") {
+      if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
+        auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
+        ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans over " << statistics_time_window_ << 
+                        " s ---> drop rate is: " << drop_rate << " scans/s");
+      scans_dropped_ = 0; 
+      statistics_start_time_ = ros::Time::now();
+      }
+    }   
+
+    pcld_seq_prev_ = msg->header.seq;  
+
   }
 
   auto number_of_points = msg->width;
