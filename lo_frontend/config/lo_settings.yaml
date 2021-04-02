@@ -42,7 +42,7 @@ publish_diagnostics: false
 
 # SLIDING WINDOW PARAMETERS
 
-b_enable_msw: true
+b_enable_msw: false
 #options
 #mapper - PointCloudMapper
 #buffer_mapper - PointCloudBufferMapper (not implemented yet)
