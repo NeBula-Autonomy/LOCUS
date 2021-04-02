@@ -42,15 +42,16 @@ publish_diagnostics: false
 
 # SLIDING WINDOW PARAMETERS
 
-b_enable_msw: true
+b_enable_msw: false
 #options
 #mapper - PointCloudMapper
 #buffer_mapper - PointCloudBufferMapper (not implemented yet)
 #kflann - PointCloudFlannMapper (not implemented yet)
 #octomap_mapper - PointCloudMapper (not implemented yet)
 #vdb_mapper - PointCloudVDBMapper (not implemented yet)
+# multi_threaded_mapper - PointCloudMultiThreadedMapper 
 
-window_local_mapping_type: mapper
+window_local_mapping_type: multi_threaded_mapper
 
 box_filter_size: 25
 velocity_buffer_size: 10

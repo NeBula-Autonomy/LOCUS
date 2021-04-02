@@ -670,62 +670,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     if (b_publish_map_) {
       counter_++;
       if (counter_ == map_publishment_meters_) {
+        if (b_enable_msw_) mapper_->Refresh(current_pose);       
         mapper_->PublishMap();
         counter_ = 0;
       }
     }
     last_keyframe_pose_ = current_pose;
   }
-
-  // Map Sliding Window 2
-  // -------------------------------------------------------------------------------------------------------
-
-  if (b_enable_msw_) {
-    gtsam::Pose3 delta_s =
-        ToGtsam(geometry_utils::PoseDelta(previous_pose_, current_pose));
-    ros::Duration delta_t = stamp - previous_stamp_;
-
-    if (ToGtsam(geometry_utils::PoseDelta(last_refresh_pose_, current_pose))
-            .translation()
-            .norm() > translation_threshold_msw_) {
-      auto translational_velocity =
-          delta_s.translation().norm() / delta_t.toSec();
-      auto rotational_velocity =
-          (2 * acos(delta_s.rotation().toQuaternion().w()) * 180.0 / M_PI) /
-          delta_t.toSec();
-      if (std::isnan(rotational_velocity))
-        rotational_velocity = 0;
-
-      translational_velocity_buffer_.push_back(translational_velocity);
-      rotational_velocity_buffer_.push_back(rotational_velocity);
-
-      auto avg_translational_velocity =
-          GetVectorAverage(translational_velocity_buffer_);
-      auto avg_rotational_velocity =
-          GetVectorAverage(rotational_velocity_buffer_);
-
-      if (translational_velocity_buffer_.size() > velocity_buffer_size_)
-        translational_velocity_buffer_.erase(
-            translational_velocity_buffer_.begin());
-      if (rotational_velocity_buffer_.size() > velocity_buffer_size_)
-        rotational_velocity_buffer_.erase(rotational_velocity_buffer_.begin());
-
-      if (translational_velocity < translational_velocity_threshold_ &&
-          !std::isnan(rotational_velocity) &&
-          rotational_velocity < rotational_velocity_threshold_ &&
-          avg_translational_velocity < translational_velocity_threshold_ &&
-          avg_rotational_velocity < rotational_velocity_threshold_) {
-        mapper_->Refresh(current_pose);
-        mapper_->PublishMap();
-        last_refresh_pose_ = current_pose;
-      }
-    }
-
-    previous_stamp_ = stamp;
-    previous_pose_ = current_pose;
-  }
-
-  // ---------------------------------------------------------------------------------------------------------------------------
 
   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
     PointCloud base_frame_pcld = *msg;
