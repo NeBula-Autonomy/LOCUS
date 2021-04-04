@@ -31,7 +31,6 @@ class LoFrontendTest : public ::testing::Test {
              "point_cloud_mapper)/config/parameters.yaml"); 
       system("rosparam set icp/num_threads 1");
       system("rosparam set localization/num_threads 1");
-      system("rosparam set b_publish_tfs true");
       system("rosparam set b_interpolate false");
       
     }

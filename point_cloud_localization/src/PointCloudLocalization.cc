@@ -95,9 +95,6 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
     return false;
 
-  // TODO: should we care that we don't catch exception here?
-  pu::Get("b_publish_tfs", b_publish_tfs_);
-
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
   gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
   gu::Rot3 R;
@@ -157,15 +154,6 @@ const gu::Transform3& PointCloudLocalization::GetIntegratedEstimate() const {
 void PointCloudLocalization::SetIntegratedEstimate(
     const gu::Transform3& integrated_estimate) {
   integrated_estimate_ = integrated_estimate;
-  // Publish transform between fixed frame and localization frame
-  if (b_publish_tfs_) {
-    geometry_msgs::TransformStamped tf;
-    tf.transform = gr::ToRosTransform(integrated_estimate_);
-    tf.header.stamp = stamp_;
-    tf.header.frame_id = fixed_frame_id_;
-    tf.child_frame_id = base_frame_id_;
-    tfbr_.sendTransform(tf);
-  }
 }
 
 bool PointCloudLocalization::MotionUpdate(
@@ -608,15 +596,6 @@ void PointCloudLocalization::PublishAll() {
   PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
   PublishOdometry(integrated_estimate_, icp_covariance_);
 
-  // Publish transform between fixed frame and localization frame
-  if (b_publish_tfs_) {
-    geometry_msgs::TransformStamped tf;
-    tf.transform = gr::ToRosTransform(integrated_estimate_);
-    tf.header.stamp = stamp_;
-    tf.header.frame_id = fixed_frame_id_;
-    tf.child_frame_id = base_frame_id_;
-    tfbr_.sendTransform(tf);
-  }
 }
 
 void PointCloudLocalization::PublishPose(
