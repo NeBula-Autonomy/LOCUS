@@ -487,7 +487,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     auto sequence_difference = (int)msg->header.seq - (int)pcld_seq_prev_;
     if (sequence_difference != 1) scans_dropped_ = scans_dropped_ + sequence_difference - 1;    
-    if (sequence_difference <= 0) ROS_WARN("sequence_difference <= 0"); 
+    if (sequence_difference <= 0) {
+      ROS_WARN("--------- sequence_difference <= 0 ---------");
+      ROS_INFO_STREAM("Current sequence: " << msg->header.seq);
+      ROS_INFO_STREAM("Previous sequence: " << pcld_seq_prev_);
+      ROS_WARN("--------------------------------------------");
+    } 
 
     if (statistics_verbosity_level_ == "high") ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans");    
     if (statistics_verbosity_level_ == "low") {
