@@ -163,9 +163,12 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("b_interpolate", b_interpolate_))
     return false;
 
-  if ((n.getNamespace().find("spot") != std::string::npos) &&
-      (data_integration_mode_ == 0))
-    b_interpolate_ = false;
+  if (n.getNamespace().find("spot") != std::string::npos) {
+    if ((data_integration_mode_ == 0) || 
+        (data_integration_mode_ == 1) || 
+        (data_integration_mode_ == 2)) b_interpolate_ = false;
+  }
+  
   ROS_INFO_STREAM("b_interpolate_: " << b_interpolate_);
 
   mapper_ = mapperFabric(window_local_mapping_type_);
