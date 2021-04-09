@@ -486,13 +486,18 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;
     b_pcld_received_ = true;
   } 
-  else { 
+  else {
 
-    if (msg->header.seq != pcld_seq_prev_ + 1) {
-      scans_dropped_ = scans_dropped_ + 1;
-      if (statistics_verbosity_level_ == "high") ROS_WARN("Lidar scan dropped");
-    }
+    auto sequence_difference = (int)msg->header.seq - (int)pcld_seq_prev_;
+    if (sequence_difference != 1) scans_dropped_ = scans_dropped_ + sequence_difference - 1;    
+    if (sequence_difference <= 0) {
+      ROS_WARN("--------- sequence_difference <= 0 ---------");
+      ROS_INFO_STREAM("Current sequence: " << msg->header.seq);
+      ROS_INFO_STREAM("Previous sequence: " << pcld_seq_prev_);
+      ROS_WARN("--------------------------------------------");
+    } 
 
+    if (statistics_verbosity_level_ == "high") ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans");    
     if (statistics_verbosity_level_ == "low") {
       if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
         auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
@@ -501,10 +506,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       scans_dropped_ = 0; 
       statistics_start_time_ = ros::Time::now();
       }
-    }   
+    }
 
     pcld_seq_prev_ = msg->header.seq;  
-
+  
   }
 
   auto number_of_points = msg->width;
