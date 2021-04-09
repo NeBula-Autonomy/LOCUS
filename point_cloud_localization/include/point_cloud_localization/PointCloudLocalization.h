@@ -220,9 +220,6 @@ private:
   double max_rotation_;
   // double max_power_;
 
-  // To not publish tfs
-  bool b_publish_tfs_{false};
-
   // ICP
   pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI,
                                                      pcl::PointXYZI>
