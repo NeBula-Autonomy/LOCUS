@@ -1,14 +1,14 @@
 filtering:
 
   # VOXEL GRID FILTER 
-  grid_filter: true
+  grid_filter: false
   # Resolution of voxel grid filter
   grid_res: 0.2
 
   # RANDOM DOWNSAMPLE FILTER
   random_filter: true
   # Percentage of points to discard. Must be between 0.0 and 1.0.
-  decimate_percentage: 0.90
+  decimate_percentage: 0.50
   decimate_percentage_open_space: 0.97
 
   # STATISTICAL OUTLIER FILTER
