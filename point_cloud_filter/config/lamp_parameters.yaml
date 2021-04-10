@@ -1,0 +1,29 @@
+filtering:
+
+  # VOXEL GRID FILTER 
+  grid_filter: true
+  # Resolution of voxel grid filter
+  grid_res: 0.2
+
+  # RANDOM DOWNSAMPLE FILTER
+  random_filter: true
+  # Percentage of points to discard. Must be between 0.0 and 1.0.
+  decimate_percentage: 0.90
+  decimate_percentage_open_space: 0.97
+
+  # STATISTICAL OUTLIER FILTER
+  outlier_filter: false
+  # Standard deviation threshold in distance to neighbors for outlier removal.
+  outlier_std: 1.0
+  # Number of nearest neighbors for outlier removal filter.
+  outlier_knn: 10
+
+  # RADIUS FILTER 
+  radius_filter: false
+  # Size of the radius outlier filter.
+  radius: 0.15
+  # If this number of neighbors are not found within a radius of a point, remove the point.
+  radius_knn: 3
+
+  # Filter point cloud by extracting features
+  extract_features: false
