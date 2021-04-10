@@ -1,7 +1,7 @@
 filtering:
 
   # VOXEL GRID FILTER 
-  grid_filter: false
+  grid_filter: true
   # Resolution of voxel grid filter
   grid_res: 0.2
 
