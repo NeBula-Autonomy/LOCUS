@@ -94,6 +94,7 @@
             <arg name="cloud0" value="velodyne_points/transformed" />
             <arg name="cloud1" value="velodyne_front/velodyne_points" />
             <arg name="cloud2" value="velodyne_rear/velodyne_points" if="$(eval number_of_velodynes > 2)"/>
+            <arg name="odom_topic" value="hero/wio_ekf/odom" />
         </include>
 
         <node pkg="nodelet"
