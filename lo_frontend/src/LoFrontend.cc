@@ -497,9 +497,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto size_y = maxPoint_.y - minPoint_.y;
   if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
     b_is_open_space_ = true;
+    translation_threshold_kf_ = 2.0; 
+    rotation_threshold_kf_ = 0.6;  
   }
   else {
     b_is_open_space_ = false;
+    translation_threshold_kf_ = 1.0; 
+    rotation_threshold_kf_ = 0.3;  
   }
   if (b_publish_xy_cross_section_) {
     auto xy_cross_section_msg = std_msgs::Float64();
