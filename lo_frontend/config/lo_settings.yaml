@@ -33,7 +33,7 @@ data_integration:
 
 b_is_flat_ground_assumption: false
 
-b_enable_computation_time_profiling: false
+b_enable_computation_time_profiling: true
 
 b_run_with_gt_point_cloud: false
 gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
