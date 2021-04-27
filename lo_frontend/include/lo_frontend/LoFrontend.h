@@ -33,7 +33,6 @@ Authors:
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
-
 #include <message_filters/subscriber.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/message_filter.h>
@@ -42,13 +41,17 @@ Authors:
 #include <tf2_ros/message_filter.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-
 #include <point_cloud_mapper/IPointCloudMapper.h>
+#include <pcl/common/common.h>
+
+
 
 class LoFrontend {
+
   friend class LoFrontendTest;
 
 public:
+
   typedef pcl::PointXYZI Point;
   typedef pcl::PointCloud<Point> PointCloud;
   typedef sensor_msgs::Imu Imu;
@@ -67,6 +70,7 @@ public:
   bool Initialize(const ros::NodeHandle& n, bool from_log);
 
 private:
+
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;
@@ -201,6 +205,13 @@ private:
 
   bool b_is_open_space_;
   int number_of_points_open_space_;
+
+  /*-----------------
+  BB based OSD
+  ------------------*/
+  double osd_size_threshold_;
+  Point minPoint_;
+  Point maxPoint_;  
 
   /* ----------------------------------
   Dynamic hierarchical data integration

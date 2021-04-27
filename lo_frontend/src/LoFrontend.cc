@@ -162,6 +162,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_interpolate", b_interpolate_))
     return false;
+  if (!pu::Get("osd_size_threshold", osd_size_threshold_))
+    return false;
 
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || 
@@ -473,12 +475,23 @@ LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
+
   ros::Time lidar_callback_start;
   ros::Time scan_to_scan_start;
   ros::Time scan_to_submap_start;
 
   if (b_enable_computation_time_profiling_) {
     lidar_callback_start = ros::Time::now();
+  }
+
+  pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
+  auto size_x = maxPoint_.x - minPoint_.x;
+  auto size_y = maxPoint_.y - minPoint_.y;
+  if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
+    ROS_INFO("Open space");     
+  }
+  else {
+    ROS_INFO("Closed space");
   }
 
   if (!b_pcld_received_) {
