@@ -212,6 +212,8 @@ private:
   double osd_size_threshold_;
   Point minPoint_;
   Point maxPoint_;  
+  bool b_publish_xy_cross_section_; 
+  ros::Publisher xy_cross_section_pub_;
 
   /* ----------------------------------
   Dynamic hierarchical data integration

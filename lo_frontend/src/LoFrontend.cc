@@ -164,6 +164,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("osd_size_threshold", osd_size_threshold_))
     return false;
+  if (!pu::Get("b_publish_xy_cross_section", b_publish_xy_cross_section_))
+    return false;
 
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || 
@@ -274,6 +276,8 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
   approx_nearest_neighbors_duration_pub_ =
       nl.advertise<std_msgs::Float64>("approx_nearest_neighbors_duration", 10, false);
+  xy_cross_section_pub_ =  
+      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   return true;
@@ -496,6 +500,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
   else {
     ROS_INFO("Closed space");
+  }
+  if (b_publish_xy_cross_section_) {
+    auto xy_cross_section_msg = std_msgs::Float64();
+    xy_cross_section_msg.data = size_x * size_y;
+    xy_cross_section_pub_.publish(xy_cross_section_msg);
   }
 
   if (!b_pcld_received_) {
