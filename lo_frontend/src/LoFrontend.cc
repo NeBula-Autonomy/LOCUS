@@ -496,10 +496,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto size_x = maxPoint_.x - minPoint_.x;
   auto size_y = maxPoint_.y - minPoint_.y;
   if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
-    ROS_INFO("Open space");     
+    b_is_open_space_ = true;
   }
   else {
-    ROS_INFO("Closed space");
+    b_is_open_space_ = false;
   }
   if (b_publish_xy_cross_section_) {
     auto xy_cross_section_msg = std_msgs::Float64();
@@ -538,11 +538,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   
   }
 
+  /*
   auto number_of_points = msg->width;
   if (number_of_points > number_of_points_open_space_)
     b_is_open_space_ = true;
   else
     b_is_open_space_ = false;
+  */
 
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
