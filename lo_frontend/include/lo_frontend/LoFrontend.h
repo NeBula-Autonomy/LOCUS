@@ -235,6 +235,7 @@ private:
   ros::Publisher lidar_callback_duration_pub_;
   ros::Publisher scan_to_scan_duration_pub_;
   ros::Publisher scan_to_submap_duration_pub_;
+  ros::Publisher approx_nearest_neighbors_duration_pub_;
 
   /* -------------------------
   Ground Truth
