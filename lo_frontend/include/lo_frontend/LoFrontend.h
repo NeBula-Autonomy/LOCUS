@@ -214,6 +214,13 @@ private:
   Point maxPoint_;  
   bool b_publish_xy_cross_section_; 
   ros::Publisher xy_cross_section_pub_;
+  // Closed space keyframe policy
+  double translation_threshold_closed_space_kf_;
+  double rotation_threshold_closed_space_kf_;
+  // Open space keyframe policy
+  double translation_threshold_open_space_kf_;
+  double rotation_threshold_open_space_kf_;
+
 
   /* ----------------------------------
   Dynamic hierarchical data integration
