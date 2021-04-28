@@ -209,6 +209,7 @@ private:
   /*-----------------
   BB based OSD
   ------------------*/
+  bool b_use_osd_; 
   double osd_size_threshold_;
   Point minPoint_;
   Point maxPoint_;  
