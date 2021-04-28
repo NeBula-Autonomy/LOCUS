@@ -91,6 +91,11 @@ private:
   ros::Subscriber odom_sub_;
   ros::Subscriber pose_sub_;
 
+  std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
+  void setImuSubscriber(ros::NodeHandle& _nh);
+  void setOdomSubscriber(ros::NodeHandle& _nh);
+  void setLidarSubscriber(ros::NodeHandle& _nh);
+
   ros::Publisher base_frame_pcld_pub_;
   ros::Publisher diagnostics_pub_;
 

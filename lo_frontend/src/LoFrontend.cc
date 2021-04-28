@@ -40,6 +40,85 @@ LoFrontend::LoFrontend()
 
 LoFrontend::~LoFrontend() {}
 
+std::vector<ros::AsyncSpinner>
+LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
+  // Get main params
+  _nh.param<std::string>("robot_namespace", this->robot_namespace_, "robot");
+
+  // Set spinners depending on parameters.
+  // If a param does not exist, do not create the spinner.
+  std::vector<ros::AsyncSpinner> async_spinners;
+
+  // Setup IMU spinner
+  {
+    ros::AsyncSpinner spinner_imu(1, &this->imu_queue_);
+    async_spinners.push_back(spinner_imu);
+    setImuSubscriber(_nh);
+    ROS_INFO("[LoFrontend::setAsynchSpinners] : New subscriber for IMU.");
+  }
+
+  // Setup Odom spinner
+  {
+    ros::AsyncSpinner spinner_odom(1, &this->odom_queue_);
+    async_spinners.push_back(spinner_odom);
+    setOdomSubscriber(_nh);
+    ROS_INFO("[LoFrontend::setAsynchSpinners] : New subscriber for odom.");
+  }
+
+  // Setup lidar spinner
+  {
+    ros::AsyncSpinner spinner_lidar(1, &this->lidar_queue_);
+    async_spinners.push_back(spinner_lidar);
+    setLidarSubscriber(_nh);
+    ROS_INFO("[LoFrontend::setAsynchSpinners] : New subscriber for lidar.");
+  }
+
+  return async_spinners;
+}
+
+// IMU subscriber definition.
+void LoFrontend::setImuSubscriber(ros::NodeHandle& _nh) {
+  // create options for subscriber and pass pointer to our custom queue
+  ros::SubscribeOptions opts = ros::SubscribeOptions::create<sensor_msgs::Imu>(
+      "IMU_TOPIC",                                 // topic name
+      imu_queue_size_,                             // queue length
+      boost::bind(&LoFrontend::ImuCallback, this), // callback
+      ros::VoidPtr(),   // tracked object, we don't need one thus NULL
+      &this->imu_queue_ // pointer to callback queue object
+  );
+  // subscribe
+  this->imu_sub_ = _nh.subscribe(opts);
+}
+
+// Odom subscriber definition.
+void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
+  // create options for subscriber and pass pointer to our custom queue
+  ros::SubscribeOptions opts =
+      ros::SubscribeOptions::create<nav_msgs::Odometry>(
+          "ODOMETRY_TOPIC",                                 // topic name
+          odom_queue_size_,                                 // queue length
+          boost::bind(&LoFrontend::OdometryCallback, this), // callback
+          ros::VoidPtr(),    // tracked object, we don't need one thus NULL
+          &this->odom_queue_ // pointer to callback queue object
+      );
+  // subscribe
+  this->odom_sub_ = _nh.subscribe(opts);
+}
+
+// Lidar subscriber definition.
+void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
+  // create options for subscriber and pass pointer to our custom queue
+  ros::SubscribeOptions opts = ros::SubscribeOptions::create<PointCloud>(
+      "LIDAR_TOPIC",                                 // topic name
+      lidar_queue_size_,                             // queue length
+      boost::bind(&LoFrontend::LidarCallback, this), // callback
+      ros::VoidPtr(),     // tracked object, we don't need one thus NULL
+      &this->lidar_queue_ // pointer to callback queue object
+  );
+  // subscribe
+  this->lidar_sub_ = _nh.subscribe(opts);
+}
+
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend - Initialize");
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");
@@ -162,7 +241,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_interpolate", b_interpolate_))
     return false;
-
   if (!pu::Get("b_use_osd", b_use_osd_))
     return false;
   if (!pu::Get("osd_size_threshold", osd_size_threshold_))
@@ -245,28 +323,28 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());
   nl_ = ros::NodeHandle(n);
 
-  if (!b_interpolate_) {
-    lidar_sub_ = nl_.subscribe(
-        "LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
-    if (data_integration_mode_ == 1 || data_integration_mode_ == 2)
-      imu_sub_ = nl_.subscribe(
-          "IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
-    else if (data_integration_mode_ == 3)
-      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
-                                odom_queue_size_,
-                                &LoFrontend::OdometryCallback,
-                                this);
-  } else {
-    odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
-                              odom_queue_size_,
-                              &LoFrontend::OdometryCallback,
-                              this);
-    lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
-    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(
-        lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_);
-    lidar_odometry_filter_->registerCallback(
-        boost::bind(&LoFrontend::LidarCallback, this, _1));
-  }
+  // if (!b_interpolate_) {
+  //   lidar_sub_ = nl_.subscribe(
+  //       "LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
+  //   if (data_integration_mode_ == 1 || data_integration_mode_ == 2)
+  //     imu_sub_ = nl_.subscribe(
+  //         "IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
+  //   else if (data_integration_mode_ == 3)
+  //     odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
+  //                               odom_queue_size_,
+  //                               &LoFrontend::OdometryCallback,
+  //                               this);
+  // } else {
+  //   odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
+  //                             odom_queue_size_,
+  //                             &LoFrontend::OdometryCallback,
+  //                             this);
+  //   lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
+  //   lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(
+  //       lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_);
+  //   lidar_odometry_filter_->registerCallback(
+  //       boost::bind(&LoFrontend::LidarCallback, this, _1));
+  // }
 
   fga_sub_ = nl_.subscribe(
       "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
