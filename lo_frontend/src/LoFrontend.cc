@@ -810,6 +810,8 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
 // Publish odometry at fixed rate --------------------------------------------------------------------
 
 void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
+  // Publishes the latest odometry at a fixed rate
+  
   // Currently works for VO - TODO: think about removing b_interpolate
   // TODO - add check to stop if we don't have lidar yet
   
@@ -999,8 +1001,6 @@ void LoFrontend::SwitchToImuIntegration() {
   b_use_odometry_integration_ = false;
   odometry_.DisableOdometryIntegration();
   b_use_imu_integration_ = true;
-  imu_sub_ = nl_.subscribe(
-      "IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
   odometry_.EnableImuIntegration();
 }
 
