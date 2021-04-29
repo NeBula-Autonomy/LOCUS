@@ -704,23 +704,29 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       imu_quaternion_previous_ = imu_quaternion;
     }
   } else {
-
     bool have_odom_transform = false;
     geometry_msgs::TransformStamped t;
 
-    // Check if we can get an odometry sources transform from the time of the last pointcloud to the latest VO timestamp
-    if (tf2_ros_odometry_buffer_.lookupTransform(
-        bd_odom_frame_id_, latest_odom_stamp_, bd_odom_frame_id_, stamp, base_frame_id_, ros::Duration(0.05)))
-    {
-      have_odom_transform = true
-      t = tf2_ros_odometry_buffer_.lookupTransform(
-          bd_odom_frame_id_, latest_odom_stamp_, bd_odom_frame_id_, stamp, base_frame_id_, ros::Duration(0.05));
+    // Check if we can get an odometry sources transform from the time of the
+    // last pointcloud to the latest VO timestamp
+    if (tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_,
+                                                 latest_odom_stamp_,
+                                                 bd_odom_frame_id_,
+                                                 stamp,
+                                                 base_frame_id_,
+                                                 ros::Duration(0.05))) {
+      have_odom_transform = true t =
+          tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_,
+                                                   latest_odom_stamp_,
+                                                   bd_odom_frame_id_,
+                                                   stamp,
+                                                   base_frame_id_,
+                                                   ros::Duration(0.05));
     }
 
     tf::Transform tf_transform;
 
-    if (have_odom_transform)
-    {
+    if (have_odom_transform) {
       // Have the tf, so use it
       tf::Vector3 tf_translation;
       tf::Quaternion tf_quaternion;
@@ -730,8 +736,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       tf_transform.setRotation(tf_quaternion);
     } else {
       // Don't have a valid tf so do pure LO
-      tf::Vector3 tf_translation(0.0,0.0,0.0);
-      tf::Quaternion tf_quaternion(0.0,0.0,0.0,1.0);
+      tf::Vector3 tf_translation(0.0, 0.0, 0.0);
+      tf::Quaternion tf_quaternion(0.0, 0.0, 0.0, 1.0);
       tf_transform.setOrigin(tf_translation);
       tf_transform.setRotation(tf_quaternion);
     }
