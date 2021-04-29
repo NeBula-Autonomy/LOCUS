@@ -35,6 +35,7 @@ Authors:
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Time.h>
+#include <std_msgs/Float64.h>
 #include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
@@ -317,6 +318,7 @@ private:
 
   // Debug utilities 
   bool b_debug_transforms_; 
+  ros::Publisher time_difference_pub_; 
 
 };
 

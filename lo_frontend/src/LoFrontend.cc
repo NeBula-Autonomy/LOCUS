@@ -413,6 +413,9 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
+
+  time_difference_pub_ = 
+      nl.advertise<std_msgs::Float64>("time_difference", 10, false); 
   
   return true;
 }
@@ -614,6 +617,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     ros::Time stamp_transform_to;
     if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) {
+      
+      auto time_difference_msg = std_msgs::Float64(); 
+      time_difference_msg.data = (stamp - latest_odom_stamp_).toSec(); 
+      time_difference_pub_.publish(time_difference_msg); 
+     
       stamp_transform_to = latest_odom_stamp_;
     } 
     else {
