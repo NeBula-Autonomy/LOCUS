@@ -85,4 +85,6 @@ rotation_threshold_open_space_kf: 0.6
 
 
 # ------------- Debug utilities -------------------------------
-b_debug_transforms: true 
+b_debug_transforms: false
+
+wait_for_odom_transform_timeout: 0.5

@@ -320,6 +320,8 @@ private:
   bool b_debug_transforms_; 
   ros::Publisher time_difference_pub_; 
 
+  double wait_for_odom_transform_timeout_; 
+
 };
 
 #endif

@@ -317,6 +317,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("b_debug_transforms", 
                 b_debug_transforms_))
     return false;
+  if (!pu::Get("wait_for_odom_transform_timeout", 
+                wait_for_odom_transform_timeout_))
+    return false;
 
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || 
@@ -615,8 +618,18 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     bool have_odom_transform = false;
     geometry_msgs::TransformStamped t;
 
+    auto wait_for_transform_start_time = ros::Time::now();     
+    while(latest_odom_stamp_ < stamp) {
+      ros::Duration(0.01).sleep();
+      auto waiting_from = (ros::Time::now() - wait_for_transform_start_time).toSec(); 
+      if (waiting_from > wait_for_odom_transform_timeout_) {
+        ROS_WARN("Could not retrieve odom transform - exiting");
+        break;  
+      }
+    }
+
     ros::Time stamp_transform_to;
-    if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) {      
+    if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) { 
       stamp_transform_to = latest_odom_stamp_;
       if (b_debug_transforms_) {
         auto time_difference_msg = std_msgs::Float64(); 
