@@ -616,13 +616,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     geometry_msgs::TransformStamped t;
 
     ros::Time stamp_transform_to;
-    if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) {
-      
-      auto time_difference_msg = std_msgs::Float64(); 
-      time_difference_msg.data = (stamp - latest_odom_stamp_).toSec(); 
-      time_difference_pub_.publish(time_difference_msg); 
-     
+    if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) {      
       stamp_transform_to = latest_odom_stamp_;
+      if (b_debug_transforms_) {
+        auto time_difference_msg = std_msgs::Float64(); 
+        time_difference_msg.data = (stamp - latest_odom_stamp_).toSec(); 
+        time_difference_pub_.publish(time_difference_msg); 
+      }     
     } 
     else {
       stamp_transform_to = stamp;
