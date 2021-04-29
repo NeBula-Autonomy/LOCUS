@@ -163,6 +163,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   }
 
   last_refresh_pose_ = localization_.GetIntegratedEstimate();
+  latest_odom_stamp_ = ros::Time(0);
 
   return true;
 }
@@ -408,6 +409,7 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     odometry.child_frame_id = odometry_msg->child_frame_id;
     tf2_ros_odometry_buffer_.setTransform(
         odometry, tf_buffer_authority_, false);
+    latest_odom_stamp_ = odometry_msg->header.stamp;
   }
 }
 
@@ -702,24 +704,44 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       imu_quaternion_previous_ = imu_quaternion;
     }
   } else {
-    // TODO: Switch to pure LO if VO dies
-    auto t = tf2_ros_odometry_buffer_.lookupTransform(
-        bd_odom_frame_id_, base_frame_id_, stamp);
+
+    bool have_odom_transform = false;
+    geometry_msgs::TransformStamped t;
+
+    // Check if we can get an odometry sources transform from the time of the last pointcloud to the latest VO timestamp
+    if (tf2_ros_odometry_buffer_.lookupTransform(
+        bd_odom_frame_id_, latest_odom_stamp_, bd_odom_frame_id_, stamp, base_frame_id_, ros::Duration(0.05)))
+    {
+      have_odom_transform = true
+      t = tf2_ros_odometry_buffer_.lookupTransform(
+          bd_odom_frame_id_, latest_odom_stamp_, bd_odom_frame_id_, stamp, base_frame_id_, ros::Duration(0.05));
+    }
+
     tf::Transform tf_transform;
-    tf::Vector3 tf_translation;
-    tf::Quaternion tf_quaternion;
-    tf::vector3MsgToTF(t.transform.translation, tf_translation);
-    tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion);
-    tf_transform.setOrigin(tf_translation);
-    tf_transform.setRotation(tf_quaternion);
+
+    if (have_odom_transform)
+    {
+      // Have the tf, so use it
+      tf::Vector3 tf_translation;
+      tf::Quaternion tf_quaternion;
+      tf::vector3MsgToTF(t.transform.translation, tf_translation);
+      tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion);
+      tf_transform.setOrigin(tf_translation);
+      tf_transform.setRotation(tf_quaternion);
+    } else {
+      // Don't have a valid tf so do pure LO
+      tf::Vector3 tf_translation(0.0,0.0,0.0);
+      tf::Quaternion tf_quaternion(0.0,0.0,0.0,1.0);
+      tf_transform.setOrigin(tf_translation);
+      tf_transform.setRotation(tf_quaternion);
+    }
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
-      odometry_pose_previous_ = tf_transform;
       b_odometry_has_been_received_ = true;
       return;
     }
-    odometry_.SetOdometryDelta(GetOdometryDelta(tf_transform));
-    odometry_pose_previous_ = tf_transform;
+    // Have the delta - set this directly in odom
+    odometry_.SetOdometryDelta(tf_transform);
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);

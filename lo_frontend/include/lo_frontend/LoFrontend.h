@@ -117,6 +117,8 @@ private:
 
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
+  ros::Time latest_odom_stamp_;
+
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
   int pose_stamped_buffer_size_limit_;
