@@ -136,6 +136,7 @@ private:
   ros::Time latest_odom_stamp_;
   bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
+  bool b_have_published_odom_ = false;
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;

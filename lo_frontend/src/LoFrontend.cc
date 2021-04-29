@@ -751,7 +751,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   latest_pose_ = current_pose;  
   previous_stamp_ = stamp;
   latest_pose_stamp_ = stamp;
-  
+  b_have_published_odom_ = false;
+
   // Compute delta
   gtsam::Pose3 delta =
       ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
@@ -868,8 +869,11 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   }
 
   // Publish as an odometry message
-  // TODO - add to the covariance with the delta from visual odom
-  PublishOdometry(latest_pose_, covariance, publish_stamp);
+  if (!b_have_published_odom_ || have_odom_transform) {
+    // TODO - add to the covariance with the delta from visual odom
+    PublishOdometry(latest_pose_, covariance, publish_stamp);
+    b_have_published_odom_ = true;
+  }
 
   return;
 }
