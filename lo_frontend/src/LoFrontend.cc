@@ -636,7 +636,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     if (have_odom_transform) {
       // Have the tf, so use it
-      ROS_INFO("Have_odom_transform");
       tf::Vector3 tf_translation;
       tf::Quaternion tf_quaternion;
       tf::vector3MsgToTF(t.transform.translation, tf_translation);
@@ -646,7 +645,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     } 
     else {
       // Don't have a valid tf so do pure LO
-      ROS_INFO("Don't have_odom_transform");
       tf::Vector3 tf_translation(0.0, 0.0, 0.0);
       tf::Quaternion tf_quaternion(0.0, 0.0, 0.0, 1.0);
       tf_transform.setOrigin(tf_translation);
