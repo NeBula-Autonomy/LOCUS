@@ -444,34 +444,38 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   ros::Time lidar_stamp = localization_.GetLatestTimestamp();
   ros::Time publish_stamp = lidar_stamp;
 
+  if (b_first_odom_timer_) {
+    latest_pose_ = latest_lidar_pose;
+    latest_pose_stamp_ = lidar_stamp;
+    b_first_odom_timer_ = false;
+  }
+
   // Check if we can get additional transforms from the odom source
   bool have_odom_transform = false;
   geometry_msgs::TransformStamped t;
-  if (latest_odom_stamp_ > lidar_stamp &&
-      tf2_ros_odometry_buffer_.canTransform(
-          bd_odom_frame_id_,
-          latest_odom_stamp_,
-          bd_odom_frame_id_,
-          lidar_stamp,
-          base_frame_id_,
-          ros::Duration(transform_wait_duration_))) {
+  if (latest_odom_stamp_ > lidar_stamp && data_integration_mode_ >= 3 &&
+      tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
+                                            latest_pose_stamp_,
+                                            base_frame_id_,
+                                            latest_odom_stamp_,
+                                            bd_odom_frame_id_)) {
     have_odom_transform = true;
     publish_stamp = latest_odom_stamp_;
     // Get the transform between the latest lidar timestamp and the latest odom
     // timestamp
-    t = tf2_ros_odometry_buffer_.lookupTransform(
-        bd_odom_frame_id_,
-        latest_odom_stamp_,
-        bd_odom_frame_id_,
-        lidar_stamp,
-        base_frame_id_,
-        ros::Duration(transform_wait_duration_));
+    t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
+                                                 latest_pose_stamp_,
+                                                 base_frame_id_,
+                                                 latest_odom_stamp_,
+                                                 bd_odom_frame_id_);
   } else {
+    publish_stamp = latest_pose_stamp_;
     // TODO - don't print this warning if we have not chosen odom as an input
-    ROS_WARN("Can not get transform from odom source");
+    // TODO - just do stats on this
+    // ROS_WARN("Can not get transform from odom source");
   }
 
-  geometry_utils::Transform3 latest_pose;
+  // geometry_utils::Transform3 latest_pose_;
 
   if (have_odom_transform) {
     // Convert transform into common format
@@ -485,14 +489,15 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     //                                            t.transform.rotation.y,
     //                                            t.transform.rotation.z);
 
-    latest_pose = geometry_utils::PoseUpdate(latest_lidar_pose, odom_delta);
+    latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
+    latest_pose_stamp_ = latest_odom_stamp_;
   } else {
-    latest_pose = latest_lidar_pose;
+    // latest_pose_ = latest_pose_;
   }
 
   // Publish as an odometry message
   // TODO - add to the covariance with the delta from visual odom
-  PublishOdometry(latest_pose, covariance, publish_stamp);
+  PublishOdometry(latest_pose_, covariance, publish_stamp);
 
   return;
 }
@@ -645,8 +650,9 @@ LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-
-  // TODO: move to class members 
+  // TO TEST Delays
+  // ros::Duration(0.2).sleep();
+  // TODO: move to class members
   ros::Time lidar_callback_start;
   ros::Time scan_to_scan_start;
   ros::Time scan_to_submap_start;
@@ -782,19 +788,17 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     // Check if we can get an odometry sources transform from the time of the
     // last pointcloud to the latest VO timestamp
-    if (tf2_ros_odometry_buffer_.canTransform(bd_odom_frame_id_,
-                                              latest_odom_stamp_,
-                                              bd_odom_frame_id_,
+    if (tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
                                               stamp,
                                               base_frame_id_,
-                                              ros::Duration(0.05))) {
+                                              latest_odom_stamp_,
+                                              bd_odom_frame_id_)) {
       have_odom_transform = true;
-      t = tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_,
-                                                   latest_odom_stamp_,
-                                                   bd_odom_frame_id_,
+      t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
                                                    stamp,
                                                    base_frame_id_,
-                                                   ros::Duration(0.05));
+                                                   latest_odom_stamp_,
+                                                   bd_odom_frame_id_);
     }
 
     tf::Transform tf_transform;
@@ -897,6 +901,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   geometry_utils::Transform3 current_pose =
       localization_.GetIntegratedEstimate();
+
+  // Update current pose for publishin
+  latest_pose_ = current_pose;
+  latest_pose_stamp_ = stamp;
+
+  // Compute delta
   gtsam::Pose3 delta =
       ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
 

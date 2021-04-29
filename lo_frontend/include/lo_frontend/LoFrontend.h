@@ -131,7 +131,10 @@ private:
 
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
+  geometry_utils::Transform3 latest_pose_;
+  ros::Time latest_pose_stamp_;
   ros::Time latest_odom_stamp_;
+  bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
 
   int imu_buffer_size_limit_;
