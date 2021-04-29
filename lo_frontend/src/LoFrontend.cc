@@ -314,6 +314,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("rotation_threshold_open_space_kf", 
                 rotation_threshold_open_space_kf_))
     return false;
+  if (!pu::Get("b_debug_transforms", 
+                b_debug_transforms_))
+    return false;
 
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || 
@@ -615,6 +618,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     } 
     else {
       stamp_transform_to = stamp;
+    }
+
+    if (b_debug_transforms_) {
+      ROS_INFO("-------------------------------------------------");
+      ROS_INFO_STREAM("stamp: " << stamp);
+      ROS_INFO_STREAM("latest_odom_stamp_: " << latest_odom_stamp_);
+      ROS_INFO_STREAM("stamp_transform_to:" << stamp_transform_to);
+      ROS_INFO_STREAM("previous_stamp_:" << previous_stamp_);
     }
 
     // Check if we can get an odometry source transform 

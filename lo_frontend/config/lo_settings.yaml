@@ -81,3 +81,8 @@ rotation_threshold_closed_space_kf: 0.3
 # Open space keyframe policy
 translation_threshold_open_space_kf: 2.0 
 rotation_threshold_open_space_kf: 0.6
+
+
+
+# ------------- Debug utilities -------------------------------
+b_debug_transforms: true 

@@ -314,6 +314,9 @@ private:
   ros::Time statistics_start_time_; 
   std::string statistics_verbosity_level_; 
 
+  // Debug utilities 
+  bool b_debug_transforms_; 
+
 };
 
 #endif
