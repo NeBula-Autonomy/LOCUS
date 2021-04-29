@@ -473,8 +473,8 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   // TO TEST Delays
-  // ros::Duration(0.2).sleep();
-  
+  // ros::Duration(0.4).sleep();
+
   // TODO: move to class members
   ros::Time lidar_callback_start;
   ros::Time scan_to_scan_start;
@@ -613,7 +613,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     geometry_msgs::TransformStamped t;
 
     ros::Time stamp_transform_to;
-    if (latest_odom_stamp_ < stamp) {
+    if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) {
       stamp_transform_to = latest_odom_stamp_;
     } 
     else {
@@ -838,7 +838,6 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   bool have_odom_transform = false;
   geometry_msgs::TransformStamped t;
   if (latest_odom_stamp_ > lidar_stamp && data_integration_mode_ >= 3 &&
-      false &&
       tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
                                             latest_pose_stamp_,
                                             base_frame_id_,
