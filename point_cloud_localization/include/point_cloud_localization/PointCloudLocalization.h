@@ -133,8 +133,14 @@ public:
   // Update timestamp
   void UpdateTimestamp(ros::Time& stamp);
 
+  // Get timestamp
+  ros::Time GetLatestTimestamp();
+
   // ICP fitness score
   double icpFitnessScore_;
+
+  // Get ICP covariance
+  Eigen::Matrix<double, 6, 6> GetLatestDeltaCovariance();
 
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsLocalization_;

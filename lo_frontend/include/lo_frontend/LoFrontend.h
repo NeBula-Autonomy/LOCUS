@@ -17,34 +17,33 @@ Authors:
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 #include <math.h>
+#include <message_filters/subscriber.h>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <pcl/common/common.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
+#include <point_cloud_mapper/IPointCloudMapper.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <point_cloud_mapper/settings.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
+#include <ros/callback_queue.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Time.h>
+#include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
-#include <visualization_msgs/Marker.h>
-#include <message_filters/subscriber.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <tf/message_filter.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/message_filter.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#include <point_cloud_mapper/IPointCloudMapper.h>
-#include <pcl/common/common.h>
-
-
+#include <visualization_msgs/Marker.h>
 
 class LoFrontend {
 
@@ -69,6 +68,8 @@ public:
 
   bool Initialize(const ros::NodeHandle& n, bool from_log);
 
+  std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
+
 private:
 
   std::string robot_type_;
@@ -91,10 +92,18 @@ private:
   ros::Subscriber odom_sub_;
   ros::Subscriber pose_sub_;
 
-  std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
   void setImuSubscriber(ros::NodeHandle& _nh);
   void setOdomSubscriber(ros::NodeHandle& _nh);
   void setLidarSubscriber(ros::NodeHandle& _nh);
+
+  // Timer for odometry callback
+  double odom_pub_rate_;
+  ros::Timer odom_pub_timer_;
+  void PublishOdomOnTimer(const ros::TimerEvent& ev);
+  void PublishOdometry(const geometry_utils::Transform3& odometry,
+                       const Eigen::Matrix<double, 6, 6>& covariance,
+                       const ros::Time stamp);
+  ros::Publisher odometry_pub_;
 
   ros::Publisher base_frame_pcld_pub_;
   ros::Publisher diagnostics_pub_;
@@ -105,6 +114,11 @@ private:
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
   void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
+
+  // Main msg callback queue
+  ros::CallbackQueue imu_queue_;
+  ros::CallbackQueue odom_queue_;
+  ros::CallbackQueue lidar_queue_;
 
   int lidar_queue_size_;
   int imu_queue_size_;
@@ -118,6 +132,7 @@ private:
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
   ros::Time latest_odom_stamp_;
+  double transform_wait_duration_;
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;

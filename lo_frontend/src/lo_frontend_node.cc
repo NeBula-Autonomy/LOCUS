@@ -19,7 +19,8 @@ int main(int argc, char** argv) {
   }
 
   // Set asynchronous spinners
-  std::vector<ros::AsyncSpinner> async_spinners = node.setAsynchSpinners(n);
+  std::vector<ros::AsyncSpinner> async_spinners =
+      lo_frontend_node.setAsynchSpinners(n);
   for (auto spinner : async_spinners)
     spinner.start();
 

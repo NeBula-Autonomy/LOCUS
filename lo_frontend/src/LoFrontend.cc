@@ -42,9 +42,6 @@ LoFrontend::~LoFrontend() {}
 
 std::vector<ros::AsyncSpinner>
 LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
-  // Get main params
-  _nh.param<std::string>("robot_namespace", this->robot_namespace_, "robot");
-
   // Set spinners depending on parameters.
   // If a param does not exist, do not create the spinner.
   std::vector<ros::AsyncSpinner> async_spinners;
@@ -80,9 +77,9 @@ LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
 void LoFrontend::setImuSubscriber(ros::NodeHandle& _nh) {
   // create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts = ros::SubscribeOptions::create<sensor_msgs::Imu>(
-      "IMU_TOPIC",                                 // topic name
-      imu_queue_size_,                             // queue length
-      boost::bind(&LoFrontend::ImuCallback, this), // callback
+      "IMU_TOPIC",                                     // topic name
+      imu_queue_size_,                                 // queue length
+      boost::bind(&LoFrontend::ImuCallback, this, _1), // callback
       ros::VoidPtr(),   // tracked object, we don't need one thus NULL
       &this->imu_queue_ // pointer to callback queue object
   );
@@ -95,9 +92,9 @@ void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
   // create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts =
       ros::SubscribeOptions::create<nav_msgs::Odometry>(
-          "ODOMETRY_TOPIC",                                 // topic name
-          odom_queue_size_,                                 // queue length
-          boost::bind(&LoFrontend::OdometryCallback, this), // callback
+          "ODOMETRY_TOPIC",                                     // topic name
+          odom_queue_size_,                                     // queue length
+          boost::bind(&LoFrontend::OdometryCallback, this, _1), // callback
           ros::VoidPtr(),    // tracked object, we don't need one thus NULL
           &this->odom_queue_ // pointer to callback queue object
       );
@@ -109,9 +106,9 @@ void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
 void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
   // create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts = ros::SubscribeOptions::create<PointCloud>(
-      "LIDAR_TOPIC",                                 // topic name
-      lidar_queue_size_,                             // queue length
-      boost::bind(&LoFrontend::LidarCallback, this), // callback
+      "LIDAR_TOPIC",                                     // topic name
+      lidar_queue_size_,                                 // queue length
+      boost::bind(&LoFrontend::LidarCallback, this, _1), // callback
       ros::VoidPtr(),     // tracked object, we don't need one thus NULL
       &this->lidar_queue_ // pointer to callback queue object
   );
@@ -171,6 +168,10 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
 bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - LoadParameters");
   if (!pu::Get("b_verbose", b_verbose_))
+    return false;
+  if (!pu::Get("odom_pub_rate", odom_pub_rate_))
+    return false;
+  if (!pu::Get("transform_wait_duration", transform_wait_duration_))
     return false;
   if (!pu::Get("translation_threshold_kf", translation_threshold_kf_))
     return false;
@@ -324,6 +325,9 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());
   nl_ = ros::NodeHandle(n);
 
+  odom_pub_timer_ =
+      nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);
+
   // if (!b_interpolate_) {
   //   lidar_sub_ = nl_.subscribe(
   //       "LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
@@ -356,6 +360,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - CreatePublishers");
   ros::NodeHandle nl(n);
+  odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   base_frame_pcld_pub_ =
       nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
   lidar_callback_duration_pub_ =
@@ -422,6 +427,74 @@ void LoFrontend::PoseStampedCallback(
     ROS_WARN(
         "LoFrontend - PoseStampedCallback - Unable to store message in buffer");
   }
+}
+
+void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
+  // Publishes the latest odometry at a fixed rate
+
+  // Get the latest pose from ICP TODO Mutex
+  geometry_utils::Transform3 latest_lidar_pose =
+      localization_.GetIntegratedEstimate();
+
+  // Get latest covariance
+  Eigen::Matrix<double, 6, 6> covariance =
+      localization_.GetLatestDeltaCovariance();
+
+  // Get the timestamp of the latest pose
+  ros::Time lidar_stamp = localization_.GetLatestTimestamp();
+  ros::Time publish_stamp = lidar_stamp;
+
+  // Check if we can get additional transforms from the odom source
+  bool have_odom_transform = false;
+  geometry_msgs::TransformStamped t;
+  if (latest_odom_stamp_ > lidar_stamp &&
+      tf2_ros_odometry_buffer_.canTransform(
+          bd_odom_frame_id_,
+          latest_odom_stamp_,
+          bd_odom_frame_id_,
+          lidar_stamp,
+          base_frame_id_,
+          ros::Duration(transform_wait_duration_))) {
+    have_odom_transform = true;
+    publish_stamp = latest_odom_stamp_;
+    // Get the transform between the latest lidar timestamp and the latest odom
+    // timestamp
+    t = tf2_ros_odometry_buffer_.lookupTransform(
+        bd_odom_frame_id_,
+        latest_odom_stamp_,
+        bd_odom_frame_id_,
+        lidar_stamp,
+        base_frame_id_,
+        ros::Duration(transform_wait_duration_));
+  } else {
+    // TODO - don't print this warning if we have not chosen odom as an input
+    ROS_WARN("Can not get transform from odom source");
+  }
+
+  geometry_utils::Transform3 latest_pose;
+
+  if (have_odom_transform) {
+    // Convert transform into common format
+    geometry_utils::Transform3 odom_delta =
+        geometry_utils::ros::FromROS(t.transform);
+    // odom_delta.translation = geometry_utils::Vec3(t.transform.translation.x,
+    //                                               t.transform.translation.y,
+    //                                               t.transform.translation.z);
+    // odom_delta.rotation = geometry_utils::Quat(t.transform.rotation.w,
+    //                                            t.transform.rotation.x,
+    //                                            t.transform.rotation.y,
+    //                                            t.transform.rotation.z);
+
+    latest_pose = geometry_utils::PoseUpdate(latest_lidar_pose, odom_delta);
+  } else {
+    latest_pose = latest_lidar_pose;
+  }
+
+  // Publish as an odometry message
+  // TODO - add to the covariance with the delta from visual odom
+  PublishOdometry(latest_pose, covariance, publish_stamp);
+
+  return;
 }
 
 void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
@@ -709,14 +782,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     // Check if we can get an odometry sources transform from the time of the
     // last pointcloud to the latest VO timestamp
-    if (tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_,
-                                                 latest_odom_stamp_,
-                                                 bd_odom_frame_id_,
-                                                 stamp,
-                                                 base_frame_id_,
-                                                 ros::Duration(0.05))) {
-      have_odom_transform = true t =
-          tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_,
+    if (tf2_ros_odometry_buffer_.canTransform(bd_odom_frame_id_,
+                                              latest_odom_stamp_,
+                                              bd_odom_frame_id_,
+                                              stamp,
+                                              base_frame_id_,
+                                              ros::Duration(0.05))) {
+      have_odom_transform = true;
+      t = tf2_ros_odometry_buffer_.lookupTransform(bd_odom_frame_id_,
                                                    latest_odom_stamp_,
                                                    bd_odom_frame_id_,
                                                    stamp,
@@ -946,4 +1019,24 @@ double LoFrontend::GetVectorAverage(const std::vector<double>& vector) {
   return vector.empty() ?
       0.0 :
       std::accumulate(vector.begin(), vector.end(), 0.0) / vector.size();
+}
+
+void LoFrontend::PublishOdometry(const geometry_utils::Transform3& odometry,
+                                 const Eigen::Matrix<double, 6, 6>& covariance,
+                                 const ros::Time stamp) {
+  nav_msgs::Odometry odometry_msg;
+  odometry_msg.header.stamp = stamp;
+  odometry_msg.header.frame_id = fixed_frame_id_;
+  odometry_msg.pose.pose.position =
+      geometry_utils::ros::ToRosPoint(odometry.translation);
+  odometry_msg.pose.pose.orientation = geometry_utils::ros::ToRosQuat(
+      geometry_utils::RToQuat(odometry.rotation));
+  for (size_t i = 0; i < 36; i++) {
+    size_t row = static_cast<size_t>(i / 6);
+    size_t col = i % 6;
+    odometry_msg.pose.covariance[i] = covariance(row, col);
+  }
+  odometry_pub_.publish(odometry_msg);
+
+  return;
 }

@@ -139,7 +139,7 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "observability_marker", 10, false);
   observability_vector_pub_ =
       nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
-  odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
+  // odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   return true;
 }
 
@@ -594,8 +594,7 @@ void PointCloudLocalization::PublishAll() {
   PublishPose(
       incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
   PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
-  PublishOdometry(integrated_estimate_, icp_covariance_);
-
+  // PublishOdometry(integrated_estimate_, icp_covariance_);
 }
 
 void PointCloudLocalization::PublishPose(
@@ -792,4 +791,12 @@ diagnostic_msgs::DiagnosticStatus PointCloudLocalization::GetDiagnostics() {
   }
 
   return diag_status;
+}
+
+ros::Time PointCloudLocalization::GetLatestTimestamp() {
+  return stamp_;
+}
+
+Eigen::Matrix<double, 6, 6> PointCloudLocalization::GetLatestDeltaCovariance() {
+  return icp_covariance_;
 }
