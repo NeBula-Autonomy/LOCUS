@@ -620,14 +620,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       stamp_transform_to = stamp;
     }
 
-    if (b_debug_transforms_) {
-      ROS_INFO("-------------------------------------------------");
-      ROS_INFO_STREAM("stamp: " << stamp);
-      ROS_INFO_STREAM("latest_odom_stamp_: " << latest_odom_stamp_);
-      ROS_INFO_STREAM("stamp_transform_to:" << stamp_transform_to);
-      ROS_INFO_STREAM("previous_stamp_:" << previous_stamp_);
-    }
-
     // Check if we can get an odometry source transform 
     // from the time of the last pointcloud to the latest VO timestamp
     if (tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
@@ -641,6 +633,15 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                                                    base_frame_id_,
                                                    stamp_transform_to,  
                                                    bd_odom_frame_id_);
+    }
+
+    if (b_debug_transforms_) {
+      ROS_INFO("-------------------------------------------------");
+      ROS_INFO_STREAM("stamp: " << stamp);
+      ROS_INFO_STREAM("latest_odom_stamp_: " << latest_odom_stamp_);
+      ROS_INFO_STREAM("stamp_transform_to:" << stamp_transform_to);
+      ROS_INFO_STREAM("previous_stamp_:" << previous_stamp_);
+      if (!have_odom_transform) ROS_WARN("Don't have odom transform"); 
     }
 
     tf::Transform tf_transform;
