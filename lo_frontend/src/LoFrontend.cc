@@ -50,7 +50,8 @@ LoFrontend::LoFrontend()
     b_run_with_gt_point_cloud_(false),
     publish_diagnostics_(false),
     tf_buffer_authority_("transform_odometry"),
-    scans_dropped_(0) {}
+    scans_dropped_(0), 
+    previous_stamp_(0) {}
 
 LoFrontend::~LoFrontend() {}
 
@@ -470,6 +471,7 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   // TO TEST Delays
   // ros::Duration(0.2).sleep();
+  
   // TODO: move to class members
   ros::Time lidar_callback_start;
   ros::Time scan_to_scan_start;
@@ -528,18 +530,17 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;    
   }
 
-  /*
-  auto number_of_points = msg->width;
-  if (number_of_points > number_of_points_open_space_)
-    b_is_open_space_ = true;
-  else
-    b_is_open_space_ = false;
-  */
-
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
 
   if (!b_interpolate_) {
+
+    /*
+    b_interpolate_ false for: 
+        - Husky with WIO/IMU/NO integration
+        - Spot with IMU/NO integration 
+    */    
+    
     if (b_use_odometry_integration_) {
       Odometry odometry_msg;
       if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
@@ -564,7 +565,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
       odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
       tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-    } else if (b_use_imu_integration_) {
+    }     
+    else if (b_use_imu_integration_) {
       Imu imu_msg;
       if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
         ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar "
@@ -595,22 +597,38 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       }
       imu_quaternion_previous_ = imu_quaternion;
     }
-  } else {
+  }
+
+  else {
+
+    /*
+    b_interpolate_ true for: 
+        - Spot with VO integration 
+    */  
+
     bool have_odom_transform = false;
     geometry_msgs::TransformStamped t;
 
-    // Check if we can get an odometry sources transform from the time of the
-    // last pointcloud to the latest VO timestamp
+    ros::Time stamp_transform_to;
+    if (latest_odom_stamp_ < stamp) {
+      stamp_transform_to = latest_odom_stamp_;
+    } 
+    else {
+      stamp_transform_to = stamp;
+    }
+
+    // Check if we can get an odometry source transform 
+    // from the time of the last pointcloud to the latest VO timestamp
     if (tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
-                                              stamp,
+                                              previous_stamp_,
                                               base_frame_id_,
-                                              latest_odom_stamp_,
+                                              stamp_transform_to,
                                               bd_odom_frame_id_)) {
       have_odom_transform = true;
       t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
-                                                   stamp,
+                                                   previous_stamp_,
                                                    base_frame_id_,
-                                                   latest_odom_stamp_,
+                                                   stamp_transform_to,  
                                                    bd_odom_frame_id_);
     }
 
@@ -618,24 +636,29 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     if (have_odom_transform) {
       // Have the tf, so use it
+      ROS_INFO("Have_odom_transform");
       tf::Vector3 tf_translation;
       tf::Quaternion tf_quaternion;
       tf::vector3MsgToTF(t.transform.translation, tf_translation);
       tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion);
       tf_transform.setOrigin(tf_translation);
       tf_transform.setRotation(tf_quaternion);
-    } else {
+    } 
+    else {
       // Don't have a valid tf so do pure LO
+      ROS_INFO("Don't have_odom_transform");
       tf::Vector3 tf_translation(0.0, 0.0, 0.0);
       tf::Quaternion tf_quaternion(0.0, 0.0, 0.0, 1.0);
       tf_transform.setOrigin(tf_translation);
       tf_transform.setRotation(tf_quaternion);
     }
+
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
       b_odometry_has_been_received_ = true;
       return;
     }
+
     // Have the delta - set this directly in odom
     odometry_.SetOdometryDelta(tf_transform);
   }
@@ -715,10 +738,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   geometry_utils::Transform3 current_pose =
       localization_.GetIntegratedEstimate();
 
-  // Update current pose for publishin
-  latest_pose_ = current_pose;
+  // Update current pose for publishing
+  latest_pose_ = current_pose;  
+  previous_stamp_ = stamp;
   latest_pose_stamp_ = stamp;
-
+  
   // Compute delta
   gtsam::Pose3 delta =
       ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
@@ -786,25 +810,16 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
 // Publish odometry at fixed rate --------------------------------------------------------------------
 
 void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
-  // Publishes the latest odometry at a fixed rate
-
-  // Get the latest pose from ICP TODO Mutex
-  geometry_utils::Transform3 latest_lidar_pose =
-      localization_.GetIntegratedEstimate();
-
+  // Currently works for VO - TODO: think about removing b_interpolate
+  // TODO - add check to stop if we don't have lidar yet
+  
   // Get latest covariance
   Eigen::Matrix<double, 6, 6> covariance =
       localization_.GetLatestDeltaCovariance();
 
   // Get the timestamp of the latest pose
-  ros::Time lidar_stamp = localization_.GetLatestTimestamp();
+  ros::Time lidar_stamp = localization_.GetLatestTimestamp(); 
   ros::Time publish_stamp = lidar_stamp;
-
-  if (b_first_odom_timer_) {
-    latest_pose_ = latest_lidar_pose;
-    latest_pose_stamp_ = lidar_stamp;
-    b_first_odom_timer_ = false;
-  }
 
   // Check if we can get additional transforms from the odom source
   bool have_odom_transform = false;
@@ -817,8 +832,7 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
                                             bd_odom_frame_id_)) {
     have_odom_transform = true;
     publish_stamp = latest_odom_stamp_;
-    // Get the transform between the latest lidar timestamp and the latest odom
-    // timestamp
+    // Get transform between latest lidar timestamp and latest odom timestamp
     t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
                                                  latest_pose_stamp_,
                                                  base_frame_id_,
@@ -830,20 +844,11 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     // TODO - just do stats on this
     // ROS_WARN("Can not get transform from odom source");
   }
-
-  // geometry_utils::Transform3 latest_pose_;
-
+  
   if (have_odom_transform) {
     // Convert transform into common format
     geometry_utils::Transform3 odom_delta =
         geometry_utils::ros::FromROS(t.transform);
-    // odom_delta.translation = geometry_utils::Vec3(t.transform.translation.x,
-    //                                               t.transform.translation.y,
-    //                                               t.transform.translation.z);
-    // odom_delta.rotation = geometry_utils::Quat(t.transform.rotation.w,
-    //                                            t.transform.rotation.x,
-    //                                            t.transform.rotation.y,
-    //                                            t.transform.rotation.z);
 
     latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
     latest_pose_stamp_ = latest_odom_stamp_;
