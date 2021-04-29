@@ -838,6 +838,7 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   bool have_odom_transform = false;
   geometry_msgs::TransformStamped t;
   if (latest_odom_stamp_ > lidar_stamp && data_integration_mode_ >= 3 &&
+      false &&
       tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
                                             latest_pose_stamp_,
                                             base_frame_id_,

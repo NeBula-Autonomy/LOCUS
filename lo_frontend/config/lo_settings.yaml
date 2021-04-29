@@ -1,6 +1,6 @@
 b_verbose: false
 
-odom_pub_rate: 20 
+odom_pub_rate: 10 
 # How long to wait for transform between timestamps
 transform_wait_duration: 0.01
 
