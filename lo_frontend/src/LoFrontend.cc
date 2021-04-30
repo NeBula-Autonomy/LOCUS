@@ -63,10 +63,7 @@ LoFrontend::~LoFrontend() {}
 
 std::vector<ros::AsyncSpinner>
 LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
-  // Set spinners depending on parameters.
-  // If a param does not exist, do not create the spinner.
   std::vector<ros::AsyncSpinner> async_spinners;
-
   // IMU spinner
   {
     ros::AsyncSpinner spinner_imu(1, &this->imu_queue_);
@@ -74,7 +71,6 @@ LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
     setImuSubscriber(_nh);
     ROS_INFO("[LoFrontend::setAsynchSpinners] : New subscriber for IMU.");
   }
-
   // Odom spinner
   {
     ros::AsyncSpinner spinner_odom(1, &this->odom_queue_);
@@ -82,7 +78,6 @@ LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
     setOdomSubscriber(_nh);
     ROS_INFO("[LoFrontend::setAsynchSpinners] : New subscriber for odom.");
   }
-
   // Lidar spinner
   {
     ros::AsyncSpinner spinner_lidar(1, &this->lidar_queue_);
@@ -90,7 +85,6 @@ LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
     setLidarSubscriber(_nh);
     ROS_INFO("[LoFrontend::setAsynchSpinners] : New subscriber for lidar.");
   }
-
   return async_spinners;
 }
 
@@ -103,7 +97,7 @@ void LoFrontend::setImuSubscriber(ros::NodeHandle& _nh) {
       ros::VoidPtr(),       // tracked object, we don't need one thus NULL
       &this->imu_queue_     // pointer to callback queue object
   );
-  this->imu_sub_ = _nh.subscribe(opts); // subscribe
+  this->imu_sub_ = _nh.subscribe(opts); 
 }
 
 void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
@@ -116,7 +110,7 @@ void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
           ros::VoidPtr(),    // tracked object, we don't need one thus NULL
           &this->odom_queue_ // pointer to callback queue object
       );
-  this->odom_sub_ = _nh.subscribe(opts); // subscribe
+  this->odom_sub_ = _nh.subscribe(opts); 
 }
 
 void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
@@ -128,7 +122,7 @@ void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
       ros::VoidPtr(),       // tracked object, we don't need one thus NULL
       &this->lidar_queue_   // pointer to callback queue object
   );
-  this->lidar_sub_ = _nh.subscribe(opts); // subscribe
+  this->lidar_sub_ = _nh.subscribe(opts); 
 }
 
 
@@ -412,11 +406,9 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<std_msgs::Float64>("approx_nearest_neighbors_duration", 10, false);
   
   xy_cross_section_pub_ =  
-      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
-  
+      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);  
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
-
   time_difference_pub_ = 
       nl.advertise<std_msgs::Float64>("time_difference", 10, false); 
   
@@ -430,39 +422,39 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
 // Callbacks ---------------------------------------------------------------------------------------
 
 void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
-  if (!b_imu_frame_is_correct_) CheckImuFrame(imu_msg);
+  if (!b_imu_frame_is_correct_) { 
+    CheckImuFrame(imu_msg); 
+  }
   if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
     imu_buffer_.erase(imu_buffer_.begin());
-  }
+  }  
   if (CheckNans(*imu_msg)) {
-    ROS_WARN("LoFrontend - ImuCallback - Throwing message as it contains NANS");
+    ROS_WARN("Throwing IMU message as it contains NANS");
     return;
   }
   if (!InsertMsgInBuffer(imu_msg, imu_buffer_)) {
-    ROS_WARN("LoFrontend - ImuCallback - Unable to store message in buffer");
-  }
+    ROS_WARN("Unable to store IMU message in buffer");
+  } 
 }
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
   if (!b_interpolate_) {
-    if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_)
+    if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
       odometry_buffer_.erase(odometry_buffer_.begin());
-    if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_))
-      ROS_WARN("LoFrontend - OdometryCallback - Unable to store message in buffer");
+    }      
+    if (!InsertMsgInBuffer(odometry_msg, odometry_buffer_)) {
+      ROS_WARN("Unable to store Odometry message in buffer");
+    }      
   } 
   else {
-    geometry_msgs::TransformStamped odometry;
-    geometry_msgs::Vector3 t;
-    t.x = odometry_msg->pose.pose.position.x;
-    t.y = odometry_msg->pose.pose.position.y;
-    t.z = odometry_msg->pose.pose.position.z;
-    odometry.transform.translation = t;
-    odometry.transform.rotation = odometry_msg->pose.pose.orientation;
-    odometry.header = odometry_msg->header;
-    odometry.header.frame_id = odometry_msg->header.frame_id;
-    odometry.child_frame_id = odometry_msg->child_frame_id;
-    tf2_ros_odometry_buffer_.setTransform(
-        odometry, tf_buffer_authority_, false);
+    geometry_msgs::TransformStamped tf_stamped;
+    tf_stamped.header = odometry_msg->header;
+    tf_stamped.child_frame_id = odometry_msg->child_frame_id;
+    tf_stamped.transform.translation.x = odometry_msg->pose.pose.position.x; 
+    tf_stamped.transform.translation.y = odometry_msg->pose.pose.position.y; 
+    tf_stamped.transform.translation.z = odometry_msg->pose.pose.position.z; 
+    tf_stamped.transform.rotation = odometry_msg->pose.pose.orientation;    
+    tf2_ros_odometry_buffer_.setTransform(tf_stamped, tf_buffer_authority_, false);
     latest_odom_stamp_ = odometry_msg->header.stamp;
   }
 }
@@ -481,10 +473,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   // TO TEST Delays
   // ros::Duration(0.4).sleep();
 
-  if (b_enable_computation_time_profiling_) {
+  if (b_enable_computation_time_profiling_) 
     lidar_callback_start_ = ros::Time::now();
-  }
-
+  
   if (b_use_osd_) {
     pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
     auto size_x = maxPoint_.x - minPoint_.x;
@@ -533,8 +524,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     pcld_seq_prev_ = msg->header.seq;    
   }
 
-  auto msg_stamp = msg->header.stamp;
-  ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
+  ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
 
   if (!b_interpolate_) {
 
@@ -547,12 +537,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     if (b_use_odometry_integration_) {
       Odometry odometry_msg;
       if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-        ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ given "
-                 "Lidar timestamp");
+        ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
+                 "given lidar timestamp");
         odometry_number_of_calls_++;
         if (odometry_number_of_calls_ > max_number_of_calls_) {
-          ROS_WARN("Deactivating odometry_integration in LoFrontend as "
-                   "odometry_number_of_calls > max_number_of_calls");
+          ROS_WARN("Deactivating odometry_integration in LoFrontend");
           SwitchToImuIntegration();
         }
         return;
@@ -572,12 +561,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     else if (b_use_imu_integration_) {
       Imu imu_msg;
       if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
-        ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ given Lidar "
-                 "timestamp");
+        ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
+                 "given lidar timestamp");
         imu_number_of_calls_++;
         if (imu_number_of_calls_ > max_number_of_calls_) {
-          ROS_WARN("Deactivating imu_integration in LoFrontend as "
-                   "imu_number_of_calls > max_number_of_calls");
+          ROS_WARN("Deactivating imu_integration in LoFrontend");
           b_use_imu_integration_ = false;
           odometry_.DisableImuIntegration();
         }
@@ -591,13 +579,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
         b_imu_has_been_received_ = true;
         return;
       }
-      imu_quaternion_change_ =
-          imu_quaternion_previous_.inverse() * imu_quaternion;
+      imu_quaternion_change_ = imu_quaternion_previous_.inverse() * imu_quaternion;
       if (b_use_imu_yaw_integration_) {
         odometry_.SetImuDelta(GetImuYawDelta());
-      } else {
-        odometry_.SetImuDelta(GetImuDelta());
       }
+      else {
+        odometry_.SetImuDelta(GetImuDelta());
+      } 
       imu_quaternion_previous_ = imu_quaternion;
     }
   }
