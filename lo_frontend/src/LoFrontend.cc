@@ -638,15 +638,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                                                    bd_odom_frame_id_);
     }
 
-    if (b_debug_transforms_) {
-      ROS_INFO("-------------------------------------------------");
-      ROS_INFO_STREAM("stamp: " << stamp);
-      ROS_INFO_STREAM("latest_odom_stamp_: " << latest_odom_stamp_);
-      ROS_INFO_STREAM("stamp_transform_to:" << stamp_transform_to);
-      ROS_INFO_STREAM("previous_stamp_:" << previous_stamp_);
-      if (!have_odom_transform) ROS_WARN("Don't have odom transform"); 
-    }
-
     tf::Transform tf_transform;
 
     if (have_odom_transform) {
@@ -674,30 +665,20 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     // Have the delta - set this directly in odom
     odometry_.SetOdometryDelta(tf_transform);
+    
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
   odometry_.SetLidar(*msg_filtered_);
 
-  if (b_enable_computation_time_profiling_) {
-    scan_to_scan_start_ = ros::Time::now();
-  }
-
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
   }
+
   diagnostic_msgs::DiagnosticStatus diagnostics_odometry =
       odometry_.GetDiagnostics();
   if (diagnostics_odometry.level == 0)
     odometry_.PublishAll();
-
-  if (b_enable_computation_time_profiling_) {
-    auto scan_to_scan_end = ros::Time::now();
-    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start_;
-    auto scan_to_scan_duration_msg = std_msgs::Float64();
-    scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec());
-    scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
-  }
 
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
     localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
@@ -711,45 +692,17 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     return;
   }
 
-  if (b_enable_computation_time_profiling_) {
-    scan_to_submap_start_ = ros::Time::now();
-  }
-
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-
-  if (b_enable_computation_time_profiling_) {
-    approx_nearest_neighbors_start_ = ros::Time::now();
-  }
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
-  if (b_enable_computation_time_profiling_) {
-    auto approx_nearest_neighbors_end = ros::Time::now();
-    auto approx_nearest_neighbors_duration = approx_nearest_neighbors_end - approx_nearest_neighbors_start_;
-    auto approx_nearest_neighbors_duration_msg = std_msgs::Float64();
-    approx_nearest_neighbors_duration_msg.data = float(approx_nearest_neighbors_duration.toSec());
-    approx_nearest_neighbors_duration_pub_.publish(approx_nearest_neighbors_duration_msg); 
-  }
+  localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
+  localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
 
-  localization_.TransformPointsToSensorFrame(*msg_neighbors_,
-                                             msg_neighbors_.get());
-  localization_.MeasurementUpdate(
-      msg_filtered_, msg_neighbors_, msg_base_.get());
-
-  diagnostic_msgs::DiagnosticStatus diagnostics_localization =
-      localization_.GetDiagnostics();
+  diagnostic_msgs::DiagnosticStatus diagnostics_localization = localization_.GetDiagnostics();
   if (diagnostics_localization.level == 0)
     localization_.PublishAll();
 
-  if (b_enable_computation_time_profiling_) {
-    auto scan_to_submap_end = ros::Time::now();
-    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start_;
-    auto scan_to_submap_duration_msg = std_msgs::Float64();
-    scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec());
-    scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
-  }
-
-  geometry_utils::Transform3 current_pose =
-      localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
   // Update current pose for publishing
   latest_pose_ = current_pose;  
@@ -762,13 +715,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
 
   if (delta.translation().norm() > translation_threshold_kf_ ||
-      fabs(2 * acos(delta.rotation().toQuaternion().w())) >
-          rotation_threshold_kf_) {
+      fabs(2 * acos(delta.rotation().toQuaternion().w())) > rotation_threshold_kf_) {
     if (b_verbose_)
       ROS_INFO_STREAM("Adding to map with translation "
                       << delta.translation().norm() << " and rotation "
-                      << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 /
-                          M_PI
+                      << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 / M_PI
                       << " deg");
     localization_.MotionUpdate(gu::Transform3::Identity());
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
