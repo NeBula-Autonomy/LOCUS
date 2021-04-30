@@ -322,6 +322,14 @@ private:
 
   double wait_for_odom_transform_timeout_; 
 
+  /*------------------------------
+  Time profiling 
+  -------------------------------*/
+  ros::Time lidar_callback_start_;
+  ros::Time scan_to_scan_start_;
+  ros::Time scan_to_submap_start_;
+  ros::Time approx_nearest_neighbors_start_;
+
 };
 
 #endif

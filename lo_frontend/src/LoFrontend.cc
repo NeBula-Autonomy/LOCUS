@@ -481,14 +481,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   // TO TEST Delays
   // ros::Duration(0.4).sleep();
 
-  // TODO: move to class members
-  ros::Time lidar_callback_start;
-  ros::Time scan_to_scan_start;
-  ros::Time scan_to_submap_start;
-  ros::Time approx_nearest_neighbors_start;
-
   if (b_enable_computation_time_profiling_) {
-    lidar_callback_start = ros::Time::now();
+    lidar_callback_start_ = ros::Time::now();
   }
 
   if (b_use_osd_) {
@@ -698,7 +692,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   odometry_.SetLidar(*msg_filtered_);
 
   if (b_enable_computation_time_profiling_) {
-    scan_to_scan_start = ros::Time::now();
+    scan_to_scan_start_ = ros::Time::now();
   }
 
   if (!odometry_.UpdateEstimate()) {
@@ -711,7 +705,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_enable_computation_time_profiling_) {
     auto scan_to_scan_end = ros::Time::now();
-    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start;
+    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start_;
     auto scan_to_scan_duration_msg = std_msgs::Float64();
     scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec());
     scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
@@ -730,19 +724,19 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   if (b_enable_computation_time_profiling_) {
-    scan_to_submap_start = ros::Time::now();
+    scan_to_submap_start_ = ros::Time::now();
   }
 
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
 
   if (b_enable_computation_time_profiling_) {
-    approx_nearest_neighbors_start = ros::Time::now();
+    approx_nearest_neighbors_start_ = ros::Time::now();
   }
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
   if (b_enable_computation_time_profiling_) {
     auto approx_nearest_neighbors_end = ros::Time::now();
-    auto approx_nearest_neighbors_duration = approx_nearest_neighbors_end - approx_nearest_neighbors_start;
+    auto approx_nearest_neighbors_duration = approx_nearest_neighbors_end - approx_nearest_neighbors_start_;
     auto approx_nearest_neighbors_duration_msg = std_msgs::Float64();
     approx_nearest_neighbors_duration_msg.data = float(approx_nearest_neighbors_duration.toSec());
     approx_nearest_neighbors_duration_pub_.publish(approx_nearest_neighbors_duration_msg); 
@@ -760,7 +754,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_enable_computation_time_profiling_) {
     auto scan_to_submap_end = ros::Time::now();
-    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start;
+    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start_;
     auto scan_to_submap_duration_msg = std_msgs::Float64();
     scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec());
     scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
@@ -810,7 +804,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_enable_computation_time_profiling_) {
     auto lidar_callback_end = ros::Time::now();
-    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start;
+    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start_;
     auto lidar_callback_duration_msg = std_msgs::Float64();
     lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec());
     lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);
