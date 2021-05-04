@@ -174,12 +174,10 @@ bool PointCloudLocalization::TransformPointsToFixedFrame(
   // integrated estimate, and transform the incoming point cloud
   const gu::Transform3 estimate =
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
-  const Eigen::Matrix<double, 3, 3> R = estimate.rotation.Eigen();
-  const Eigen::Matrix<double, 3, 1> T = estimate.translation.Eigen();
 
   Eigen::Matrix4d tf;
-  tf.block(0, 0, 3, 3) = R;
-  tf.block(0, 3, 3, 1) = T;
+  tf.block(0, 0, 3, 3) = estimate.rotation.Eigen();
+  tf.block(0, 3, 3, 1) = estimate.translation.Eigen();
 
   pcl::transformPointCloud(points, *points_transformed, tf);
 
@@ -197,12 +195,10 @@ bool PointCloudLocalization::TransformPointsToSensorFrame(
   // integrated estimate, then invert to go from world to sensor frame
   const gu::Transform3 estimate = gu::PoseInverse(
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_));
-  const Eigen::Matrix<double, 3, 3> R = estimate.rotation.Eigen();
-  const Eigen::Matrix<double, 3, 1> T = estimate.translation.Eigen();
 
   Eigen::Matrix4d tf;
-  tf.block(0, 0, 3, 3) = R;
-  tf.block(0, 3, 3, 1) = T;
+  tf.block(0, 0, 3, 3) = estimate.rotation.Eigen();
+  tf.block(0, 3, 3, 1) = estimate.translation.Eigen();
 
   pcl::transformPointCloud(points, *points_transformed, tf);
 
