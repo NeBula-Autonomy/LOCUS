@@ -213,6 +213,7 @@ bool PointCloudLocalization::SetupICP() {
   icp_.setMaximumOptimizerIterations(50);
   icp_.setNumThreads(params_.num_threads);
   icp_.enableTimingOutput(params_.enable_timing_output);
+  search_tree_ = icp_.getSearchMethodTarget();
   return true;
 }
 
@@ -230,7 +231,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
 
   icp_.setInputSource(query);
   icp_.setInputTarget(reference);
-  PointCloud icpAlignedPointsLocalization_;
   icp_.align(icpAlignedPointsLocalization_);
   icpFitnessScore_ = icp_.getFitnessScore();
 
@@ -238,7 +238,6 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   const Eigen::Matrix4f T = icp_.getFinalTransformation();
   pcl::transformPointCloud(*query, *aligned_query, T);
 
-  KdTree::Ptr search_tree_ = icp_.getSearchMethodTarget();
   // Get the correspondence indices
   std::vector<size_t> correspondences;
   for (auto point : aligned_query->points) {

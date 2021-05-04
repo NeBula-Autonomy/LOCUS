@@ -264,6 +264,10 @@ private:
   Making some friends
   --------------------*/
   friend class PointCloudLocalizationTest;
+
+  // Reductions 
+  KdTree::Ptr search_tree_;
+
 };
 
 #endif
