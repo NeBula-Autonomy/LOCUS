@@ -719,8 +719,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       ROS_INFO_STREAM("Adding to map with translation "
                       << delta.translation().norm() << " and rotation "
                       << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 / M_PI
-                      << " deg");
-    localization_.MotionUpdate(gu::Transform3::Identity());
+                      << " deg");    
+    localization_.incremental_estimate_ = gu::Transform3::Identity();    
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
     mapper_->InsertPoints(msg_fixed_, mapper_unused_out_.get());
     if (b_publish_map_) {
