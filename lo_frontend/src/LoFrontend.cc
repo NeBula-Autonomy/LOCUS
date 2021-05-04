@@ -171,7 +171,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     InitWithGTPointCloud(gt_point_cloud_filename_);
   }
 
-  last_refresh_pose_ = localization_.GetIntegratedEstimate();
+  last_refresh_pose_ = localization_.integrated_estimate_;
   latest_odom_stamp_ = ros::Time(0);
 
   return true;
@@ -605,7 +605,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       ros::Duration(0.01).sleep();
       auto waiting_from = (ros::Time::now() - wait_for_transform_start_time).toSec(); 
       if (waiting_from > wait_for_odom_transform_timeout_) {
-        ROS_WARN("Could not retrieve odom transform - exiting");
+        ROS_WARN("Could not retrieve odom transform");
         break;  
       }
     }
@@ -686,13 +686,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     localization_.UpdateTimestamp(stamp);
     localization_.PublishPoseNoUpdate();
     b_add_first_scan_to_key_ = false;
-    last_keyframe_pose_ = localization_.GetIntegratedEstimate();
-    previous_pose_ = localization_.GetIntegratedEstimate();
+    last_keyframe_pose_ = localization_.integrated_estimate_;
     previous_stamp_ = stamp;
     return;
   }
 
-  localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
+  localization_.incremental_estimate_ = odometry_.incremental_estimate_;  
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
@@ -702,7 +701,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if (diagnostics_localization.level == 0)
     localization_.PublishAll();
 
-  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 current_pose = localization_.integrated_estimate_;
 
   // Update current pose for publishing
   latest_pose_ = current_pose;  
