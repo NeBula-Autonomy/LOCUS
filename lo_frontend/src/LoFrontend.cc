@@ -681,7 +681,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     odometry_.PublishAll();
 
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
-    localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
+    localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
     mapper_->InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
     localization_.UpdateTimestamp(stamp);
     localization_.PublishPoseNoUpdate();
@@ -692,7 +692,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   localization_.incremental_estimate_ = odometry_.incremental_estimate_;  
-  localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
+  localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
@@ -721,7 +721,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                       << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 / M_PI
                       << " deg");    
     localization_.incremental_estimate_ = gu::Transform3::Identity();    
-    localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
+    localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_fixed_.get());
     mapper_->InsertPoints(msg_fixed_, mapper_unused_out_.get());
     if (b_publish_map_) {
       counter_++;
