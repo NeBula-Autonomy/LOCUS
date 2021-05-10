@@ -35,6 +35,7 @@ Authors:
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Time.h>
+#include <std_msgs/String.h>
 #include <std_msgs/Float64.h>
 #include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
@@ -226,30 +227,6 @@ private:
   bool b_pose_stamped_has_been_received_;
   int pose_stamped_number_of_calls_;
 
-  /*-----------------
-  Open space detector
-  ------------------*/
-
-  bool b_is_open_space_;
-  int number_of_points_open_space_;
-
-  /*-----------------
-  BB based OSD
-  ------------------*/
-  bool b_use_osd_; 
-  double osd_size_threshold_;
-  Point minPoint_;
-  Point maxPoint_;  
-  bool b_publish_xy_cross_section_; 
-  ros::Publisher xy_cross_section_pub_;
-  // Closed space keyframe policy
-  double translation_threshold_closed_space_kf_;
-  double rotation_threshold_closed_space_kf_;
-  // Open space keyframe policy
-  double translation_threshold_open_space_kf_;
-  double rotation_threshold_open_space_kf_;
-
-
   /* ----------------------------------
   Dynamic hierarchical data integration
   ---------------------------------- */
@@ -329,6 +306,19 @@ private:
   ros::Time scan_to_scan_start_;
   ros::Time scan_to_submap_start_;
   ros::Time approx_nearest_neighbors_start_;
+
+  /*----------------------------------
+  Subscribe to localizer space monitor 
+  ----------------------------------*/
+
+  bool b_use_osd_;
+  bool b_is_open_space_;
+  ros::Subscriber space_monitor_sub_;
+  void SpaceMonitorCallback(const std_msgs::String& msg);
+  double translation_threshold_closed_space_kf_;
+  double rotation_threshold_closed_space_kf_;
+  double translation_threshold_open_space_kf_;
+  double rotation_threshold_open_space_kf_;
 
 };
 

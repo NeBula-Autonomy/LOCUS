@@ -132,7 +132,7 @@ void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
 // Initialize --------------------------------------------------------------------------------------
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
-  ROS_INFO("LoFrontend - Initialize");
+  ROS_INFO("LoFrontend::Initialize");
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");
 
   if (!filter_.Initialize(n)) {
@@ -178,7 +178,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
 }
 
 bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
-  ROS_INFO("LoFrontend - LoadParameters");
+  ROS_INFO("LoFrontend::LoadParameters");
   if (!pu::Get("b_verbose", 
                 b_verbose_)) 
     return false;
@@ -193,9 +193,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("rotation_threshold_kf", 
                 rotation_threshold_kf_))
-    return false;
-  if (!pu::Get("number_of_points_open_space", 
-                number_of_points_open_space_))
     return false;
   if (!pu::Get("map_publishment/meters", 
                 map_publishment_meters_))
@@ -290,12 +287,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("b_use_osd", 
                 b_use_osd_))
     return false;
-  if (!pu::Get("osd_size_threshold", 
-                osd_size_threshold_))
-    return false;
-  if (!pu::Get("b_publish_xy_cross_section", 
-                b_publish_xy_cross_section_))
-    return false;  
   if (!pu::Get("translation_threshold_closed_space_kf", 
                 translation_threshold_closed_space_kf_))
     return false;
@@ -329,7 +320,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
 }
 
 bool LoFrontend::SetDataIntegrationMode() {
-  ROS_INFO("LoFrontend - SetDataIntegrationMode");
+  ROS_INFO("LoFrontend::SetDataIntegrationMode");
   switch (data_integration_mode_) {
   case 0:
     ROS_INFO("No integration requested");
@@ -361,7 +352,7 @@ bool LoFrontend::SetDataIntegrationMode() {
 }
 
 bool LoFrontend::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
-  ROS_INFO("LoFrontend - RegisterCallbacks");
+  ROS_INFO("LoFrontend::RegisterCallbacks");
   ros::NodeHandle nl(n);
   if (from_log)
     return RegisterLogCallbacks(n);
@@ -370,22 +361,24 @@ bool LoFrontend::RegisterCallbacks(const ros::NodeHandle& n, bool from_log) {
 }
 
 bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
-  ROS_INFO("LoFrontend - RegisterLogCallbacks");
+  ROS_INFO("LoFrontend::RegisterLogCallbacks");
   ROS_INFO("%s: Registering log callbacks.", name_.c_str());
   return CreatePublishers(n);
 }
 
 bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
-  ROS_INFO("LoFrontend - RegisterOnlineCallbacks");
+  ROS_INFO("LoFrontend::RegisterOnlineCallbacks");
   ROS_INFO("%s: Registering online callbacks.", name_.c_str());
   nl_ = ros::NodeHandle(n);
-  fga_sub_ = nl_.subscribe(
-      "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
+  fga_sub_ = 
+    nl_.subscribe("FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
+  space_monitor_sub_ =
+    nl_.subscribe("SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
   return CreatePublishers(n);
 }
 
 bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
-  ROS_INFO("LoFrontend - CreatePublishers");
+  ROS_INFO("LoFrontend::CreatePublishers");
   ros::NodeHandle nl(n);
 
   odom_pub_timer_ =
@@ -405,8 +398,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   approx_nearest_neighbors_duration_pub_ =
       nl.advertise<std_msgs::Float64>("approx_nearest_neighbors_duration", 10, false);
   
-  xy_cross_section_pub_ =  
-      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);  
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   time_difference_pub_ = 
@@ -465,7 +456,7 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
   }
   if (!InsertMsgInBuffer(pose_stamped_msg, pose_stamped_buffer_)) {
     ROS_WARN(
-        "LoFrontend - PoseStampedCallback - Unable to store message in buffer");
+        "LoFrontend::PoseStampedCallback - Unable to store message in buffer");
   }
 }
 
@@ -739,10 +730,27 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 }
 
 void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
-  ROS_INFO("LoFrontend - FlatGroundAssumptionCallback");
+  ROS_INFO("LoFrontend::FlatGroundAssumptionCallback");
   std::cout << "Received " << bool_msg.data << std::endl;
   odometry_.SetFlatGroundAssumptionValue(bool_msg.data);
   localization_.SetFlatGroundAssumptionValue(bool_msg.data);
+}
+
+void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
+  if (b_use_osd_) {
+    ROS_INFO("LoFrontend::SpaceMonitorCallback");
+    std::cout << "Received " << msg.data << std::endl;
+    if (msg.data == "closed") {
+      b_is_open_space_ = false;
+      translation_threshold_kf_ = translation_threshold_closed_space_kf_; 
+      rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;   
+    }
+    else if (msg.data == "open") {
+      b_is_open_space_ = true;
+      translation_threshold_kf_ = translation_threshold_open_space_kf_; 
+      rotation_threshold_kf_ = rotation_threshold_open_space_kf_; 
+    }
+  }  
 }
 
 
@@ -859,7 +867,7 @@ void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
 }
 
 bool LoFrontend::LoadCalibrationFromTfTree() {
-  ROS_INFO("LoFrontend - LoadCalibrationFromTfTree");
+  ROS_INFO("LoFrontend::LoadCalibrationFromTfTree");
   ROS_WARN_DELAYED_THROTTLE(
       2.0,
       "Waiting for \'%s\' and \'%s\' to appear in tf_tree...",
@@ -942,7 +950,7 @@ void LoFrontend::InitWithGTPointCloud(const std::string filename) {
 }
 
 void LoFrontend::SwitchToImuIntegration() {
-  ROS_WARN("LoFrontend - SwitchToImuIntegration");
+  ROS_WARN("LoFrontend::SwitchToImuIntegration");
   b_use_odometry_integration_ = false;
   odometry_.DisableOdometryIntegration();
   b_use_imu_integration_ = true;
@@ -984,7 +992,7 @@ Eigen::Matrix3d LoFrontend::GetImuYawDelta() {
                    imu_quaternion_change_.w());
   tf::Matrix3x3 m(q);
   m.getRPY(roll, pitch, yaw);
-  ROS_INFO_STREAM("LoFrontend - GetImuYawDelta - Yaw delta from IMU is "
+  ROS_INFO_STREAM("LoFrontend::GetImuYawDelta - Yaw delta from IMU is "
                   << yaw * 180.0 / M_PI << " deg");
   rot_yaw_mat = Eigen::Matrix3d();
   rot_yaw_mat << cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1;

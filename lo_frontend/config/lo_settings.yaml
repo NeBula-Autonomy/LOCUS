@@ -69,12 +69,8 @@ statistics_verbosity_level: low # off, low, high
 
 # -------------------------------------------------------------
 
-# BB based OSD 
+# Subscribe to localizer space monitor
 b_use_osd: true
-
-osd_size_threshold: 40
-b_publish_xy_cross_section: false
-
 # Closed space keyframe policy
 translation_threshold_closed_space_kf: 1.0 
 rotation_threshold_closed_space_kf: 0.3
