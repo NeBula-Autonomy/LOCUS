@@ -171,7 +171,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     InitWithGTPointCloud(gt_point_cloud_filename_);
   }
 
-  last_refresh_pose_ = localization_.integrated_estimate_;
+  last_refresh_pose_ = localization_.GetIntegratedEstimate();
   latest_odom_stamp_ = ros::Time(0);
 
   return true;
@@ -686,12 +686,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     localization_.UpdateTimestamp(stamp);
     localization_.PublishPoseNoUpdate();
     b_add_first_scan_to_key_ = false;
-    last_keyframe_pose_ = localization_.integrated_estimate_;
+    last_keyframe_pose_ = localization_.GetIntegratedEstimate();
     previous_stamp_ = stamp;
     return;
   }
-
-  localization_.incremental_estimate_ = odometry_.incremental_estimate_;  
+  
+  localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
@@ -701,7 +701,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if (diagnostics_localization.level == 0)
     localization_.PublishAll();
 
-  geometry_utils::Transform3 current_pose = localization_.integrated_estimate_;
+  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
   // Update current pose for publishing
   latest_pose_ = current_pose;  
@@ -720,7 +720,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                       << delta.translation().norm() << " and rotation "
                       << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 / M_PI
                       << " deg");    
-    localization_.incremental_estimate_ = gu::Transform3::Identity();    
+    localization_.MotionUpdate(gu::Transform3::Identity());
     localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_fixed_.get());
     mapper_->InsertPoints(msg_fixed_, mapper_unused_out_.get());
     if (b_publish_map_) {
