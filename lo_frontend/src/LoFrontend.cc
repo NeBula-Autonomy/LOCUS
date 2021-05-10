@@ -470,32 +470,12 @@ void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-  // TO TEST Delays
+
+  // To test delays
   // ros::Duration(0.4).sleep();
 
   if (b_enable_computation_time_profiling_) 
     lidar_callback_start_ = ros::Time::now();
-  
-  if (b_use_osd_) {
-    pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
-    auto size_x = maxPoint_.x - minPoint_.x;
-    auto size_y = maxPoint_.y - minPoint_.y;
-    if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
-      b_is_open_space_ = true;
-      translation_threshold_kf_ = translation_threshold_open_space_kf_; 
-      rotation_threshold_kf_ = rotation_threshold_open_space_kf_;  
-    }
-    else {
-      b_is_open_space_ = false;
-      translation_threshold_kf_ = translation_threshold_closed_space_kf_; 
-      rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;  
-    }
-    if (b_publish_xy_cross_section_) {
-      auto xy_cross_section_msg = std_msgs::Float64();
-      xy_cross_section_msg.data = size_x * size_y;
-      xy_cross_section_pub_.publish(xy_cross_section_msg);
-    }
-  }
   
   if (!b_pcld_received_) {
     statistics_start_time_ = ros::Time::now();
@@ -709,9 +689,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   latest_pose_stamp_ = stamp;
   b_have_published_odom_ = false;
 
-  // Compute delta
-  gtsam::Pose3 delta =
-      ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
+  gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
 
   if (delta.translation().norm() > translation_threshold_kf_ ||
       fabs(2 * acos(delta.rotation().toQuaternion().w())) > rotation_threshold_kf_) {
@@ -748,7 +726,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);
   }
 
-  // Publish diagnostics
   if (publish_diagnostics_) {
     diagnostic_msgs::DiagnosticArray diagnostic_array;
     diagnostic_array.status.push_back(diagnostics_odometry);
@@ -758,6 +735,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     diagnostic_array.header.frame_id = name_;
     diagnostics_pub_.publish(diagnostic_array);
   }
+
 }
 
 void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
