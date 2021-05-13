@@ -114,7 +114,6 @@ private:
   void LidarCallback(const PointCloud::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
-  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
 
   // Main msg callback queue
   ros::CallbackQueue imu_queue_;
@@ -250,9 +249,6 @@ private:
 
   bool b_enable_computation_time_profiling_;
   ros::Publisher lidar_callback_duration_pub_;
-  ros::Publisher scan_to_scan_duration_pub_;
-  ros::Publisher scan_to_submap_duration_pub_;
-  ros::Publisher approx_nearest_neighbors_duration_pub_;
 
   /* -------------------------
   Ground Truth

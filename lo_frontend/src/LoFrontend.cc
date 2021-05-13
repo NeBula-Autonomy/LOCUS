@@ -377,26 +377,16 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend::CreatePublishers");
   ros::NodeHandle nl(n);
-
   odom_pub_timer_ =
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);  
   odometry_pub_ = 
-      nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
-  
+      nl.advertise<nav_msgs::Odometry>("odometry", 10, false);  
   lidar_callback_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
-  scan_to_scan_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
-  scan_to_submap_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
-  approx_nearest_neighbors_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("approx_nearest_neighbors_duration", 10, false);
-  
+      nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);    
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   time_difference_pub_ = 
-      nl.advertise<std_msgs::Float64>("time_difference", 10, false); 
-  
+      nl.advertise<std_msgs::Float64>("time_difference", 10, false);   
   return true;
 }
 
@@ -441,16 +431,6 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     tf_stamped.transform.rotation = odometry_msg->pose.pose.orientation;    
     tf2_ros_odometry_buffer_.setTransform(tf_stamped, tf_buffer_authority_, false);
     latest_odom_stamp_ = odometry_msg->header.stamp;
-  }
-}
-
-void LoFrontend::PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg) {
-  if (CheckBufferSize(pose_stamped_buffer_) > pose_stamped_buffer_size_limit_) {
-    pose_stamped_buffer_.erase(pose_stamped_buffer_.begin());
-  }
-  if (!InsertMsgInBuffer(pose_stamped_msg, pose_stamped_buffer_)) {
-    ROS_WARN(
-        "LoFrontend::PoseStampedCallback - Unable to store message in buffer");
   }
 }
 
@@ -727,10 +707,8 @@ void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
 // Publish odometry at fixed rate --------------------------------------------------------------------
 
 void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
-  // Publishes the latest odometry at a fixed rate
-  
-  // Currently works for VO - TODO: think about removing b_interpolate
-  // TODO - add check to stop if we don't have lidar yet
+  // Publishes the latest odometry at a fixed rate (currently works for VO) 
+  // TODO: think about removing b_interpolate + add check to stop if we don't have lidar yet
   
   // Get latest covariance
   Eigen::Matrix<double, 6, 6> covariance =
@@ -757,7 +735,8 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
                                                  base_frame_id_,
                                                  latest_odom_stamp_,
                                                  bd_odom_frame_id_);
-  } else {
+  } 
+  else {
     publish_stamp = latest_pose_stamp_;
     // TODO - don't print this warning if we have not chosen odom as an input
     // TODO - just do stats on this
@@ -768,12 +747,9 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     // Convert transform into common format
     geometry_utils::Transform3 odom_delta =
         geometry_utils::ros::FromROS(t.transform);
-
     latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
     latest_pose_stamp_ = latest_odom_stamp_;
-  } else {
-    // latest_pose_ = latest_pose_;
-  }
+  } 
 
   // Publish as an odometry message
   if (!b_have_published_odom_ || have_odom_transform) {
