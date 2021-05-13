@@ -136,6 +136,7 @@ private:
   geometry_utils::Transform3 latest_pose_;
   ros::Time latest_pose_stamp_;
   ros::Time latest_odom_stamp_;
+  ros::Time stamp_transform_to_;
   bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
   bool b_have_published_odom_ = false;
@@ -220,6 +221,9 @@ private:
   bool b_odometry_has_been_received_;
   int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
+  tf::Transform tf_transform_;
+  tf::Vector3 tf_translation_;
+  tf::Quaternion tf_quaternion_;
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
 
   // PoseStamped

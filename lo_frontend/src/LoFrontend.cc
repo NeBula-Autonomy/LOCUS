@@ -278,9 +278,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("statistics_time_window", 
                 statistics_time_window_))
     return false;
-  if (!pu::Get("statistics_verbosity_level", 
-                statistics_verbosity_level_))
-    return false;
   if (!pu::Get("b_interpolate", 
                 b_interpolate_))
     return false;
@@ -476,16 +473,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   else {
     auto sequence_difference = (int)msg->header.seq - (int)pcld_seq_prev_;
     if (sequence_difference != 1) scans_dropped_ = scans_dropped_ + sequence_difference - 1;    
-    if (statistics_verbosity_level_ == "high") ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans");    
-    if (statistics_verbosity_level_ == "low") {
-      if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
-        auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
-        ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans over " << statistics_time_window_ << 
-                        " s ---> drop rate is: " << drop_rate << " scans/s");
-      scans_dropped_ = 0; 
-      statistics_start_time_ = ros::Time::now();
-      }
-    }
+    if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
+      auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
+      ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans over " << statistics_time_window_ << 
+                      " s ---> drop rate is: " << drop_rate << " scans/s");
+    scans_dropped_ = 0; 
+    statistics_start_time_ = ros::Time::now();
+    }    
     pcld_seq_prev_ = msg->header.seq;    
   }
 
@@ -568,16 +562,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     auto wait_for_transform_start_time = ros::Time::now();     
     while(latest_odom_stamp_ < stamp) {
       ros::Duration(0.01).sleep();
-      auto waiting_from = (ros::Time::now() - wait_for_transform_start_time).toSec(); 
-      if (waiting_from > wait_for_odom_transform_timeout_) {
+      if ((ros::Time::now() - wait_for_transform_start_time).toSec() > wait_for_odom_transform_timeout_) {
         ROS_WARN("Could not retrieve odom transform");
         break;  
       }
     }
 
-    ros::Time stamp_transform_to;
     if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) { 
-      stamp_transform_to = latest_odom_stamp_;
+      stamp_transform_to_ = latest_odom_stamp_;
       if (b_debug_transforms_) {
         auto time_difference_msg = std_msgs::Float64(); 
         time_difference_msg.data = (stamp - latest_odom_stamp_).toSec(); 
@@ -585,7 +577,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       }     
     } 
     else {
-      stamp_transform_to = stamp;
+      stamp_transform_to_ = stamp;
     }
 
     // Check if we can get an odometry source transform 
@@ -593,34 +585,29 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     if (tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
                                               previous_stamp_,
                                               base_frame_id_,
-                                              stamp_transform_to,
+                                              stamp_transform_to_,
                                               bd_odom_frame_id_)) {
       have_odom_transform = true;
       t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
                                                    previous_stamp_,
                                                    base_frame_id_,
-                                                   stamp_transform_to,  
+                                                   stamp_transform_to_,  
                                                    bd_odom_frame_id_);
     }
 
-    tf::Transform tf_transform;
-
     if (have_odom_transform) {
       // Have the tf, so use it
-      tf::Vector3 tf_translation;
-      tf::Quaternion tf_quaternion;
-      tf::vector3MsgToTF(t.transform.translation, tf_translation);
-      tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion);
-      tf_transform.setOrigin(tf_translation);
-      tf_transform.setRotation(tf_quaternion);
+      tf::vector3MsgToTF(t.transform.translation, tf_translation_);
+      tf::quaternionMsgToTF(t.transform.rotation, tf_quaternion_);
     } 
     else {
       // Don't have a valid tf so do pure LO
-      tf::Vector3 tf_translation(0.0, 0.0, 0.0);
-      tf::Quaternion tf_quaternion(0.0, 0.0, 0.0, 1.0);
-      tf_transform.setOrigin(tf_translation);
-      tf_transform.setRotation(tf_quaternion);
+      tf_translation_ = tf::Vector3(0.0, 0.0, 0.0);
+      tf_quaternion_ = tf::Quaternion(0.0, 0.0, 0.0, 1.0);    
     }
+
+    tf_transform_.setOrigin(tf_translation_);
+    tf_transform_.setRotation(tf_quaternion_);    
 
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
@@ -628,8 +615,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       return;
     }
 
-    // Have the delta - set this directly in odom
-    odometry_.SetOdometryDelta(tf_transform);
+    odometry_.SetOdometryDelta(tf_transform_);
     
   }
 
