@@ -556,6 +556,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
         - Spot with VO integration 
     */  
 
+    if (!b_odometry_has_been_received_) {
+      ROS_INFO("Receiving odometry for the first time");
+      b_odometry_has_been_received_ = true;
+      return;
+    }
+
     bool have_odom_transform = false;
     geometry_msgs::TransformStamped t;
 
@@ -607,13 +613,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
 
     tf_transform_.setOrigin(tf_translation_);
-    tf_transform_.setRotation(tf_quaternion_);    
-
-    if (!b_odometry_has_been_received_) {
-      ROS_INFO("Receiving odometry for the first time");
-      b_odometry_has_been_received_ = true;
-      return;
-    }
+    tf_transform_.setRotation(tf_quaternion_);  
 
     odometry_.SetOdometryDelta(tf_transform_);
     
