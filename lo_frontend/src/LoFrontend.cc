@@ -459,8 +459,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   // To test delays
   // ros::Duration(0.4).sleep();
 
-  if (b_enable_computation_time_profiling_) 
+  if (b_enable_computation_time_profiling_) {
     lidar_callback_start_ = ros::Time::now();
+  }    
   
   if (!b_pcld_received_) {
     statistics_start_time_ = ros::Time::now();
@@ -469,7 +470,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   } 
   else {
     auto sequence_difference = msg->header.seq - pcld_seq_prev_;
-    if (sequence_difference != 1) scans_dropped_ = scans_dropped_ + sequence_difference - 1;    
+    if (sequence_difference != 1) {
+      scans_dropped_ = scans_dropped_ + sequence_difference - 1;
+    }        
     if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
       auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
       ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans over " << statistics_time_window_ << 
@@ -483,13 +486,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
 
   if (!b_interpolate_) {
-
     /*
     b_interpolate_ false for: 
         - Husky with WIO/IMU/NO integration
         - Spot with IMU/NO integration 
     */    
-    
     if (b_use_odometry_integration_) {
       Odometry odometry_msg;
       if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
@@ -543,22 +544,20 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
         odometry_.SetImuDelta(GetImuDelta());
       } 
       imu_quaternion_previous_ = imu_quaternion;
-    }
+    }    
   }
 
   else {
-
     /*
     b_interpolate_ true for: 
         - Spot with VO integration 
     */  
-
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
       b_odometry_has_been_received_ = true;
       return;
     }
-
+    
     bool have_odom_transform = false;
     geometry_msgs::TransformStamped t;
 
@@ -608,12 +607,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       tf_translation_ = tf::Vector3(0.0, 0.0, 0.0);
       tf_quaternion_ = tf::Quaternion(0.0, 0.0, 0.0, 1.0);    
     }
-
     tf_transform_.setOrigin(tf_translation_);
-    tf_transform_.setRotation(tf_quaternion_);  
-
-    odometry_.SetOdometryDelta(tf_transform_);
-    
+    tf_transform_.setRotation(tf_quaternion_);
+    odometry_.SetOdometryDelta(tf_transform_);        
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_);
@@ -623,10 +619,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_add_first_scan_to_key_ = true;
   }
 
-  diagnostic_msgs::DiagnosticStatus diagnostics_odometry =
-      odometry_.GetDiagnostics();
-  if (diagnostics_odometry.level == 0)
+  auto diagnostics_odometry = odometry_.GetDiagnostics();
+  if (diagnostics_odometry.level == 0) {
     odometry_.PublishAll();
+  }    
 
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
     localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
@@ -645,9 +641,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
 
-  diagnostic_msgs::DiagnosticStatus diagnostics_localization = localization_.GetDiagnostics();
-  if (diagnostics_localization.level == 0)
+  auto diagnostics_localization = localization_.GetDiagnostics();
+  if (diagnostics_localization.level == 0) {
     localization_.PublishAll();
+  }    
 
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
@@ -658,7 +655,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   b_have_published_odom_ = false;
 
   gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
-
   if (delta.translation().norm() > translation_threshold_kf_ ||
       fabs(2 * acos(delta.rotation().toQuaternion().w())) > rotation_threshold_kf_) {
     if (b_verbose_)
