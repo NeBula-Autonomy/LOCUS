@@ -107,7 +107,6 @@ private:
                        const ros::Time stamp);
   ros::Publisher odometry_pub_;
 
-  ros::Publisher base_frame_pcld_pub_;
   ros::Publisher diagnostics_pub_;
 
   tf2_ros::MessageFilter<PointCloud>* lidar_odometry_filter_;

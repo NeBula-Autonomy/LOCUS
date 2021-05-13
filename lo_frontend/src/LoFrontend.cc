@@ -382,9 +382,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);  
   odometry_pub_ = 
       nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
-
-  base_frame_pcld_pub_ =
-      nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
   
   lidar_callback_duration_pub_ =
       nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
@@ -471,7 +468,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_pcld_received_ = true;
   } 
   else {
-    auto sequence_difference = (int)msg->header.seq - (int)pcld_seq_prev_;
+    auto sequence_difference = msg->header.seq - pcld_seq_prev_;
     if (sequence_difference != 1) scans_dropped_ = scans_dropped_ + sequence_difference - 1;    
     if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
       auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
@@ -681,12 +678,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       }
     }
     last_keyframe_pose_ = current_pose;
-  }
-
-  if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
-    PointCloud base_frame_pcld = *msg;
-    base_frame_pcld.header.frame_id = base_frame_id_;
-    base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
   if (b_enable_computation_time_profiling_) {
