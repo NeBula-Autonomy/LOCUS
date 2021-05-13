@@ -605,7 +605,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }    
 
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
-    localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
+    localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
     mapper_->InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
     localization_.UpdateTimestamp(stamp);
     localization_.PublishPoseNoUpdate();
@@ -643,7 +643,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                       << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 / M_PI
                       << " deg");    
     localization_.MotionUpdate(gu::Transform3::Identity());
-    localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_fixed_.get());
+    localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
     mapper_->InsertPoints(msg_fixed_, mapper_unused_out_.get());
     if (b_publish_map_) {
       counter_++;
@@ -757,8 +757,6 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     PublishOdometry(latest_pose_, covariance, publish_stamp);
     b_have_published_odom_ = true;
   }
-
-  return;
 }
 
 void LoFrontend::PublishOdometry(const geometry_utils::Transform3& odometry,
@@ -777,8 +775,6 @@ void LoFrontend::PublishOdometry(const geometry_utils::Transform3& odometry,
     odometry_msg.pose.covariance[i] = covariance(row, col);
   }
   odometry_pub_.publish(odometry_msg);
-
-  return;
 }
 
 
