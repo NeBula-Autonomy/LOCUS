@@ -5,10 +5,10 @@ Authors:
   - Andrea Tagliabue  (andrea.tagliabue@jpl.nasa.gov)
 */
 
+#include <chrono>
 #include <point_cloud_localization/PointCloudLocalization.h>
 #include <point_cloud_localization/utils.h>
 #include <tf/transform_datatypes.h>
-#include <chrono>
 
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -41,9 +41,9 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   double init_qx = 0.0, init_qy = 0.0, init_qz = 0.0, init_qw = 1.0;
   bool b_have_fiducial = true;
 
-  if (!pu::Get("frame_id/fixed", fixed_frame_id_)) 
+  if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
-  if (!pu::Get("frame_id/base", base_frame_id_)) 
+  if (!pu::Get("frame_id/base", base_frame_id_))
     return false;
 
   if (!pu::Get("fiducial_calibration/position/x", init_x))
@@ -61,36 +61,39 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
 
-  if (!pu::Get("localization/compute_icp_covariance", params_.compute_icp_covariance))
+  if (!pu::Get("localization/compute_icp_covariance",
+               params_.compute_icp_covariance))
     return false;
-  if (!pu::Get("localization/icp_covariance_method", params_.icp_covariance_method))
+  if (!pu::Get("localization/icp_covariance_method",
+               params_.icp_covariance_method))
     return false;
   if (!pu::Get("localization/icp_max_covariance", params_.icp_max_covariance))
     return false;
-  if (!pu::Get("localization/compute_icp_observability", params_.compute_icp_observability))
+  if (!pu::Get("localization/compute_icp_observability",
+               params_.compute_icp_observability))
     return false;
-  if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon)) 
+  if (!pu::Get("localization/tf_epsilon", params_.tf_epsilon))
     return false;
-  if (!pu::Get("localization/corr_dist", params_.corr_dist)) 
+  if (!pu::Get("localization/corr_dist", params_.corr_dist))
     return false;
-  if (!pu::Get("localization/iterations", params_.iterations)) 
+  if (!pu::Get("localization/iterations", params_.iterations))
     return false;
   if (!pu::Get("localization/transform_thresholding", transform_thresholding_))
     return false;
-  if (!pu::Get("localization/num_threads", params_.num_threads)) 
+  if (!pu::Get("localization/num_threads", params_.num_threads))
     return false;
-  if (!pu::Get("localization/enable_timing_output", params_.enable_timing_output))
+  if (!pu::Get("localization/enable_timing_output",
+               params_.enable_timing_output))
     return false;
-  if (!pu::Get("localization/max_translation", max_translation_)) 
+  if (!pu::Get("localization/max_translation", max_translation_))
     return false;
-  if (!pu::Get("localization/max_rotation", max_rotation_)) 
+  if (!pu::Get("localization/max_rotation", max_rotation_))
     return false;
-  if (!pu::Get("localization/normal_search_radius", params_.normal_radius_))
+  if (!pu::Get("localization/normal_search_radius",
+               params_.k_nearest_neighbours_))
     return false;
   if (!pu::Get("b_is_flat_ground_assumption", b_is_flat_ground_assumption_))
     return false;
-
-  pu::Get("b_publish_tfs", b_publish_tfs_);
 
   double init_roll = 0.0, init_pitch = 0.0, init_yaw = 0.0;
   gu::Quat q(gu::Quat(init_qw, init_qx, init_qy, init_qz));
@@ -104,13 +107,13 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
 
   if (b_is_flat_ground_assumption_) {
-    integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+    integrated_estimate_.rotation =
+        gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
   }
 
   if (!b_have_fiducial) {
     ROS_WARN("Can't find fiducials, using origin");
-  }
-  else {
+  } else {
     ROS_INFO_STREAM("Using:\n" << integrated_estimate_);
   }
 
@@ -136,8 +139,7 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "observability_marker", 10, false);
   observability_vector_pub_ =
       nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
-  odometry_pub_ = 
-      nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
+  odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   return true;
 }
 
@@ -152,15 +154,6 @@ const gu::Transform3& PointCloudLocalization::GetIntegratedEstimate() const {
 void PointCloudLocalization::SetIntegratedEstimate(
     const gu::Transform3& integrated_estimate) {
   integrated_estimate_ = integrated_estimate;
-  // Publish transform between fixed frame and localization frame
-  if (b_publish_tfs_) {
-    geometry_msgs::TransformStamped tf;
-    tf.transform = gr::ToRosTransform(integrated_estimate_);
-    tf.header.stamp = stamp_;
-    tf.header.frame_id = fixed_frame_id_;
-    tf.child_frame_id = base_frame_id_;
-    tfbr_.sendTransform(tf);
-  }
 }
 
 bool PointCloudLocalization::MotionUpdate(
@@ -171,8 +164,7 @@ bool PointCloudLocalization::MotionUpdate(
 }
 
 bool PointCloudLocalization::TransformPointsToFixedFrame(
-    const PointCloud& points,
-    PointCloud* points_transformed) const {
+    const PointCloud& points, PointCloud* points_transformed) const {
   if (points_transformed == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
     return false;
@@ -195,8 +187,7 @@ bool PointCloudLocalization::TransformPointsToFixedFrame(
 }
 
 bool PointCloudLocalization::TransformPointsToSensorFrame(
-    const PointCloud& points,
-    PointCloud* points_transformed) const {
+    const PointCloud& points, PointCloud* points_transformed) const {
   if (points_transformed == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
     return false;
@@ -251,6 +242,16 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   const Eigen::Matrix4f T = icp_.getFinalTransformation();
   pcl::transformPointCloud(*query, *aligned_query, T);
 
+  KdTree::Ptr search_tree_ = icp_.getSearchMethodTarget();
+  // Get the correspondence indices
+  std::vector<size_t> correspondences;
+  for (auto point : aligned_query->points) {
+    std::vector<int> matched_indices;
+    std::vector<float> matched_distances;
+    search_tree_->nearestKSearch(point, 1, matched_indices, matched_distances);
+    correspondences.push_back(matched_indices[0]);
+  }
+
   gu::Transform3 pose_update;
 
   if (b_is_flat_ground_assumption_) {
@@ -302,25 +303,30 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
     Eigen::Matrix<double, 6, 6> eigenvectors_new;
     Eigen::Matrix<double, 6, 1> eigenvalues_new;
     observability_matrix_ = Eigen::Matrix<double, 6, 6>::Zero();
-    ComputeIcpObservability(
-        query, reference, &eigenvectors_new, &eigenvalues_new, &observability_matrix_);
+    ComputeIcpObservability(*query,
+                            *reference,
+                            correspondences,
+                            T,
+                            &eigenvectors_new,
+                            &eigenvalues_new,
+                            &observability_matrix_);
   }
 
   // Compute the covariance matrix for the estimated transform
   icp_covariance_ = Eigen::Matrix<double, 6, 6>::Zero();
   if (params_.compute_icp_covariance) {
     switch (params_.icp_covariance_method) {
-      case (0):
-        ComputePoint2PointICPCovariance(
-            icpAlignedPointsLocalization_, T, &icp_covariance_);
-        break;
-      case (1):
-        ComputePoint2PlaneICPCovariance(
-            icpAlignedPointsLocalization_, T, &icp_covariance_);
-        break;
-      default:
-        ROS_ERROR(
-            "Unknown method for ICP covariance calculation. Check config. ");
+    case (0):
+      ComputePoint2PointICPCovariance(
+          icpAlignedPointsLocalization_, T, &icp_covariance_);
+      break;
+    case (1):
+      ComputePoint2PlaneICPCovariance(
+          *query, *reference, correspondences, T, &icp_covariance_);
+      break;
+    default:
+      ROS_ERROR(
+          "Unknown method for ICP covariance calculation. Check config. ");
     }
   }
   // TODO: Improve the healthy check.
@@ -340,19 +346,19 @@ void PointCloudLocalization::SetFlatGroundAssumptionValue(const bool& value) {
 }
 
 void PointCloudLocalization::ComputeIcpObservability(
-    const PointCloud::Ptr& new_cloud,
-    const PointCloud::Ptr& old_cloud,
+    const PointCloud& query_cloud,
+    const PointCloud& reference_cloud,
+    const std::vector<size_t>& correspondences,
+    const Eigen::Matrix4f& T,
     Eigen::Matrix<double, 6, 6>* eigenvectors_ptr,
     Eigen::Matrix<double, 6, 1>* eigenvalues_ptr,
     Eigen::Matrix<double, 6, 6>* A_ptr) {
   // Get normals
-  PointNormal::Ptr new_normals(new PointNormal);   // pc with normals
-  PointNormal::Ptr old_normals(new PointNormal);   // pc with normals
-  PointCloud::Ptr new_normalized(new PointCloud);  // pc whose points have been
-                                                   // rearranged.
-  addNormal(*new_cloud, new_normals, params_.normal_radius_);
-  addNormal(*old_cloud, old_normals, params_.normal_radius_);
-  normalizePCloud(*new_cloud, new_normalized);
+  PointNormal::Ptr reference_normals(new PointNormal); // pc with normals
+  PointCloud::Ptr query_normalized(new PointCloud);    // pc whose points have
+                                                       // been rearranged.
+  addNormal(reference_cloud, reference_normals, params_.k_nearest_neighbours_);
+  normalizePCloud(query_cloud, query_normalized);
 
   // Check input pointers not null
   if (not eigenvectors_ptr or not eigenvalues_ptr) {
@@ -362,7 +368,8 @@ void PointCloudLocalization::ComputeIcpObservability(
 
   Eigen::Matrix<double, 6, 6> Ap;
   // Compute Ap and its eigengectors
-  ComputeAp_ForPoint2PlaneICP(new_normalized, new_normals, Ap);
+  ComputeAp_ForPoint2PlaneICP(
+      query_normalized, reference_normals, correspondences, T, Ap);
   doEigenDecomp6x6(Ap, *eigenvalues_ptr, *eigenvectors_ptr);
   *A_ptr = Ap;
 }
@@ -401,6 +408,7 @@ bool PointCloudLocalization::ComputePoint2PointICPCovariance(
 
   // Compute the entries of Jacobian
   // Entries of Jacobian matrix are obtained from MATLAB Symbolic Toolbox
+  // TODO: implicit conversersion
   for (size_t i = 0; i < pointCloud.points.size(); ++i) {
     double p_x = pointCloud.points[i].x;
     double p_y = pointCloud.points[i].y;
@@ -408,68 +416,68 @@ bool PointCloudLocalization::ComputePoint2PointICPCovariance(
 
     J11 = 0.0;
     J12 = -2.0 *
-          (p_z * sin(p) + p_x * cos(p) * cos(y) - p_y * cos(p) * sin(y)) *
-          (t_x - p_x + p_z * cos(p) - p_x * cos(y) * sin(p) +
-           p_y * sin(p) * sin(y));
+        (p_z * sin(p) + p_x * cos(p) * cos(y) - p_y * cos(p) * sin(y)) *
+        (t_x - p_x + p_z * cos(p) - p_x * cos(y) * sin(p) +
+         p_y * sin(p) * sin(y));
     J13 = 2.0 * (p_y * cos(y) * sin(p) + p_x * sin(p) * sin(y)) *
-          (t_x - p_x + p_z * cos(p) - p_x * cos(y) * sin(p) +
-           p_y * sin(p) * sin(y));
+        (t_x - p_x + p_z * cos(p) - p_x * cos(y) * sin(p) +
+         p_y * sin(p) * sin(y));
     J14 = 2.0 * t_x - 2.0 * p_x + 2.0 * p_z * cos(p) -
-          2.0 * p_x * cos(y) * sin(p) + 2.0 * p_y * sin(p) * sin(y);
+        2.0 * p_x * cos(y) * sin(p) + 2.0 * p_y * sin(p) * sin(y);
     J15 = 0.0;
     J16 = 0.0;
 
     J21 = 2.0 *
-          (p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
-           p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
-           p_z * sin(p) * sin(r)) *
-          (p_y - t_y + p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
-           p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
-           p_z * cos(r) * sin(p));
+        (p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
+         p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
+         p_z * sin(p) * sin(r)) *
+        (p_y - t_y + p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
+         p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
+         p_z * cos(r) * sin(p));
     J22 = -2.0 *
-          (p_z * cos(p) * cos(r) - p_x * cos(r) * cos(y) * sin(p) +
-           p_y * cos(r) * sin(p) * sin(y)) *
-          (p_y - t_y + p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
-           p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
-           p_z * cos(r) * sin(p));
+        (p_z * cos(p) * cos(r) - p_x * cos(r) * cos(y) * sin(p) +
+         p_y * cos(r) * sin(p) * sin(y)) *
+        (p_y - t_y + p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
+         p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
+         p_z * cos(r) * sin(p));
     J23 = 2.0 *
-          (p_x * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
-           p_y * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y))) *
-          (p_y - t_y + p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
-           p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
-           p_z * cos(r) * sin(p));
+        (p_x * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
+         p_y * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y))) *
+        (p_y - t_y + p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
+         p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
+         p_z * cos(r) * sin(p));
     J24 = 0.0;
     J25 = 2.0 * t_y - 2.0 * p_y -
-          2.0 * p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) -
-          2.0 * p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) +
-          2.0 * p_z * cos(r) * sin(p);
+        2.0 * p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) -
+        2.0 * p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) +
+        2.0 * p_z * cos(r) * sin(p);
     J26 = 0.0;
 
     J31 = -2.0 *
-          (p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
-           p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
-           p_z * cos(r) * sin(p)) *
-          (t_z - p_z + p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
-           p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
-           p_z * sin(p) * sin(r));
+        (p_x * (sin(r) * sin(y) - cos(p) * cos(r) * cos(y)) +
+         p_y * (cos(y) * sin(r) + cos(p) * cos(r) * sin(y)) -
+         p_z * cos(r) * sin(p)) *
+        (t_z - p_z + p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
+         p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
+         p_z * sin(p) * sin(r));
     J32 = 2.0 *
-          (p_z * cos(p) * sin(r) - p_x * cos(y) * sin(p) * sin(r) +
-           p_y * sin(p) * sin(r) * sin(y)) *
-          (t_z - p_z + p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
-           p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
-           p_z * sin(p) * sin(r));
+        (p_z * cos(p) * sin(r) - p_x * cos(y) * sin(p) * sin(r) +
+         p_y * sin(p) * sin(r) * sin(y)) *
+        (t_z - p_z + p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
+         p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
+         p_z * sin(p) * sin(r));
     J33 = 2.0 *
-          (p_x * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) -
-           p_y * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r))) *
-          (t_z - p_z + p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
-           p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
-           p_z * sin(p) * sin(r));
+        (p_x * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) -
+         p_y * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r))) *
+        (t_z - p_z + p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
+         p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
+         p_z * sin(p) * sin(r));
     J34 = 0.0;
     J35 = 0.0;
     J36 = 2.0 * t_z - 2.0 * p_z +
-          2.0 * p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
-          2.0 * p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
-          2.0 * p_z * sin(p) * sin(r);
+        2.0 * p_x * (cos(r) * sin(y) + cos(p) * cos(y) * sin(r)) +
+        2.0 * p_y * (cos(r) * cos(y) - cos(p) * sin(r) * sin(y)) +
+        2.0 * p_z * sin(p) * sin(r);
 
     // Form the 3X6 Jacobian matrix
     Eigen::Matrix<double, 3, 6> J;
@@ -486,7 +494,7 @@ bool PointCloudLocalization::ComputePoint2PointICPCovariance(
   eigensolver.compute(*covariance);
   Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
   Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
-  double lower_bound = 0.001;     // Should be positive semidef
+  double lower_bound = 0.001; // Should be positive semidef
   double upper_bound = params_.icp_max_covariance;
   if (eigen_values.size() < 6) {
     *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
@@ -494,8 +502,10 @@ bool PointCloudLocalization::ComputePoint2PointICPCovariance(
     return false;
   }
   for (size_t i = 0; i < 6; i++) {
-    if (eigen_values[i] < lower_bound) eigen_values[i] = lower_bound;
-    if (eigen_values[i] > upper_bound) eigen_values[i] = upper_bound;
+    if (eigen_values[i] < lower_bound)
+      eigen_values[i] = lower_bound;
+    if (eigen_values[i] > upper_bound)
+      eigen_values[i] = upper_bound;
   }
   // Update covariance matrix after bound
   *covariance =
@@ -518,41 +528,30 @@ bool PointCloudLocalization::ComputePoint2PointICPCovariance(
 }
 
 bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
-    const PointCloud& pointCloud,
+    const PointCloud& query_cloud,
+    const PointCloud& reference_cloud,
+    const std::vector<size_t>& correspondences,
     const Eigen::Matrix4f& T,
     Eigen::Matrix<double, 6, 6>* covariance) {
   // Get normals
-  PointNormal::Ptr pcl_normals(new PointNormal);   // pc with normals
-  PointCloud::Ptr pcl_normalized(new PointCloud);  // pc whose points have been
-                                                   // rearranged.
-  addNormal(pointCloud, pcl_normals, params_.normal_radius_);
-  normalizePCloud(pointCloud, pcl_normalized);
+  PointNormal::Ptr reference_normals(new PointNormal); // pc with normals
+  PointCloud::Ptr query_normalized(new PointCloud);    // pc whose points have
+                                                       // been rearranged.
+  Eigen::Matrix<double, 6, 6> Ap;
 
-  *covariance = Eigen::Matrix<double, 6, 6>::Zero();
-  Eigen::Matrix<double, 6, 6> H_i = Eigen::Matrix<double, 6, 6>::Zero();
+  addNormal(reference_cloud, reference_normals, params_.k_nearest_neighbours_);
+  normalizePCloud(query_cloud, query_normalized);
+  ComputeAp_ForPoint2PlaneICP(
+      query_normalized, reference_normals, correspondences, T, Ap);
+  // 1 cm covariance for now hard coded
+  *covariance = 0.01 * 0.01 * Ap.inverse();
 
-  Eigen::Vector3d a_i, n_i;
-
-  for (uint32_t i = 0; i < pointCloud.size(); i++) {
-    a_i << pcl_normalized->points[i].x, pcl_normalized->points[i].y,
-        pcl_normalized->points[i].z;
-    n_i << pcl_normals->points[i].normal_x, pcl_normals->points[i].normal_y,
-        pcl_normals->points[i].normal_z;
-    Eigen::Vector3d ai_cross_ni = (a_i.cross(n_i));
-
-    H_i.block(0, 0, 3, 3) = ai_cross_ni * (ai_cross_ni.transpose());
-    H_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
-    H_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
-    if (!H_i.hasNaN()) *covariance += H_i;
-  }
-
-  covariance->block(3, 0, 3, 3) = covariance->block(0, 3, 3, 3).transpose();
   // Here bound the covariance using eigen values
   Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
   eigensolver.compute(*covariance);
   Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
   Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
-  double lower_bound = 0.001;  // Should be positive semidef
+  double lower_bound = 0.001; // Should be positive semidef
   double upper_bound = params_.icp_max_covariance;
   if (eigen_values.size() < 6) {
     *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
@@ -560,12 +559,14 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
     return false;
   }
   for (size_t i = 0; i < eigen_values.size(); i++) {
-    if (eigen_values(i) < lower_bound) eigen_values(i) = lower_bound;
-    if (eigen_values(i) > upper_bound) eigen_values(i) = upper_bound;
+    if (eigen_values(i) < lower_bound)
+      eigen_values(i) = lower_bound;
+    if (eigen_values(i) > upper_bound)
+      eigen_values(i) = upper_bound;
   }
   // Update covariance matrix after bound
-  *covariance = eigen_vectors * eigen_values.asDiagonal() *
-                eigen_vectors.inverse() * icpFitnessScore_;
+  *covariance =
+      eigen_vectors * eigen_values.asDiagonal() * eigen_vectors.inverse();
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
@@ -590,19 +591,11 @@ void PointCloudLocalization::PublishAll() {
   if (params_.compute_icp_covariance)
     PublishConditionNumber(condition_number_, condition_number_pub_);
 
-  PublishPose(incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
+  PublishPose(
+      incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
   PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
   PublishOdometry(integrated_estimate_, icp_covariance_);
 
-  // Publish transform between fixed frame and localization frame
-  if (b_publish_tfs_) {
-    geometry_msgs::TransformStamped tf;
-    tf.transform = gr::ToRosTransform(integrated_estimate_);
-    tf.header.stamp = stamp_;
-    tf.header.frame_id = fixed_frame_id_;
-    tf.child_frame_id = base_frame_id_;
-    tfbr_.sendTransform(tf);
-  }
 }
 
 void PointCloudLocalization::PublishPose(
@@ -610,7 +603,8 @@ void PointCloudLocalization::PublishPose(
     const Eigen::Matrix<double, 6, 6>& covariance,
     const ros::Publisher& pub) {
   // Check for subscribers before doing any work
-  if (pub.getNumSubscribers() == 0) return;
+  if (pub.getNumSubscribers() == 0)
+    return;
 
   // Convert from gu::Transform3 to ROS's Pose with covariance stamped type and
   // publish
@@ -657,7 +651,7 @@ void PointCloudLocalization::PublishObservableDirections(
     Eigen::MatrixXf::Index maxRow_z, maxCol_z;
     (eigenvectors3.row(2))
         .cwiseAbs()
-        .maxCoeff(&maxRow_z, &maxCol_z);  // Find which one is z
+        .maxCoeff(&maxRow_z, &maxCol_z); // Find which one is z
 
     // Eigen::Matrix<double, 3, 1> eigenvector_z = eigenvectors3.col(maxCol_z);
 
@@ -674,13 +668,12 @@ void PointCloudLocalization::PublishObservableDirections(
       Eigen::Vector3d direction(
           eigenvectors3(0, i),
           eigenvectors3(1, i),
-          eigenvectors3(
-              2,
-              i));  // LAST three coordinates = translation coordinates
+          eigenvectors3(2,
+                        i)); // LAST three coordinates = translation coordinates
 
       int sign = (direction(1) > 0) ? 1 : -1;
-      direction = sign * direction;  // To keep consistency when plotting (v and
-                                     // -v are two valids eigenvectors)
+      direction = sign * direction; // To keep consistency when plotting (v and
+                                    // -v are two valids eigenvectors)
 
       // Ensure Eigenvector z is poiting up
       // Eigen::MatrixXf::Index maxRow, maxCol;
@@ -737,75 +730,66 @@ void PointCloudLocalization::UpdateTimestamp(ros::Time& stamp) {
 
 // Compute matrix Ap= \sum_i (Hi' Hi)
 // A_i = (Hi' Hi)
-// H_i=[  a_i x n_i'   n_i' ]'
-// n_i AND a_i are taken from the old point cloud
+// H_i=[  a_i x R'n_i'   n_i' ]'
+// n_i from reference point cloud
+// a_i are from query point cloud
 void PointCloudLocalization::ComputeAp_ForPoint2PlaneICP(
-    const PointCloud::Ptr pcl_normalized,
-    const PointNormal::Ptr pcl_normals,
+    const PointCloud::Ptr query_normalized,
+    const PointNormal::Ptr reference_normals,
+    const std::vector<size_t>& correspondences,
+    const Eigen::Matrix4f& T,
     Eigen::Matrix<double, 6, 6>& Ap) {
   Ap = Eigen::Matrix<double, 6, 6>::Zero();
   Eigen::Matrix<double, 6, 6> A_i = Eigen::Matrix<double, 6, 6>::Zero();
 
   Eigen::Vector3d a_i, n_i;
+  for (uint32_t i = 0; i < query_normalized->size(); i++) {
+    a_i << query_normalized->points[i].x, //////
+        query_normalized->points[i].y,    //////
+        query_normalized->points[i].z;
 
-  for (uint32_t i = 0; i < pcl_normals->size(); i++) {
-    a_i << pcl_normalized->points[i].x,  //////
-        pcl_normalized->points[i].y,     //////
-        pcl_normalized->points[i].z;
+    n_i << reference_normals->points[correspondences[i]].normal_x, //////
+        reference_normals->points[correspondences[i]].normal_y,    //////
+        reference_normals->points[correspondences[i]].normal_z;
 
-    n_i << pcl_normals->points[i].normal_x,  //////
-        pcl_normals->points[i].normal_y,     //////
-        pcl_normals->points[i].normal_z;
+    if (a_i.hasNaN() || n_i.hasNaN())
+      continue;
 
-    ComputeDiagonalAndUpperRightOfAi(a_i, n_i, A_i);
-
-    Ap += A_i;
+    Eigen::Matrix<double, 1, 6> H = Eigen::Matrix<double, 1, 6>::Zero();
+    H.block(0, 0, 1, 3) = (a_i.cross(n_i)).transpose();
+    H.block(0, 3, 1, 3) = n_i.transpose();
+    Ap += H.transpose() * H;
   }
-
-  Ap.block(3, 0, 3, 3) = Ap.block(0, 3, 3, 3).transpose();
-}
-
-void PointCloudLocalization::ComputeDiagonalAndUpperRightOfAi(
-    Eigen::Vector3d& a_i,
-    Eigen::Vector3d& n_i,
-    Eigen::Matrix<double, 6, 6>& A_i) {
-  Eigen::Vector3d ai_cross_ni = (a_i.cross(n_i));
-
-  A_i.block(0, 0, 3, 3) = ai_cross_ni * (ai_cross_ni.transpose());
-  A_i.block(0, 3, 3, 3) = ai_cross_ni * n_i.transpose();
-  A_i.block(3, 3, 3, 3) = n_i * n_i.transpose();
 }
 
 void PointCloudLocalization::PublishOdometry(
-  const geometry_utils::Transform3& odometry, 
-  const Eigen::Matrix<double, 6, 6>& covariance) {
-  nav_msgs::Odometry odometry_msg; 
-  odometry_msg.header.stamp = stamp_; 
+    const geometry_utils::Transform3& odometry,
+    const Eigen::Matrix<double, 6, 6>& covariance) {
+  nav_msgs::Odometry odometry_msg;
+  odometry_msg.header.stamp = stamp_;
   odometry_msg.header.frame_id = fixed_frame_id_;
   odometry_msg.pose.pose.position = gr::ToRosPoint(odometry.translation);
-  odometry_msg.pose.pose.orientation = gr::ToRosQuat(gu::RToQuat(odometry.rotation));
+  odometry_msg.pose.pose.orientation =
+      gr::ToRosQuat(gu::RToQuat(odometry.rotation));
   for (size_t i = 0; i < 36; i++) {
     size_t row = static_cast<size_t>(i / 6);
     size_t col = i % 6;
     odometry_msg.pose.covariance[i] = covariance(row, col);
   }
-  odometry_pub_.publish(odometry_msg); 
+  odometry_pub_.publish(odometry_msg);
 }
 
 diagnostic_msgs::DiagnosticStatus PointCloudLocalization::GetDiagnostics() {
-    diagnostic_msgs::DiagnosticStatus diag_status;
-    diag_status.name = name_;
+  diagnostic_msgs::DiagnosticStatus diag_status;
+  diag_status.name = name_;
 
-    if (is_healthy_)
-    {
-      diag_status.level = 0; // OK
-      diag_status.message = "Healthy";
-    }
-    else
-    {
-      diag_status.level = 2; // ERROR
-      diag_status.message = "Non healthy - Null output in MeasurementUpdate.";
-    }
+  if (is_healthy_) {
+    diag_status.level = 0; // OK
+    diag_status.message = "Healthy";
+  } else {
+    diag_status.level = 2; // ERROR
+    diag_status.message = "Non healthy - Null output in MeasurementUpdate.";
+  }
 
-    return diag_status;
+  return diag_status;
 }

@@ -9,8 +9,6 @@ map_publishment:
   b_publish_map: true
   meters: 1
 
-b_run_rolling_map_buffer: false
-
 queues: 
   lidar_queue_size: 1
   imu_queue_size: 100
@@ -42,8 +40,40 @@ gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
 
 publish_diagnostics: false
 
+# SLIDING WINDOW PARAMETERS
+
+b_enable_msw: false
+#options
+#mapper - PointCloudMapper
+#buffer_mapper - PointCloudBufferMapper (not implemented yet)
+#kflann - PointCloudFlannMapper (not implemented yet)
+#octomap_mapper - PointCloudMapper (not implemented yet)
+#vdb_mapper - PointCloudVDBMapper (not implemented yet)
+# multi_threaded_mapper - PointCloudMultiThreadedMapper 
+
+window_local_mapping_type: multi_threaded_mapper
+
 box_filter_size: 25
 velocity_buffer_size: 10
 translation_threshold_msw: 5 
 rotational_velocity_threshold: 1
 translational_velocity_threshold: 0.1 
+
+# Statistics 
+statistics_time_window: 5
+statistics_verbosity_level: low # off, low, high
+
+# -------------------------------------------------------------
+
+# BB based OSD 
+b_use_osd: true 
+
+osd_size_threshold: 40
+b_publish_xy_cross_section: false
+
+# Closed space keyframe policy
+translation_threshold_closed_space_kf: 1.0 
+rotation_threshold_closed_space_kf: 0.3
+# Open space keyframe policy
+translation_threshold_open_space_kf: 2.0 
+rotation_threshold_open_space_kf: 0.6

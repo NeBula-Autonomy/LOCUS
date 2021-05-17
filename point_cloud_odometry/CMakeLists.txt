@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud_odometry)
 
-#IF(NOT CMAKE_BUILD_TYPE)
-#  SET(CMAKE_BUILD_TYPE Release)
-#ENDIF()
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
 
-SET(CMAKE_BUILD_TYPE Release)
+#SET(CMAKE_BUILD_TYPE Release)
 
 find_package(PCL 1.7 REQUIRED COMPONENTS common filters features registration)
 if(NOT PCL_FOUND)
   message(FATAL_ERROR "This program requires the PCL library.")
-endif(NOT PCL_FOUND)
+endif()
 
 find_package(OpenMP)
 # if (OpenMP_FOUND)
@@ -20,34 +20,34 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  geometry_utils
-  parameter_utils
-  geometry_msgs
-  sensor_msgs
-  pcl_ros
-  tf2_ros
-  tf
-  eigen_conversions
-  multithreaded_gicp
-  diagnostic_msgs
+    diagnostic_msgs
+    eigen_conversions
+    geometry_msgs
+    geometry_utils
+    multithreaded_gicp
+    parameter_utils
+    pcl_ros
+    roscpp
+    sensor_msgs
+    tf
+    tf2_ros
 )
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
-    roscpp
-    geometry_utils
-    parameter_utils
-    geometry_msgs
-    sensor_msgs
-    pcl_ros
-    tf2_ros
-    tf
-    eigen_conversions
-    multithreaded_gicp
     diagnostic_msgs
+    eigen_conversions
+    geometry_msgs
+    geometry_utils
+    multithreaded_gicp
+    parameter_utils
+    pcl_ros
+    roscpp
+    sensor_msgs
+    tf
+    tf2_ros  
 )
 
 # find_package(PCL 1.7 REQUIRED)
@@ -61,10 +61,11 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
 )
 
-link_directories(
-  ${catkin_LIBRARY_DIRS}
-  ${PCL_LIBRARY_DIRS}
-)
+# andrzej: this is oudated style i think
+#link_directories(
+#  ${catkin_LIBRARY_DIRS}
+#  ${PCL_LIBRARY_DIRS}
+#)
 
 add_library(${PROJECT_NAME} src/PointCloudOdometry.cc)
 target_link_libraries(${PROJECT_NAME}
@@ -79,8 +80,18 @@ target_link_libraries(${PROJECT_NAME}_node
   ${PCL_LIBRARIES}
 )
 
-# Add Gtest for the package
+#installation, #todo: verify whether we want to install it
+#install(TARGETS ${PROJECT_NAME}
+#  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+#)
+
+#############
+## Testing ##
+#############
 if(CATKIN_ENABLE_TESTING)
-  catkin_add_gtest(test_${PROJECT_NAME} test/test_${PROJECT_NAME}.cpp)
-  target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME} ${catkin_LIBRARIES})  
-endif(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(test_${PROJECT_NAME} test/test_${PROJECT_NAME}.test test/test_${PROJECT_NAME}.cpp)
+  target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME} ${catkin_LIBRARIES})
+endif()

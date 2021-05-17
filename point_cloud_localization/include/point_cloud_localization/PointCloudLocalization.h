@@ -37,35 +37,32 @@
 #ifndef POINT_CLOUD_LOCALIZATION_H
 #define POINT_CLOUD_LOCALIZATION_H
 
-#include <nav_msgs/Odometry.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
-#include <parameter_utils/ParameterUtils.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <pcl/search/impl/search.hpp>
 #include <multithreaded_gicp/gicp.h>
+#include <nav_msgs/Odometry.h>
+#include <parameter_utils/ParameterUtils.h>
+#include <pcl/search/impl/search.hpp>
 #include <pcl_ros/point_cloud.h>
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/MarkerArray.h>
-#include <diagnostic_msgs/DiagnosticStatus.h>
 
 using pcl::PointCloud;
 using pcl::PointXYZI;
 using pcl::transformPointCloud;
 
 class PointCloudLocalization {
-
- public:
-
+public:
   typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
   typedef pcl::PointCloud<pcl::PointNormal> PointNormal;
+  typedef pcl::search::KdTree<pcl::PointXYZI> KdTree;
 
   PointCloudLocalization();
   ~PointCloudLocalization();
@@ -97,13 +94,18 @@ class PointCloudLocalization {
                                        const Eigen::Matrix4f& T,
                                        Eigen::Matrix<double, 6, 6>* covariance);
 
-  bool ComputePoint2PlaneICPCovariance(const PointCloud& pointCloud,
-                                       const Eigen::Matrix4f& T,
-                                       Eigen::Matrix<double, 6, 6>* covariance);
+  bool
+  ComputePoint2PlaneICPCovariance(const PointCloud& query_cloud,
+                                  const PointCloud& reference_cloud,
+                                  const std::vector<size_t>& correspondences,
+                                  const Eigen::Matrix4f& T,
+                                  Eigen::Matrix<double, 6, 6>* covariance);
 
   // Compute observability of ICP for two pointclouds
-  void ComputeIcpObservability(const PointCloud::Ptr& new_cloud,
-                               const PointCloud::Ptr& old_cloud,
+  void ComputeIcpObservability(const PointCloud& query_cloud,
+                               const PointCloud& reference_cloud,
+                               const std::vector<size_t>& correspondences,
+                               const Eigen::Matrix4f& T,
                                Eigen::Matrix<double, 6, 6>* eigenvectors_ptr,
                                Eigen::Matrix<double, 6, 1>* eigenvalues_ptr,
                                Eigen::Matrix<double, 6, 6>* A_ptr);
@@ -114,9 +116,11 @@ class PointCloudLocalization {
 
   // Set integrated estimate. Useful for graph SLAM whenever the pose graph is
   // updated and the map is regenerated
-  void SetIntegratedEstimate(const geometry_utils::Transform3& integrated_estimate);
+  void
+  SetIntegratedEstimate(const geometry_utils::Transform3& integrated_estimate);
 
   // Pose estimate
+  // TODO: why do we need an interface if we have them as  a public?
   geometry_utils::Transform3 incremental_estimate_;
   geometry_utils::Transform3 integrated_estimate_;
 
@@ -141,7 +145,6 @@ class PointCloudLocalization {
   diagnostic_msgs::DiagnosticStatus GetDiagnostics();
 
 private:
-
   // Node initialization
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
@@ -151,7 +154,7 @@ private:
                    const Eigen::Matrix<double, 6, 6>& covariance,
                    const ros::Publisher& pub);
 
-  void PublishOdometry(const geometry_utils::Transform3& odometry, 
+  void PublishOdometry(const geometry_utils::Transform3& odometry,
                        const Eigen::Matrix<double, 6, 6>& covariance);
 
   // Publish condition number of ICP covariance matrix
@@ -184,14 +187,14 @@ private:
   tf2_ros::TransformBroadcaster tfbr_;
 
   // Parameters for filtering and ICP
-  struct Parameters {    
+  struct Parameters {
     // Compute ICP covariance and condition number
     bool compute_icp_covariance;
     // Point-to-point or Point-to-plane
     int icp_covariance_method;
     // Max boundd for icp covariance
     double icp_max_covariance;
-    // Compute ICP observability 
+    // Compute ICP observability
     bool compute_icp_observability;
     // Stop ICP if the transformation from the last iteration was this small
     double tf_epsilon;
@@ -204,8 +207,9 @@ private:
     int num_threads;
     // Enable GICP timing information print logs
     bool enable_timing_output;
-    // Radius used when computing ptcld normals 
-    double normal_radius_;
+    // Radius used when computing ptcld normals
+    //    double normal_radius_;
+    int k_nearest_neighbours_;
   } params_;
 
   // Maximum acceptable translation and rotation tolerances.
@@ -216,29 +220,26 @@ private:
   double max_rotation_;
   // double max_power_;
 
-  // To not publish tfs
-  bool b_publish_tfs_{false};
-
   // ICP
-  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
+  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI,
+                                                     pcl::PointXYZI>
+      icp_;
   bool SetupICP();
 
-  void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr pcl_normalized,
-                                   const PointNormal::Ptr pcl_normals,
+  void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr query_normalized,
+                                   const PointNormal::Ptr reference_normals,
+                                   const std::vector<size_t>& correspondences,
+                                   const Eigen::Matrix4f& T,
                                    Eigen::Matrix<double, 6, 6>& Ap);
 
-  void ComputeDiagonalAndUpperRightOfAi(Eigen::Vector3d& a_i,
-                                        Eigen::Vector3d& n_i,
-                                        Eigen::Matrix<double, 6, 6>& A_i);
-
   /*--------------------
-  Flat ground assumption  
+  Flat ground assumption
   --------------------*/
 
   bool b_is_flat_ground_assumption_;
 
   /*--------------------
-  Odometry publishment   
+  Odometry publishment
   --------------------*/
 
   ros::Publisher odometry_pub_;
@@ -252,6 +253,11 @@ private:
 
   // Diagnostics
   bool is_healthy_;
+
+  /*--------------------
+  Making some friends
+  --------------------*/
+  friend class PointCloudLocalizationTest;
 };
 
 #endif

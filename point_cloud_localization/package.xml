@@ -14,7 +14,7 @@
   <build_depend>roscpp</build_depend>
   <build_depend>geometry_utils</build_depend>
   <build_depend>parameter_utils</build_depend>
-  <build_depend>visualization_msgs</build_depend>
+  <!--build_depend>visualization_msgs</build_depend-->
   <build_depend>tf2_ros</build_depend>
   <build_depend>pcl_ros</build_depend>
   <build_depend>multithreaded_gicp</build_depend>
