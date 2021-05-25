@@ -163,6 +163,21 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("b_interpolate", b_interpolate_))
     return false;
 
+  if (!pu::Get("b_use_osd", b_use_osd_))
+    return false;
+  if (!pu::Get("osd_size_threshold", osd_size_threshold_))
+    return false;
+  if (!pu::Get("b_publish_xy_cross_section", b_publish_xy_cross_section_))
+    return false;  
+  if (!pu::Get("translation_threshold_closed_space_kf", translation_threshold_closed_space_kf_))
+    return false;
+  if (!pu::Get("rotation_threshold_closed_space_kf", rotation_threshold_closed_space_kf_))
+    return false;
+  if (!pu::Get("translation_threshold_open_space_kf", translation_threshold_open_space_kf_))
+    return false;
+  if (!pu::Get("rotation_threshold_open_space_kf", rotation_threshold_open_space_kf_))
+    return false;
+
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || 
         (data_integration_mode_ == 1) || 
@@ -270,6 +285,10 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
   scan_to_submap_duration_pub_ =
       nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
+  approx_nearest_neighbors_duration_pub_ =
+      nl.advertise<std_msgs::Float64>("approx_nearest_neighbors_duration", 10, false);
+  xy_cross_section_pub_ =  
+      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   return true;
@@ -473,14 +492,39 @@ LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
+
+  // TODO: move to class members 
   ros::Time lidar_callback_start;
   ros::Time scan_to_scan_start;
   ros::Time scan_to_submap_start;
+  ros::Time approx_nearest_neighbors_start;
 
   if (b_enable_computation_time_profiling_) {
     lidar_callback_start = ros::Time::now();
   }
 
+  if (b_use_osd_) {
+    pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
+    auto size_x = maxPoint_.x - minPoint_.x;
+    auto size_y = maxPoint_.y - minPoint_.y;
+    if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
+      b_is_open_space_ = true;
+      translation_threshold_kf_ = translation_threshold_open_space_kf_; 
+      rotation_threshold_kf_ = rotation_threshold_open_space_kf_;  
+    }
+    else {
+      b_is_open_space_ = false;
+      translation_threshold_kf_ = translation_threshold_closed_space_kf_; 
+      rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;  
+    }
+    if (b_publish_xy_cross_section_) {
+      auto xy_cross_section_msg = std_msgs::Float64();
+      xy_cross_section_msg.data = size_x * size_y;
+      xy_cross_section_pub_.publish(xy_cross_section_msg);
+    }
+  }
+
+  
   if (!b_pcld_received_) {
     statistics_start_time_ = ros::Time::now();
     pcld_seq_prev_ = msg->header.seq;
@@ -512,11 +556,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   
   }
 
+  /*
   auto number_of_points = msg->width;
   if (number_of_points > number_of_points_open_space_)
     b_is_open_space_ = true;
   else
     b_is_open_space_ = false;
+  */
 
   auto msg_stamp = msg->header.stamp;
   ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
@@ -639,7 +685,19 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
+
+  if (b_enable_computation_time_profiling_) {
+    approx_nearest_neighbors_start = ros::Time::now();
+  }
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
+  if (b_enable_computation_time_profiling_) {
+    auto approx_nearest_neighbors_end = ros::Time::now();
+    auto approx_nearest_neighbors_duration = approx_nearest_neighbors_end - approx_nearest_neighbors_start;
+    auto approx_nearest_neighbors_duration_msg = std_msgs::Float64();
+    approx_nearest_neighbors_duration_msg.data = float(approx_nearest_neighbors_duration.toSec());
+    approx_nearest_neighbors_duration_pub_.publish(approx_nearest_neighbors_duration_msg); 
+  }
+
   localization_.TransformPointsToSensorFrame(*msg_neighbors_,
                                              msg_neighbors_.get());
   localization_.MeasurementUpdate(

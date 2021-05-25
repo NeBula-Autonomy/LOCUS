@@ -33,7 +33,6 @@ Authors:
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
-
 #include <message_filters/subscriber.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/message_filter.h>
@@ -42,13 +41,17 @@ Authors:
 #include <tf2_ros/message_filter.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-
 #include <point_cloud_mapper/IPointCloudMapper.h>
+#include <pcl/common/common.h>
+
+
 
 class LoFrontend {
+
   friend class LoFrontendTest;
 
 public:
+
   typedef pcl::PointXYZI Point;
   typedef pcl::PointCloud<Point> PointCloud;
   typedef sensor_msgs::Imu Imu;
@@ -67,6 +70,7 @@ public:
   bool Initialize(const ros::NodeHandle& n, bool from_log);
 
 private:
+
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;
@@ -202,6 +206,23 @@ private:
   bool b_is_open_space_;
   int number_of_points_open_space_;
 
+  /*-----------------
+  BB based OSD
+  ------------------*/
+  bool b_use_osd_; 
+  double osd_size_threshold_;
+  Point minPoint_;
+  Point maxPoint_;  
+  bool b_publish_xy_cross_section_; 
+  ros::Publisher xy_cross_section_pub_;
+  // Closed space keyframe policy
+  double translation_threshold_closed_space_kf_;
+  double rotation_threshold_closed_space_kf_;
+  // Open space keyframe policy
+  double translation_threshold_open_space_kf_;
+  double rotation_threshold_open_space_kf_;
+
+
   /* ----------------------------------
   Dynamic hierarchical data integration
   ---------------------------------- */
@@ -224,6 +245,7 @@ private:
   ros::Publisher lidar_callback_duration_pub_;
   ros::Publisher scan_to_scan_duration_pub_;
   ros::Publisher scan_to_submap_duration_pub_;
+  ros::Publisher approx_nearest_neighbors_duration_pub_;
 
   /* -------------------------
   Ground Truth
