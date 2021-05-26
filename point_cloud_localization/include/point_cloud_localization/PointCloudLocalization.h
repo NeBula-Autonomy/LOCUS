@@ -133,9 +133,6 @@ public:
   // Update timestamp
   void UpdateTimestamp(ros::Time& stamp);
 
-  // ICP fitness score
-  double icpFitnessScore_;
-
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsLocalization_;
 
