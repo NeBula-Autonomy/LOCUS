@@ -78,7 +78,6 @@ public:
   geometry_utils::Transform3 integrated_estimate_;
 
   bool GetLastPointCloud(PointCloud::Ptr& out) const;
-  double icpFitnessScore_;
 
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
