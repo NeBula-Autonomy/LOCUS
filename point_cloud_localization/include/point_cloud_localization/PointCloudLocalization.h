@@ -45,10 +45,12 @@
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
 #include <multithreaded_gicp/gicp.h>
+#include <multithreaded_ndt/ndt_omp.h>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/search/impl/search.hpp>
 #include <pcl_ros/point_cloud.h>
+#include <registration_settings.h>
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -89,11 +91,6 @@ public:
                          const PointCloud::Ptr& reference,
                          PointCloud* aligned_query);
 
-  // Compute ICP Covariance Matrix
-  bool ComputePoint2PointICPCovariance(const PointCloud& pointCloud,
-                                       const Eigen::Matrix4f& T,
-                                       Eigen::Matrix<double, 6, 6>* covariance);
-
   bool
   ComputePoint2PlaneICPCovariance(const PointCloud& query_cloud,
                                   const PointCloud& reference_cloud,
@@ -132,9 +129,6 @@ public:
 
   // Update timestamp
   void UpdateTimestamp(ros::Time& stamp);
-
-  // ICP fitness score
-  double icpFitnessScore_;
 
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsLocalization_;
@@ -188,6 +182,8 @@ private:
 
   // Parameters for filtering and ICP
   struct Parameters {
+    // What registration method should be used: GICP, NDT
+    std::string registration_method;
     // Compute ICP covariance and condition number
     bool compute_icp_covariance;
     // Point-to-point or Point-to-plane
@@ -221,9 +217,7 @@ private:
   // double max_power_;
 
   // ICP
-  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI,
-                                                     pcl::PointXYZI>
-      icp_;
+  pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr icp_;
   bool SetupICP();
 
   void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr query_normalized,

@@ -254,23 +254,6 @@ TEST_F(PointCloudLocalizationTest, SetFlatGroundAssumptionValue) {
 
 // TODO: since i don't have a reference, i just outputed the result and i'm
 // checking consistency assuming that the implementation was correct.
-TEST_F(PointCloudLocalizationTest, ComputePoint2PointICPCovariance) {
-  auto dummy_cloud = GeneratePlane();
-  Eigen::Matrix4f tf = Eigen::Matrix4f::Identity();
-  Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Zero();
-
-  point_cloud_localization.ComputePoint2PointICPCovariance(
-      *dummy_cloud, tf, &cov);
-
-  EXPECT_NEAR(cov.diagonal()[0], 1000, epsilion);
-  EXPECT_NEAR(cov.diagonal()[1], 1000, epsilion);
-  EXPECT_NEAR(cov.diagonal()[2], 1000, epsilion);
-  EXPECT_NEAR(cov.diagonal()[3], 1000, epsilion);
-  EXPECT_NEAR(cov.diagonal()[4], 1000, epsilion);
-  EXPECT_NEAR(cov.diagonal()[5], 1000, epsilion);
-}
-// TODO: since i don't have a reference, i just outputed the result and i'm
-// checking consistency assuming that the implementation was correct.
 // TEST_F(PointCloudLocalizationTest, ComputeAp_ForPoint2PlaneICP) {
 //   auto dummy_cloud = GeneratePlane();
 //   PointCloudLocalization::PointNormal::Ptr dummy_normals(

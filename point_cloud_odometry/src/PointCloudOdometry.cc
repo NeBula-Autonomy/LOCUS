@@ -1,7 +1,8 @@
 /*
-Authors: 
+Authors:
   - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
   - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+  - Andrzej Reinke    (andrzej.m.reinke@jpl.nasa.gov)
 */
 
 #include <point_cloud_odometry/PointCloudOdometry.h>
@@ -14,11 +15,11 @@ using pcl::copyPointCloud;
 using pcl::PointCloud;
 using pcl::PointXYZI;
 
-PointCloudOdometry::PointCloudOdometry() : 
-  initialized_(false), 
-  b_use_imu_integration_(false), 
-  b_use_odometry_integration_(false), 
-  b_use_pose_stamped_integration_(false) {
+PointCloudOdometry::PointCloudOdometry()
+  : initialized_(false),
+    b_use_imu_integration_(false),
+    b_use_odometry_integration_(false),
+    b_use_pose_stamped_integration_(false) {
   query_.reset(new PointCloud);
   reference_.reset(new PointCloud);
 }
@@ -37,7 +38,7 @@ bool PointCloudOdometry::Initialize(const ros::NodeHandle& n) {
     ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
     return false;
   }
-  if(!SetupICP()){
+  if (!SetupICP()) {
     ROS_ERROR("Failed to SetupICP");
   }
   return true;
@@ -70,6 +71,8 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
 
+  if (!pu::Get("icp/registration_method", params_.registration_method))
+    return false;
   if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon))
     return false;
   if (!pu::Get("icp/corr_dist", params_.icp_corr_dist))
@@ -82,9 +85,9 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("icp/max_rotation", max_rotation_))
     return false;
-  if (!pu::Get("icp/num_threads", params_.num_threads)) 
+  if (!pu::Get("icp/num_threads", params_.num_threads))
     return false;
-  if (!pu::Get("icp/enable_timing_output", params_.enable_timing_output)) 
+  if (!pu::Get("icp/enable_timing_output", params_.enable_timing_output))
     return false;
 
   if (!pu::Get("b_verbose", b_verbose_))
@@ -104,16 +107,16 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   integrated_estimate_.rotation = gu::Rot3(init_roll, init_pitch, init_yaw);
 
   if (b_is_flat_ground_assumption_) {
-    integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+    integrated_estimate_.rotation =
+        gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
   }
 
   if (!b_have_fiducial) {
     ROS_WARN("Can't find fiducials, using origin");
-  } 
-  else {
+  } else {
     ROS_INFO_STREAM("Using:\n" << integrated_estimate_);
   }
-   
+
   return true;
 }
 
@@ -121,20 +124,61 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("PointCloudOdometry - RegisterCallbacks");
   ros::NodeHandle nl(n);
   query_pub_ = nl.advertise<PointCloud>("odometry_query_points", 10, false);
-  reference_pub_ = nl.advertise<PointCloud>("odometry_reference_points", 10, false);
-  incremental_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>("odometry_incremental_estimate", 10, false);
-  integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>("odometry_integrated_estimate", 10, false);
+  reference_pub_ =
+      nl.advertise<PointCloud>("odometry_reference_points", 10, false);
+  incremental_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
+      "odometry_incremental_estimate", 10, false);
+  integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
+      "odometry_integrated_estimate", 10, false);
   return true;
 }
 
 bool PointCloudOdometry::SetupICP() {
   ROS_INFO("PointCloudOdometry - SetupICP");
-  icp_.setTransformationEpsilon(params_.icp_tf_epsilon);
-  icp_.setMaxCorrespondenceDistance(params_.icp_corr_dist);
-  icp_.setMaximumIterations(params_.icp_iterations);
-  icp_.setRANSACIterations(0);
-  icp_.setNumThreads(params_.num_threads);
-  icp_.enableTimingOutput(params_.enable_timing_output);
+
+  switch (getRegistrationMethodFromString(params_.registration_method)) {
+  case RegistrationMethod::GICP: {
+    ROS_INFO_STREAM("RegistrationMethod::GICP activated.");
+    pcl::MultithreadedGeneralizedIterativeClosestPoint<
+        pcl::PointXYZI,
+        pcl::PointXYZI>::Ptr gicp =
+        boost::make_shared<pcl::MultithreadedGeneralizedIterativeClosestPoint<
+            pcl::PointXYZI,
+            pcl::PointXYZI>>();
+
+    gicp->setTransformationEpsilon(params_.icp_tf_epsilon);
+    gicp->setMaxCorrespondenceDistance(params_.icp_corr_dist);
+    gicp->setMaximumIterations(params_.icp_iterations);
+    gicp->setRANSACIterations(0);
+    gicp->setNumThreads(params_.num_threads);
+    gicp->enableTimingOutput(params_.enable_timing_output);
+
+    icp_ = gicp;
+    break;
+  }
+  case RegistrationMethod::NDT: {
+    ROS_INFO_STREAM("RegistrationMethod::NDT activated.");
+    pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>::Ptr
+        ndt_omp = boost::make_shared<
+            pclomp::NormalDistributionsTransform<pcl::PointXYZI,
+                                                 pcl::PointXYZI>>();
+
+    ndt_omp->setTransformationEpsilon(params_.icp_tf_epsilon);
+    ndt_omp->setMaxCorrespondenceDistance(params_.icp_corr_dist);
+    ndt_omp->setMaximumIterations(params_.icp_iterations);
+    ndt_omp->setRANSACIterations(0);
+    ndt_omp->setNumThreads(params_.num_threads);
+    ndt_omp->enableTimingOutput(params_.enable_timing_output);
+    icp_ = ndt_omp;
+    break;
+  }
+
+  default:
+    throw std::runtime_error(
+        "No such Registration mode or not implemented yet " +
+        params_.registration_method);
+  }
+
   return true;
 }
 
@@ -178,7 +222,8 @@ bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
   return true;
 }
 
-bool PointCloudOdometry::SetPoseStampedDelta(const tf::Transform& pose_stamped_delta) {
+bool PointCloudOdometry::SetPoseStampedDelta(
+    const tf::Transform& pose_stamped_delta) {
   pose_stamped_delta_ = pose_stamped_delta;
   return true;
 }
@@ -188,98 +233,108 @@ bool PointCloudOdometry::UpdateEstimate() {
     copyPointCloud(points_, *query_);
     initialized_ = true;
     return false;
-  }
-  else {
+  } else {
     copyPointCloud(*query_, *reference_);
-    copyPointCloud(points_, *query_); 
+    copyPointCloud(points_, *query_);
     return UpdateICP();
-  } 
-} 
+  }
+}
 
 bool PointCloudOdometry::UpdateICP() {
+  PointCloud::Ptr query_trans(new PointCloud);
 
-  PointCloud::Ptr query_trans( new PointCloud);
-  
-  Eigen::Matrix4d imu_prior; 
+  Eigen::Matrix4d imu_prior;
   Eigen::Matrix4d odometry_prior;
   Eigen::Matrix4d pose_stamped_prior;
 
   if (b_use_imu_integration_) {
     imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    imu_prior.block(0, 0, 3, 3) = imu_delta_;   
-    pcl::transformPointCloud(*query_, *query_trans, imu_prior);  
-  }
-  else if (b_use_odometry_integration_) {
+    imu_prior.block(0, 0, 3, 3) = imu_delta_;
+    pcl::transformPointCloud(*query_, *query_trans, imu_prior);
+  } else if (b_use_odometry_integration_) {
     Eigen::Matrix4f temp;
     pcl_ros::transformAsMatrix(odometry_delta_, temp);
-    odometry_prior = temp.cast <double> ();
+    odometry_prior = temp.cast<double>();
     pcl::transformPointCloud(*query_, *query_trans, odometry_prior);
-  }
-  else if (b_use_pose_stamped_integration_) {
+  } else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
     is_healthy_ = false;
     return false;
-  }  
-  else {
+  } else {
     *query_trans = *query_;
   }
 
-  icp_.setInputSource(query_trans);
-  icp_.setInputTarget(reference_);
-  icp_.align(icpAlignedPointsOdometry_);
-  icpFitnessScore_ = icp_.getFitnessScore();
-  Eigen::Matrix4d T; 
-  T = icp_.getFinalTransformation().cast<double>();
+  icp_->setInputSource(query_trans);
+  icp_->setInputTarget(reference_);
+  icp_->align(icpAlignedPointsOdometry_);
+  Eigen::Matrix4d T;
+  T = icp_->getFinalTransformation().cast<double>();
 
-  if (b_use_imu_integration_) { 
+  if (b_use_imu_integration_) {
     T = T * imu_prior;
-  }
-  else if (b_use_odometry_integration_) {
+  } else if (b_use_odometry_integration_) {
     T = T * odometry_prior;
-  }
-  else if (b_use_pose_stamped_integration_) {
+  } else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
     is_healthy_ = false;
     return false;
   }
-  
+
   if (b_is_flat_ground_assumption_) {
-    tf::Matrix3x3 rotation(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
+    tf::Matrix3x3 rotation(T(0, 0),
+                           T(0, 1),
+                           T(0, 2),
+                           T(1, 0),
+                           T(1, 1),
+                           T(1, 2),
+                           T(2, 0),
+                           T(2, 1),
+                           T(2, 2));
     double roll, pitch, yaw;
     rotation.getRPY(roll, pitch, yaw);
     incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), 0);
-    incremental_estimate_.rotation = gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);      
-  }
-  else {
+    incremental_estimate_.rotation =
+        gu::Rot3(cos(yaw), -sin(yaw), 0, sin(yaw), cos(yaw), 0, 0, 0, 1);
+  } else {
     incremental_estimate_.translation = gu::Vec3(T(0, 3), T(1, 3), T(2, 3));
-    incremental_estimate_.rotation =    gu::Rot3(T(0, 0), T(0, 1), T(0, 2),
-                                                 T(1, 0), T(1, 1), T(1, 2),
-                                                 T(2, 0), T(2, 1), T(2, 2));
+    incremental_estimate_.rotation = gu::Rot3(T(0, 0),
+                                              T(0, 1),
+                                              T(0, 2),
+                                              T(1, 0),
+                                              T(1, 1),
+                                              T(1, 2),
+                                              T(2, 0),
+                                              T(2, 1),
+                                              T(2, 2));
   }
 
   if (!transform_thresholding_ ||
       (incremental_estimate_.translation.Norm() <= max_translation_ &&
        incremental_estimate_.rotation.ToEulerZYX().Norm() <= max_rotation_)) {
-    integrated_estimate_ = gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
-  } 
-  else {
+    integrated_estimate_ =
+        gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
+  } else {
     ROS_WARN(
-      "%s: Discarding incremental transformation with norm (t: %lf, r: %lf)",
-      name_.c_str(),
-      incremental_estimate_.translation.Norm(),
-      incremental_estimate_.rotation.ToEulerZYX().Norm());
+        "%s: Discarding incremental transformation with norm (t: %lf, r: %lf)",
+        name_.c_str(),
+        incremental_estimate_.translation.Norm(),
+        incremental_estimate_.rotation.ToEulerZYX().Norm());
   }
 
   // TODO: Improve the healthy check.
   is_healthy_ = true;
-  
+
   return true;
 }
 
 void PointCloudOdometry::SetFlatGroundAssumptionValue(const bool& value) {
-  ROS_INFO_STREAM("PointCloudOdometry - SetFlatGroundAssumptionValue - Received: " << value);
+  ROS_INFO_STREAM(
+      "PointCloudOdometry - SetFlatGroundAssumptionValue - Received: "
+      << value);
   b_is_flat_ground_assumption_ = value;
-  if (value) integrated_estimate_.rotation = gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
+  if (value)
+    integrated_estimate_.rotation =
+        gu::Rot3(0, 0, integrated_estimate_.rotation.Yaw());
 }
 
 const gu::Transform3& PointCloudOdometry::GetIncrementalEstimate() const {
@@ -306,7 +361,8 @@ void PointCloudOdometry::PublishAll() {
 
 void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
                                      const ros::Publisher& pub) {
-  if (pub.getNumSubscribers() == 0) return;
+  if (pub.getNumSubscribers() == 0)
+    return;
   geometry_msgs::PoseStamped ros_pose;
   ros_pose.pose = gr::ToRosPose(pose);
   ros_pose.header.frame_id = fixed_frame_id_;
@@ -315,19 +371,16 @@ void PointCloudOdometry::PublishPose(const gu::Transform3& pose,
 }
 
 diagnostic_msgs::DiagnosticStatus PointCloudOdometry::GetDiagnostics() {
-    diagnostic_msgs::DiagnosticStatus diag_status;
-    diag_status.name = name_;
+  diagnostic_msgs::DiagnosticStatus diag_status;
+  diag_status.name = name_;
 
-    if (is_healthy_)
-    {
-      diag_status.level = 0; // OK
-      diag_status.message = "Healthy";
-    }
-    else
-    {
-      diag_status.level = 2; // ERROR
-      diag_status.message = "Non healthy - Null output in MeasurementUpdate.";
-    }
+  if (is_healthy_) {
+    diag_status.level = 0; // OK
+    diag_status.message = "Healthy";
+  } else {
+    diag_status.level = 2; // ERROR
+    diag_status.message = "Non healthy - Null output in MeasurementUpdate.";
+  }
 
-    return diag_status;
+  return diag_status;
 }

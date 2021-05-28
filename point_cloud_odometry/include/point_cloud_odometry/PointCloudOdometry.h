@@ -44,11 +44,13 @@
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
 #include <multithreaded_gicp/gicp.h>
+#include <multithreaded_ndt/ndt_omp.h>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/search/impl/search.hpp>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <registration_settings.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Float64.h>
@@ -78,7 +80,6 @@ public:
   geometry_utils::Transform3 integrated_estimate_;
 
   bool GetLastPointCloud(PointCloud::Ptr& out) const;
-  double icpFitnessScore_;
 
   // Aligned point cloud returned by ICP
   PointCloud icpAlignedPointsOdometry_;
@@ -140,6 +141,8 @@ private:
 
   // ICP
   struct Parameters {
+    // Registration method
+    std::string registration_method;
     double icp_tf_epsilon;
     double icp_corr_dist;
     unsigned int icp_iterations;
@@ -148,9 +151,8 @@ private:
     // Enable GICP timing information print logs
     bool enable_timing_output;
   } params_;
-  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI,
-                                                     pcl::PointXYZI>
-      icp_;
+
+  pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr icp_;
   bool SetupICP();
 
   /*--------------
