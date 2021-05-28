@@ -1,5 +1,6 @@
 localization:
-
+  # Registration method
+  registration_method: gicp
   # Compute ICP covariance and condition number
   compute_icp_covariance: true
   # 0: point to point 1: point to plane
@@ -33,3 +34,5 @@ localization:
   
   # Radius for normal search
   normal_search_radius: 10
+
+

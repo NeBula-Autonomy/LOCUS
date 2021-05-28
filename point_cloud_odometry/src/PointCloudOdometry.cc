@@ -2,6 +2,7 @@
 Authors:
   - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
   - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+  - Andrzej Reinke    (andrzej.m.reinke@jpl.nasa.gov)
 */
 
 #include <point_cloud_odometry/PointCloudOdometry.h>
@@ -70,6 +71,8 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
 
+  if (!pu::Get("icp/registration_method", params_.registration_method))
+    return false;
   if (!pu::Get("icp/tf_epsilon", params_.icp_tf_epsilon))
     return false;
   if (!pu::Get("icp/corr_dist", params_.icp_corr_dist))
@@ -132,12 +135,50 @@ bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
 
 bool PointCloudOdometry::SetupICP() {
   ROS_INFO("PointCloudOdometry - SetupICP");
-  icp_.setTransformationEpsilon(params_.icp_tf_epsilon);
-  icp_.setMaxCorrespondenceDistance(params_.icp_corr_dist);
-  icp_.setMaximumIterations(params_.icp_iterations);
-  icp_.setRANSACIterations(0);
-  icp_.setNumThreads(params_.num_threads);
-  icp_.enableTimingOutput(params_.enable_timing_output);
+
+  switch (getRegistrationMethodFromString(params_.registration_method)) {
+  case RegistrationMethod::GICP: {
+    ROS_INFO_STREAM("RegistrationMethod::GICP activated.");
+    pcl::MultithreadedGeneralizedIterativeClosestPoint<
+        pcl::PointXYZI,
+        pcl::PointXYZI>::Ptr gicp =
+        boost::make_shared<pcl::MultithreadedGeneralizedIterativeClosestPoint<
+            pcl::PointXYZI,
+            pcl::PointXYZI>>();
+
+    gicp->setTransformationEpsilon(params_.icp_tf_epsilon);
+    gicp->setMaxCorrespondenceDistance(params_.icp_corr_dist);
+    gicp->setMaximumIterations(params_.icp_iterations);
+    gicp->setRANSACIterations(0);
+    gicp->setNumThreads(params_.num_threads);
+    gicp->enableTimingOutput(params_.enable_timing_output);
+
+    icp_ = gicp;
+    break;
+  }
+  case RegistrationMethod::NDT: {
+    ROS_INFO_STREAM("RegistrationMethod::NDT activated.");
+    pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>::Ptr
+        ndt_omp = boost::make_shared<
+            pclomp::NormalDistributionsTransform<pcl::PointXYZI,
+                                                 pcl::PointXYZI>>();
+
+    ndt_omp->setTransformationEpsilon(params_.icp_tf_epsilon);
+    ndt_omp->setMaxCorrespondenceDistance(params_.icp_corr_dist);
+    ndt_omp->setMaximumIterations(params_.icp_iterations);
+    ndt_omp->setRANSACIterations(0);
+    ndt_omp->setNumThreads(params_.num_threads);
+    ndt_omp->enableTimingOutput(params_.enable_timing_output);
+    icp_ = ndt_omp;
+    break;
+  }
+
+  default:
+    throw std::runtime_error(
+        "No such Registration mode or not implemented yet " +
+        params_.registration_method);
+  }
+
   return true;
 }
 
@@ -223,11 +264,11 @@ bool PointCloudOdometry::UpdateICP() {
     *query_trans = *query_;
   }
 
-  icp_.setInputSource(query_trans);
-  icp_.setInputTarget(reference_);
-  icp_.align(icpAlignedPointsOdometry_);
+  icp_->setInputSource(query_trans);
+  icp_->setInputTarget(reference_);
+  icp_->align(icpAlignedPointsOdometry_);
   Eigen::Matrix4d T;
-  T = icp_.getFinalTransformation().cast<double>();
+  T = icp_->getFinalTransformation().cast<double>();
 
   if (b_use_imu_integration_) {
     T = T * imu_prior;

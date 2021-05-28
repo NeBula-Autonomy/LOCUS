@@ -3,6 +3,7 @@ Authors:
   - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
   - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
   - Andrea Tagliabue  (andrea.tagliabue@jpl.nasa.gov)
+  - Andrzej Reinke (andrzej.m.reinke@jpl.nasa.gov)
 */
 
 #include <chrono>
@@ -61,6 +62,8 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("fiducial_calibration/orientation/w", init_qw))
     b_have_fiducial = false;
 
+  if (!pu::Get("localization/registration_method", params_.registration_method))
+    return false;
   if (!pu::Get("localization/compute_icp_covariance",
                params_.compute_icp_covariance))
     return false;
@@ -210,13 +213,48 @@ bool PointCloudLocalization::TransformPointsToSensorFrame(
 }
 
 bool PointCloudLocalization::SetupICP() {
-  icp_.setTransformationEpsilon(params_.tf_epsilon);
-  icp_.setMaxCorrespondenceDistance(params_.corr_dist);
-  icp_.setMaximumIterations(params_.iterations);
-  icp_.setRANSACIterations(0);
-  icp_.setMaximumOptimizerIterations(50);
-  icp_.setNumThreads(params_.num_threads);
-  icp_.enableTimingOutput(params_.enable_timing_output);
+  ROS_INFO("PointCloudLocalization - SetupICP");
+  switch (getRegistrationMethodFromString(params_.registration_method)) {
+  case RegistrationMethod::GICP: {
+    ROS_INFO_STREAM("RegistrationMethod::GICP activated.");
+    pcl::MultithreadedGeneralizedIterativeClosestPoint<
+        pcl::PointXYZI,
+        pcl::PointXYZI>::Ptr gicp =
+        boost::make_shared<pcl::MultithreadedGeneralizedIterativeClosestPoint<
+            pcl::PointXYZI,
+            pcl::PointXYZI>>();
+
+    gicp->setTransformationEpsilon(params_.tf_epsilon);
+    gicp->setMaxCorrespondenceDistance(params_.corr_dist);
+    gicp->setMaximumIterations(params_.iterations);
+    gicp->setRANSACIterations(0);
+    gicp->setMaximumOptimizerIterations(50);
+    gicp->setNumThreads(params_.num_threads);
+    gicp->enableTimingOutput(params_.enable_timing_output);
+    icp_ = gicp;
+    break;
+  }
+  case RegistrationMethod::NDT: {
+    ROS_INFO_STREAM("RegistrationMethod::NDT activated.");
+    pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>::Ptr
+        ndt_omp = boost::make_shared<
+            pclomp::NormalDistributionsTransform<pcl::PointXYZI,
+                                                 pcl::PointXYZI>>();
+
+    ndt_omp->setTransformationEpsilon(params_.tf_epsilon);
+    ndt_omp->setMaxCorrespondenceDistance(params_.corr_dist);
+    ndt_omp->setMaximumIterations(params_.iterations);
+    ndt_omp->setRANSACIterations(0);
+    ndt_omp->setNumThreads(params_.num_threads);
+    ndt_omp->enableTimingOutput(params_.enable_timing_output);
+    icp_ = ndt_omp;
+    break;
+  }
+  default:
+    throw std::runtime_error(
+        "No such Registration mode or not implemented yet " +
+        params_.registration_method);
+  }
   return true;
 }
 
@@ -232,16 +270,16 @@ bool PointCloudLocalization::MeasurementUpdate(const PointCloud::Ptr& query,
   // Store time stamp
   stamp_.fromNSec(query->header.stamp * 1e3);
 
-  icp_.setInputSource(query);
-  icp_.setInputTarget(reference);
+  icp_->setInputSource(query);
+  icp_->setInputTarget(reference);
   PointCloud icpAlignedPointsLocalization_;
-  icp_.align(icpAlignedPointsLocalization_);
+  icp_->align(icpAlignedPointsLocalization_);
 
   // Retrieve transformation and estimate and update
-  const Eigen::Matrix4f T = icp_.getFinalTransformation();
+  const Eigen::Matrix4f T = icp_->getFinalTransformation();
   pcl::transformPointCloud(*query, *aligned_query, T);
 
-  KdTree::Ptr search_tree_ = icp_.getSearchMethodTarget();
+  KdTree::Ptr search_tree_ = icp_->getSearchMethodTarget();
   // Get the correspondence indices
   std::vector<size_t> correspondences;
   for (auto point : aligned_query->points) {
