@@ -6,4 +6,11 @@ find_package(catkin REQUIRED
     point_cloud_filter)
 
 
-catkin_package()
+    catkin_package(
+        INCLUDE_DIRS include
+        LIBRARIES ${PROJECT_NAME}
+        CATKIN_DEPENDS
+        lo_frontend
+        point_cloud_odometry
+        point_cloud_filter
+      )
