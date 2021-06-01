@@ -254,80 +254,143 @@ TEST_F(PointCloudLocalizationTest, SetFlatGroundAssumptionValue) {
 
 // TODO: since i don't have a reference, i just outputed the result and i'm
 // checking consistency assuming that the implementation was correct.
-// TEST_F(PointCloudLocalizationTest, ComputeAp_ForPoint2PlaneICP) {
-//   auto dummy_cloud = GeneratePlane();
-//   PointCloudLocalization::PointNormal::Ptr dummy_normals(
-//       new PointCloudLocalization::PointNormal);
-//   Eigen::Matrix<double, 6, 6> Ap = Eigen::Matrix<double, 6, 6>::Zero();
-//   PointCloudLocalization::PointCloud::Ptr dummy_normalized(
-//       new PointCloudLocalization::PointCloud);
-//   addNormal(*dummy_cloud, dummy_normals, 10);
-//   normalizePCloud(*dummy_cloud, dummy_normalized);
-//   computeAp_ForPoint2PlaneICP(dummy_normalized, dummy_normals, Ap);
+TEST_F(PointCloudLocalizationTest, ComputeAp_ForPoint2PlaneICP) {
+  auto dummy_cloud = GeneratePlane();
+  PointCloudLocalization::PointNormal::Ptr dummy_normals(
+      new PointCloudLocalization::PointNormal);
+  Eigen::Matrix<double, 6, 6> Ap = Eigen::Matrix<double, 6, 6>::Zero();
+  PointCloudLocalization::PointCloud::Ptr dummy_normalized(
+      new PointCloudLocalization::PointCloud);
+  addNormal(*dummy_cloud, dummy_normals, 10);
+  normalizePCloud(*dummy_cloud, dummy_normalized);
+  std::vector<size_t> correspondences(dummy_cloud->size());
+  std::iota(std::begin(correspondences),
+            std::end(correspondences),
+            0);  // Fill with 0, 1, ...
+  // Generate Ap manually
+  Eigen::MatrixXf Ap_ref = Eigen::MatrixXf::Zero(6, 6);
+  Eigen::Vector3d a_i, n_i;
+  for (size_t i = 0; i < dummy_cloud->size(); i++) {
+    a_i << dummy_normalized->points[i].x,  //////
+        dummy_normalized->points[i].y,     //////
+        dummy_normalized->points[i].z;
 
-//   for (size_t i = 0; i < 6; i++) {
-//     for (size_t j = 0; j < 6; j++) {
-//       // since the plane is generated the diagonal cov will not be 0 only in
-//       // x:(0), y:(1), yaw:(5)
-//       if (not(i == j and (i == 0 or i == 1 or i == 5)))
-//         EXPECT_NEAR(Ap(i, j), 0.0, epsilion);
-//     }
-//   }
-//   EXPECT_NEAR(Ap(0, 0), 56.7753, epsilion);
-//   EXPECT_NEAR(Ap(1, 1), 56.7753, epsilion);
-//   EXPECT_NEAR(Ap(5, 5), 100, epsilion);
-// }
-// // TODO: since i don't have a reference, i just outputed the result and i'm
-// // checking consistency assuming that the implementation was correct.
-// TEST_F(PointCloudLocalizationTest, ComputePoint2PlaneICPCovariance) {
-//   auto dummy_cloud = GeneratePlane();
-//   Eigen::Matrix4f tf = Eigen::Matrix4f::Identity();
-//   Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Zero();
+    n_i << dummy_normals->points[correspondences[i]].normal_x,  //////
+        dummy_normals->points[correspondences[i]].normal_y,     //////
+        dummy_normals->points[correspondences[i]].normal_z;
+    double a, b, c;
+    a = (a_i.cross(n_i))(0);
+    b = (a_i.cross(n_i))(1);
+    c = n_i(2);
+    Ap_ref(0, 0) += a * a;
+    Ap_ref(0, 1) += a * b;
+    Ap_ref(1, 0) += a * b;
+    Ap_ref(1, 1) += b * b;
+    Ap_ref(0, 5) += a * c;
+    Ap_ref(1, 5) += b * c;
+    Ap_ref(5, 0) += a * c;
+    Ap_ref(5, 1) += b * c;
+    Ap_ref(5, 5) += c * c;
+  }
 
-//   point_cloud_localization.ComputePoint2PlaneICPCovariance(
-//       *dummy_cloud, tf, &cov);
+  Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+  computeAp_ForPoint2PlaneICP(
+      dummy_normalized, dummy_normals, correspondences, T, Ap);
+  
+  for (size_t i = 0; i < 6; i++) {
+    for (size_t j = 0; j < 6; j++) {
+      EXPECT_NEAR(Ap(i, j), Ap_ref(i, j), epsilion);
+    }
+  }
+  EXPECT_NEAR(Ap(0, 0), 56.7753, epsilion);
+  EXPECT_NEAR(Ap(1, 1), 56.7753, epsilion);
+  EXPECT_NEAR(Ap(5, 5), 100, epsilion);
+}
+// TODO: since i don't have a reference, i just outputed the result and i'm
+// checking consistency assuming that the implementation was correct.
+TEST_F(PointCloudLocalizationTest, ComputePoint2PlaneICPCovariance) {
+  auto dummy_cloud = GeneratePlane();
+  Eigen::Matrix4f tf = Eigen::Matrix4f::Identity();
+  Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Zero();
+  std::vector<size_t> correspondences(dummy_cloud->size());
+  std::iota(std::begin(correspondences),
+            std::end(correspondences),
+            0);  // Fill with 0, 1, ...
+  point_cloud_localization.ComputePoint2PlaneICPCovariance(
+      *dummy_cloud, *dummy_cloud, correspondences, tf, &cov);
 
-//   ROS_INFO_STREAM(cov);
-//   std::cout << cov << std::endl;
-//   for (size_t i = 0; i < 6; i++) {
-//     for (size_t j = 0; j < 6; j++) {
-//       // since the plane is generated the diagonal cov will not be 0 only in
-//       // x:(0), y:(1), yaw:(5)
-//       if (not(i == j and (i == 0 or i == 1 or i == 5)))
-//         EXPECT_NEAR(cov(i, j), 0.0, epsilion);
-//     }
-//   }
-//   EXPECT_NEAR(cov(0, 0), 0.0166334, epsilion);
-//   EXPECT_NEAR(cov(1, 1), 0.0166334, epsilion);
-//   EXPECT_NEAR(cov(5, 5), 0.0292969, epsilion);
-// }
-// // TODO: since i don't have a reference, i just outputed the result and i'm
-// // checking consistency assuming that the implementation was correct.
-// TEST_F(PointCloudLocalizationTest, ComputeIcpObservability) {
-//   // TODO: known issue: sometimes fail
+  // Default to max value since single plane not "observable"
+  for (size_t i = 0; i < 6; i++) {
+    for (size_t j = 0; j < 6; j++) {
+      if (i == j) {
+        EXPECT_NEAR(cov(i, j), 1000.0, epsilion);
+      } else {
+        EXPECT_NEAR(cov(i, j), 0.0, epsilion);
+      }
+    }
+  }
+  // Add another plane 
+  // Perform transformation
+  pcl::PointCloud<pcl::PointXYZI>::Ptr transformed_dummy(
+      new pcl::PointCloud<pcl::PointXYZI>());
+  Eigen::Matrix4f T_dummy = Eigen::Matrix4f::Zero();
+  T_dummy(0, 0) = 1;
+  T_dummy(1, 2) = -1;
+  T_dummy(2, 1) = 1;
+  T_dummy(0, 3) = 1;
+  pcl::transformPointCloud(*dummy_cloud, *transformed_dummy, T_dummy);
+  *dummy_cloud += *transformed_dummy;
 
-//   Eigen::Matrix<double, 6, 6> eigenvectors_new =
-//       Eigen::Matrix<double, 6, 6>::Zero();
-//   Eigen::Matrix<double, 6, 1> eigenvalues_new =
-//       Eigen::Matrix<double, 6, 1>::Zero();
-//   Eigen::Matrix<double, 6, 6> observability_matrix =
-//       Eigen::Matrix<double, 6, 6>::Zero();
-//   auto query = GeneratePlane();
-//   computeIcpObservability(
-//       query, query, &eigenvectors_new, &eigenvalues_new,
-//       &observability_matrix);
-//   for (size_t i = 0; i < 6; i++) {
-//     for (size_t j = 0; j < 6; j++) {
-//       // since the plane is generated the diagonal cov will not be 0 only in
-//       // x:(0), y:(1), yaw:(5)
-//       if (not(i == j and (i == 0 or i == 1 or i == 5)))
-//         EXPECT_NEAR(observability_matrix(i, j), 0.0, epsilion);
-//     }
-//   }
-//   EXPECT_NEAR(observability_matrix(0, 0), 56.7753, epsilion);
-//   EXPECT_NEAR(observability_matrix(1, 1), 56.7753, epsilion);
-//   EXPECT_NEAR(observability_matrix(5, 5), 100, epsilion);
-// }
+  cov = Eigen::Matrix<double, 6, 6>::Zero();
+  std::vector<size_t> correspondences2(dummy_cloud->size());
+  std::iota(std::begin(correspondences2),
+            std::end(correspondences2),
+            0);  // Fill with 0, 1, ...
+  point_cloud_localization.ComputePoint2PlaneICPCovariance(
+      *dummy_cloud, *dummy_cloud, correspondences2, tf, &cov);
+
+  // Default to max value since single plane not "observable"
+  for (size_t i = 0; i < 6; i++) {
+    for (size_t j = 0; j < 6; j++) {
+      if (i == j) {
+        EXPECT_NEAR(cov(i, j), 0.0011, epsilion);
+      } else {
+        EXPECT_NEAR(cov(i, j), 0.0, epsilion);
+      }
+    }
+  }
+}
+// TODO: since i don't have a reference, i just outputed the result and i'm
+// checking consistency assuming that the implementation was correct.
+TEST_F(PointCloudLocalizationTest, ComputeIcpObservability) {
+  // TODO: known issue: sometimes fail
+
+  Eigen::Matrix<double, 6, 6> eigenvectors_new =
+      Eigen::Matrix<double, 6, 6>::Zero();
+  Eigen::Matrix<double, 6, 1> eigenvalues_new =
+      Eigen::Matrix<double, 6, 1>::Zero();
+  Eigen::Matrix<double, 6, 6> observability_matrix =
+      Eigen::Matrix<double, 6, 6>::Zero();
+  auto query = GeneratePlane();
+  std::vector<size_t> correspondences(query->size());
+  std::iota(std::begin(correspondences),
+            std::end(correspondences),
+            0);  // Fill with 0, 1, ...
+  computeIcpObservability(*query,
+                          *query,
+                          correspondences,
+                          Eigen::Matrix4f::Identity(),
+                          &eigenvectors_new,
+                          &eigenvalues_new,
+                          &observability_matrix);
+  // Note Eigen sorts this automatically 
+  EXPECT_NEAR(eigenvalues_new(0), 0, epsilion);
+  EXPECT_NEAR(eigenvalues_new(1), 0, epsilion);
+  EXPECT_NEAR(eigenvalues_new(2), 0, epsilion);
+  EXPECT_NEAR(eigenvalues_new(3), 56.7753, epsilion);
+  EXPECT_NEAR(eigenvalues_new(4), 56.7753, epsilion);
+  EXPECT_NEAR(eigenvalues_new(5), 100, epsilion);
+}
 TEST_F(PointCloudLocalizationTest, MeasurementUpdateGetDiagnostics) {
   ROS_INFO_STREAM("XD");
   ros::NodeHandle nh;
