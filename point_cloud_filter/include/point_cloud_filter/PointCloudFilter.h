@@ -37,38 +37,31 @@
 #ifndef POINT_CLOUD_FILTER_H
 #define POINT_CLOUD_FILTER_H
 
-#include <ros/ros.h>
-#include <pcl_ros/point_cloud.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl_ros/transforms.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/filters/voxel_grid.h>
+#include <frontend_utils/CommonStructs.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/random_sample.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
 
 // Point label options
-enum PointLabel
-{
-    CORNER_SHARP = 2,      ///< sharp corner point
-    CORNER_LESS_SHARP = 1, ///< less sharp corner point
-    SURFACE_LESS_FLAT = 0, ///< less flat surface point
-    SURFACE_FLAT = -1      ///< flat surface point
+enum PointLabel {
+  CORNER_SHARP = 2,      ///< sharp corner point
+  CORNER_LESS_SHARP = 1, ///< less sharp corner point
+  SURFACE_LESS_FLAT = 0, ///< less flat surface point
+  SURFACE_FLAT = -1      ///< flat surface point
 };
 
 class PointCloudFilter {
-
- public:
-
-  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
-  typedef pcl::PointCloud<pcl::PointXYZI>::ConstPtr pclConstPtr;
-  typedef pcl::PointCloud<pcl::PointXYZI>::Ptr pclPtr;
+public:
   typedef std::pair<size_t, size_t> IndexRange;
 
   PointCloudFilter();
@@ -78,8 +71,8 @@ class PointCloudFilter {
   bool Initialize(const ros::NodeHandle& n);
 
   // Filter an incoming point cloud
-  bool Filter(const PointCloud::ConstPtr& points,
-              PointCloud::Ptr points_filtered, 
+  bool Filter(const PointCloudF::ConstPtr& points,
+              PointCloudF::Ptr points_filtered,
               const bool b_is_open_space = false);
 
   // VLP16 characteristics
@@ -87,80 +80,83 @@ class PointCloudFilter {
   const float upperBound_ = 15;
   const uint16_t nScanRings_ = 16;
   // linear interpolation factor
-  float factor_ = (nScanRings_ - 1) / (upperBound_ - lowerBound_);       
+  float factor_ = (nScanRings_ - 1) / (upperBound_ - lowerBound_);
 
- private:
-
+private:
   struct Configuration {
     const int curvatureRegion = 5;
     const int nFeatureRegions = 6;
-    const int maxCornerSharp = 2; // 2 * 6(feature_regions) * 16(rings) = 192 sharp features
-    const int maxCornerLessSharp = 10 * maxCornerSharp; //1920 less sharp features
+    const int maxCornerSharp =
+        2; // 2 * 6(feature_regions) * 16(rings) = 192 sharp features
+    const int maxCornerLessSharp =
+        10 * maxCornerSharp; // 1920 less sharp features
     const int maxSurfaceFlat = 4;
     const float surfaceCurvatureThreshold = 0.1;
     const float lessFlatFilterSize = 0.2;
-  } feature_config_;  
+  } feature_config_;
 
   // Node initialization
   bool LoadParameters(const ros::NodeHandle& n);
   std::string name_;
-  
-  std::vector<pcl::PointCloud<pcl::PointXYZI>> laserCloudScans_;
-  pcl::PointCloud<pcl::PointXYZI> laserCloud_;            // < full resolution input cloud - smk:contains all points but now ring-wise sorted
-  std::vector<IndexRange> scanIndices_;                   // < start and end indices of the individual scans withing the full resolution cloud
-  pcl::PointCloud<pcl::PointXYZI> cornerPointsSharp_;     // < sharp corner points cloud
-  pcl::PointCloud<pcl::PointXYZI> cornerPointsLessSharp_; // < less sharp corner points cloud
-  pcl::PointCloud<pcl::PointXYZI> surfacePointsFlat_;     // < flat surface points cloud
-  pcl::PointCloud<pcl::PointXYZI> surfacePointsLessFlat_; // < less flat surface points cloud
-  std::vector<float> regionCurvature_;                    // < point curvature buffer
-  std::vector<PointLabel> regionLabel_;                   // < point label buffer
-  std::vector<size_t> regionSortIndices_;                 // < sorted region indices based on point curvature
-  std::vector<int> scanNeighborPicked_;                   // < flag if neighboring point was already picked
 
-  void arrangePCLInScanLines(const PointCloud &laserCloudIn, float scanPeriod);
-  void extractFeatures(const uint16_t &beginIdx = 0);
-  void setRegionBuffersFor(const size_t &startIdx, const size_t &endIdx);
-  void setScanBuffersFor(const size_t &startIdx, const size_t &endIdx);
-  void markAsPicked(const size_t &cloudIdx, const size_t &scanIdx);
+  std::vector<PointCloudF> laserCloudScans_;
+  PointCloudF laserCloud_; // < full resolution input cloud - smk:contains all
+                           // points but now ring-wise sorted
+  std::vector<IndexRange>
+      scanIndices_; // < start and end indices of the individual scans withing
+                    // the full resolution cloud
+  PointCloudF cornerPointsSharp_;       // < sharp corner points cloud
+  PointCloudF cornerPointsLessSharp_;   // < less sharp corner points cloud
+  PointCloudF surfacePointsFlat_;       // < flat surface points cloud
+  PointCloudF surfacePointsLessFlat_;   // < less flat surface points cloud
+  std::vector<float> regionCurvature_;  // < point curvature buffer
+  std::vector<PointLabel> regionLabel_; // < point label buffer
+  std::vector<size_t>
+      regionSortIndices_; // < sorted region indices based on point curvature
+  std::vector<int>
+      scanNeighborPicked_; // < flag if neighboring point was already picked
+
+  void arrangePCLInScanLines(const PointCloudF& laserCloudIn, float scanPeriod);
+  void extractFeatures(const uint16_t& beginIdx = 0);
+  void setRegionBuffersFor(const size_t& startIdx, const size_t& endIdx);
+  void setScanBuffersFor(const size_t& startIdx, const size_t& endIdx);
+  void markAsPicked(const size_t& cloudIdx, const size_t& scanIdx);
 
   /** \brief Map the specified vertical point angle to its ring ID
    * @param angle the vertical point angle (in rad)
    * @return the ring ID
    */
-  int getRingForAngle(const float &angle) const;
+  int getRingForAngle(const float& angle) const;
 
   // Calculate the squared difference of the given two points
   template <typename PointT>
-  inline float calcSquaredDiff(const PointT &a, const PointT &b)
-  {
-      float diffX = a.x - b.x;
-      float diffY = a.y - b.y;
-      float diffZ = a.z - b.z;
-      return diffX * diffX + diffY * diffY + diffZ * diffZ;
+  inline float calcSquaredDiff(const PointT& a, const PointT& b) {
+    float diffX = a.x - b.x;
+    float diffY = a.y - b.y;
+    float diffZ = a.z - b.z;
+    return diffX * diffX + diffY * diffY + diffZ * diffZ;
   }
 
-  //Calculate the squared difference of the given two points with weighting
+  // Calculate the squared difference of the given two points with weighting
   template <typename PointT>
-  inline float calcSquaredDiff(const PointT &a, const PointT &b, const float &wb)
-  {
-      float diffX = a.x - b.x * wb;
-      float diffY = a.y - b.y * wb;
-      float diffZ = a.z - b.z * wb;
-      return diffX * diffX + diffY * diffY + diffZ * diffZ;
+  inline float
+  calcSquaredDiff(const PointT& a, const PointT& b, const float& wb) {
+    float diffX = a.x - b.x * wb;
+    float diffY = a.y - b.y * wb;
+    float diffZ = a.z - b.z * wb;
+    return diffX * diffX + diffY * diffY + diffZ * diffZ;
   }
 
   // Calculate the absolute distance of the point to the origin
   template <typename PointT>
-  inline float calcPointDistance(const PointT &p)
-  {
-      return std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+  inline float calcPointDistance(const PointT& p) {
+    return std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
   }
 
   // Calculate the squared distance of the point to the origin
   template <typename PointT>
-  inline float calcSquaredPointDistance(const PointT &p)
-  {
-      return p.x * p.x + p.y * p.y + p.z * p.z;
+  inline float calcSquaredPointDistance(const PointT& p) {
+    return p.x * p.x + p.y * p.y + p.z * p.z;
   }
 
   struct Parameters {
@@ -174,7 +170,8 @@ class PointCloudFilter {
     bool random_filter;
     // Percentage of points to discard. Must be between 0.0 and 1.0;
     double decimate_percentage;
-    // Percentage of points to discard when in open space. Must be between 0.0 and 1.0;
+    // Percentage of points to discard when in open space. Must be between 0.0
+    // and 1.0;
     double decimate_percentage_open_space;
     // Apply a statistical outlier filter.
     bool outlier_filter;
@@ -187,10 +184,10 @@ class PointCloudFilter {
     bool radius_filter;
     // Size of the radius filter.
     double radius;
-    // If this number of neighbors are not found within a radius around each point, remove that point
+    // If this number of neighbors are not found within a radius around each
+    // point, remove that point
     unsigned int radius_knn;
   } params_;
-
 };
 
 #endif

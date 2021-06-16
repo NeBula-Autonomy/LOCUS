@@ -39,6 +39,8 @@
 
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <frontend_utils/CommonFunctions.h>
+#include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
@@ -47,6 +49,7 @@
 #include <multithreaded_ndt/ndt_omp.h>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/search/impl/search.hpp>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
@@ -57,17 +60,14 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
 #include <tf2_ros/transform_broadcaster.h>
-
 class PointCloudOdometry {
 public:
-  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
-
   PointCloudOdometry();
   ~PointCloudOdometry();
 
   bool Initialize(const ros::NodeHandle& n);
 
-  bool SetLidar(const PointCloud& points);
+  bool SetLidar(const PointCloudF& points);
   bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
   bool SetPoseStampedDelta(const tf::Transform& pose_stamped_delta);
@@ -79,10 +79,10 @@ public:
   geometry_utils::Transform3 incremental_estimate_;
   geometry_utils::Transform3 integrated_estimate_;
 
-  bool GetLastPointCloud(PointCloud::Ptr& out) const;
+  bool GetLastPointCloud(PointCloudF::Ptr& out) const;
 
   // Aligned point cloud returned by ICP
-  PointCloud icpAlignedPointsOdometry_;
+  PointCloudF icpAlignedPointsOdometry_;
 
   void EnableImuIntegration();
   void EnableOdometryIntegration();
@@ -128,9 +128,13 @@ private:
   std::string odometry_frame_id_;
 
   // Point cloud containers
-  PointCloud points_;
-  PointCloud::Ptr query_;
-  PointCloud::Ptr reference_;
+  PointCloudF points_;
+  PointCloudF::Ptr query_;
+  PointCloudF::Ptr reference_;
+
+  // Query point cloud container
+
+  PointCloudF::Ptr query_trans_;
 
   // Maximum acceptable translation and rotation tolerances
   // If transform_thresholding_ is set to false,
@@ -150,9 +154,11 @@ private:
     int num_threads;
     // Enable GICP timing information print logs
     bool enable_timing_output;
+
   } params_;
 
-  pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr icp_;
+  pcl::Registration<PointF, PointF>::Ptr icp_;
+
   bool SetupICP();
 
   /*--------------
@@ -177,8 +183,17 @@ private:
 
   bool b_is_flat_ground_assumption_;
 
+  bool recompute_covariances_;
+
   // Diagnostics
   bool is_healthy_;
+
+  /*--------------
+  Data integration
+  --------------*/
+  Eigen::Matrix4d imu_prior_;
+  Eigen::Matrix4d odometry_prior_;
+  Eigen::Matrix4d pose_stamped_prior_;
 
   /*--------------------
   Making some friends

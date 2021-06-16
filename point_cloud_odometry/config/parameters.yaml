@@ -21,3 +21,7 @@ icp:
 
   # Enable GICP timing output
   enable_timing_output: false
+
+# in general if there is no particular reason it should always be false,
+# since it recomputes the covariances from scratch but we calculate them from normals
+  recompute_covariances: false

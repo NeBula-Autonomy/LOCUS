@@ -2,7 +2,11 @@
 Authors:
   - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
   - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
+<<<<<<< HEAD
+  - Andrzej Reinke (andrzej.m.reinke@jpl.nasa.gov)
+=======
   - Andrzej Reinke    (andrzej.m.reinke@jpl.nasa.gov)
+>>>>>>> b21bdb09c68a834dcfb3938cc254b673056c2144
 */
 
 #include <point_cloud_odometry/PointCloudOdometry.h>
@@ -12,16 +16,17 @@ namespace gr = gu::ros;
 namespace pu = parameter_utils;
 
 using pcl::copyPointCloud;
-using pcl::PointCloud;
-using pcl::PointXYZI;
 
 PointCloudOdometry::PointCloudOdometry()
   : initialized_(false),
     b_use_imu_integration_(false),
     b_use_odometry_integration_(false),
     b_use_pose_stamped_integration_(false) {
-  query_.reset(new PointCloud);
-  reference_.reset(new PointCloud);
+  query_.reset(new PointCloudF);
+  reference_.reset(new PointCloudF);
+  query_trans_.reset(new PointCloudF);
+  query_trans_->reserve(50000);
+  query_trans_->clear();
 }
 
 PointCloudOdometry::~PointCloudOdometry() {}
@@ -89,6 +94,8 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("icp/enable_timing_output", params_.enable_timing_output))
     return false;
+  if (!pu::Get("icp/recompute_covariances", recompute_covariances_))
+    return false;
 
   if (!pu::Get("b_verbose", b_verbose_))
     return false;
@@ -123,9 +130,9 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
 bool PointCloudOdometry::RegisterCallbacks(const ros::NodeHandle& n) {
   ROS_INFO("PointCloudOdometry - RegisterCallbacks");
   ros::NodeHandle nl(n);
-  query_pub_ = nl.advertise<PointCloud>("odometry_query_points", 10, false);
+  query_pub_ = nl.advertise<PointCloudF>("odometry_query_points", 10, false);
   reference_pub_ =
-      nl.advertise<PointCloud>("odometry_reference_points", 10, false);
+      nl.advertise<PointCloudF>("odometry_reference_points", 10, false);
   incremental_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
       "odometry_incremental_estimate", 10, false);
   integrated_estimate_pub_ = nl.advertise<geometry_msgs::PoseStamped>(
@@ -139,12 +146,10 @@ bool PointCloudOdometry::SetupICP() {
   switch (getRegistrationMethodFromString(params_.registration_method)) {
   case RegistrationMethod::GICP: {
     ROS_INFO_STREAM("RegistrationMethod::GICP activated.");
-    pcl::MultithreadedGeneralizedIterativeClosestPoint<
-        pcl::PointXYZI,
-        pcl::PointXYZI>::Ptr gicp =
-        boost::make_shared<pcl::MultithreadedGeneralizedIterativeClosestPoint<
-            pcl::PointXYZI,
-            pcl::PointXYZI>>();
+    pcl::MultithreadedGeneralizedIterativeClosestPoint<PointF, PointF>::Ptr
+        gicp = boost::make_shared<
+            pcl::MultithreadedGeneralizedIterativeClosestPoint<PointF,
+                                                               PointF>>();
 
     gicp->setTransformationEpsilon(params_.icp_tf_epsilon);
     gicp->setMaxCorrespondenceDistance(params_.icp_corr_dist);
@@ -152,16 +157,17 @@ bool PointCloudOdometry::SetupICP() {
     gicp->setRANSACIterations(0);
     gicp->setNumThreads(params_.num_threads);
     gicp->enableTimingOutput(params_.enable_timing_output);
+    gicp->RecomputeTargetCovariance(recompute_covariances_);
+    gicp->RecomputeSourceCovariance(recompute_covariances_);
 
     icp_ = gicp;
     break;
   }
   case RegistrationMethod::NDT: {
     ROS_INFO_STREAM("RegistrationMethod::NDT activated.");
-    pclomp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI>::Ptr
-        ndt_omp = boost::make_shared<
-            pclomp::NormalDistributionsTransform<pcl::PointXYZI,
-                                                 pcl::PointXYZI>>();
+    pclomp::NormalDistributionsTransform<PointF, PointF>::Ptr ndt_omp =
+        boost::make_shared<
+            pclomp::NormalDistributionsTransform<PointF, PointF>>();
 
     ndt_omp->setTransformationEpsilon(params_.icp_tf_epsilon);
     ndt_omp->setMaxCorrespondenceDistance(params_.icp_corr_dist);
@@ -206,7 +212,7 @@ void PointCloudOdometry::DisablePoseStampedIntegration() {
   b_use_pose_stamped_integration_ = false;
 }
 
-bool PointCloudOdometry::SetLidar(const PointCloud& points) {
+bool PointCloudOdometry::SetLidar(const PointCloudF& points) {
   stamp_.fromNSec(points.header.stamp * 1e3);
   points_ = points;
   return true;
@@ -241,39 +247,36 @@ bool PointCloudOdometry::UpdateEstimate() {
 }
 
 bool PointCloudOdometry::UpdateICP() {
-  PointCloud::Ptr query_trans(new PointCloud);
-
-  Eigen::Matrix4d imu_prior;
-  Eigen::Matrix4d odometry_prior;
-  Eigen::Matrix4d pose_stamped_prior;
+  query_trans_->clear();
 
   if (b_use_imu_integration_) {
-    imu_prior << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    imu_prior.block(0, 0, 3, 3) = imu_delta_;
-    pcl::transformPointCloud(*query_, *query_trans, imu_prior);
+    imu_prior_ << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    imu_prior_.block(0, 0, 3, 3) = imu_delta_;
+    pcl::transformPointCloud(*query_, *query_trans_, imu_prior_);
   } else if (b_use_odometry_integration_) {
     Eigen::Matrix4f temp;
     pcl_ros::transformAsMatrix(odometry_delta_, temp);
-    odometry_prior = temp.cast<double>();
-    pcl::transformPointCloud(*query_, *query_trans, odometry_prior);
+    odometry_prior_ = temp.cast<double>();
+    pcl::transformPointCloud(*query_, *query_trans_, odometry_prior_);
   } else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
     is_healthy_ = false;
     return false;
   } else {
-    *query_trans = *query_;
+    *query_trans_ = *query_;
   }
 
-  icp_->setInputSource(query_trans);
+  icp_->setInputSource(query_trans_);
   icp_->setInputTarget(reference_);
   icp_->align(icpAlignedPointsOdometry_);
+
   Eigen::Matrix4d T;
   T = icp_->getFinalTransformation().cast<double>();
 
   if (b_use_imu_integration_) {
-    T = T * imu_prior;
+    T = T * imu_prior_;
   } else if (b_use_odometry_integration_) {
-    T = T * odometry_prior;
+    T = T * odometry_prior_;
   } else if (b_use_pose_stamped_integration_) {
     ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
     is_healthy_ = false;
@@ -314,11 +317,11 @@ bool PointCloudOdometry::UpdateICP() {
     integrated_estimate_ =
         gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
   } else {
-    ROS_WARN(
-        "%s: Discarding incremental transformation with norm (t: %lf, r: %lf)",
-        name_.c_str(),
-        incremental_estimate_.translation.Norm(),
-        incremental_estimate_.rotation.ToEulerZYX().Norm());
+    ROS_WARN("%s: Discarding incremental transformation with norm (t: %lf, "
+             "r: %lf)",
+             name_.c_str(),
+             incremental_estimate_.translation.Norm(),
+             incremental_estimate_.rotation.ToEulerZYX().Norm());
   }
 
   // TODO: Improve the healthy check.
@@ -345,7 +348,7 @@ const gu::Transform3& PointCloudOdometry::GetIntegratedEstimate() const {
   return integrated_estimate_;
 }
 
-bool PointCloudOdometry::GetLastPointCloud(PointCloud::Ptr& out) const {
+bool PointCloudOdometry::GetLastPointCloud(PointCloudF::Ptr& out) const {
   if (!initialized_ || query_ == NULL) {
     ROS_WARN("%s: Not initialized.", name_.c_str());
     return false;
