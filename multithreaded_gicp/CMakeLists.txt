@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   sensor_msgs
+  frontend_utils
 )
 
 find_package(OpenMP)

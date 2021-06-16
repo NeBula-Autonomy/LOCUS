@@ -36,3 +36,10 @@ localization:
   normal_search_radius: 10
 
 
+  # scan-to-map, scan has normals, map has normals as well, but the data comes
+  # from scan sparse data therefore may be beneficial to recompute the covariance matrix
+  recompute_covariance_local_map: false
+
+# in general if there is no particular reason it should always be false,
+# since it recomputes the covariances from scratch but we calculate them from normals
+  recompute_covariance_scan: false

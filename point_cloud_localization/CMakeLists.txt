@@ -32,6 +32,7 @@ find_package(catkin REQUIRED COMPONENTS
     pcl_ros
     roscpp
     tf2_ros
+    frontend_utils
 )
 
 catkin_package(
@@ -45,6 +46,7 @@ catkin_package(
     roscpp
     tf2_ros
     visualization_msgs
+    frontend_utils
 )
 
 include_directories(
