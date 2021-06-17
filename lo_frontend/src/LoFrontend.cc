@@ -13,13 +13,13 @@ LoFrontend::LoFrontend()
   : b_add_first_scan_to_key_(true),
     counter_(0),
     b_pcld_received_(false),
-    msg_filtered_(new PointCloud()),
-    msg_transformed_(new PointCloud()),
-    msg_neighbors_(new PointCloud()),
-    msg_base_(new PointCloud()),
-    msg_fixed_(new PointCloud()),
-    mapper_unused_fixed_(new PointCloud()),
-    mapper_unused_out_(new PointCloud()),
+    msg_filtered_(new PointCloudF()),
+    msg_transformed_(new PointCloudF()),
+    msg_neighbors_(new PointCloudF()),
+    msg_base_(new PointCloudF()),
+    msg_fixed_(new PointCloudF()),
+    mapper_unused_fixed_(new PointCloudF()),
+    mapper_unused_out_(new PointCloudF()),
     b_interpolate_(false),
     b_use_imu_integration_(false),
     b_use_imu_yaw_integration_(false),
@@ -154,7 +154,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("rotational_velocity_threshold", rotational_velocity_threshold_))
     return false;
-  if (!pu::Get("translational_velocity_threshold", translational_velocity_threshold_))
+  if (!pu::Get("translational_velocity_threshold",
+               translational_velocity_threshold_))
     return false;
   if (!pu::Get("statistics_time_window", statistics_time_window_))
     return false;
@@ -168,22 +169,26 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("osd_size_threshold", osd_size_threshold_))
     return false;
   if (!pu::Get("b_publish_xy_cross_section", b_publish_xy_cross_section_))
-    return false;  
-  if (!pu::Get("translation_threshold_closed_space_kf", translation_threshold_closed_space_kf_))
     return false;
-  if (!pu::Get("rotation_threshold_closed_space_kf", rotation_threshold_closed_space_kf_))
+  if (!pu::Get("translation_threshold_closed_space_kf",
+               translation_threshold_closed_space_kf_))
     return false;
-  if (!pu::Get("translation_threshold_open_space_kf", translation_threshold_open_space_kf_))
+  if (!pu::Get("rotation_threshold_closed_space_kf",
+               rotation_threshold_closed_space_kf_))
     return false;
-  if (!pu::Get("rotation_threshold_open_space_kf", rotation_threshold_open_space_kf_))
+  if (!pu::Get("translation_threshold_open_space_kf",
+               translation_threshold_open_space_kf_))
+    return false;
+  if (!pu::Get("rotation_threshold_open_space_kf",
+               rotation_threshold_open_space_kf_))
     return false;
 
   if (n.getNamespace().find("spot") != std::string::npos) {
-    if ((data_integration_mode_ == 0) || 
-        (data_integration_mode_ == 1) || 
-        (data_integration_mode_ == 2)) b_interpolate_ = false;
+    if ((data_integration_mode_ == 0) || (data_integration_mode_ == 1) ||
+        (data_integration_mode_ == 2))
+      b_interpolate_ = false;
   }
-  
+
   ROS_INFO_STREAM("b_interpolate_: " << b_interpolate_);
 
   mapper_ = mapperFabric(window_local_mapping_type_);
@@ -262,7 +267,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
                               &LoFrontend::OdometryCallback,
                               this);
     lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
-    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloud>(
+    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloudF>(
         lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10, nl_);
     lidar_odometry_filter_->registerCallback(
         boost::bind(&LoFrontend::LidarCallback, this, _1));
@@ -278,16 +283,16 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   ROS_INFO("LoFrontend - CreatePublishers");
   ros::NodeHandle nl(n);
   base_frame_pcld_pub_ =
-      nl.advertise<PointCloud>("base_frame_point_cloud", 10, false);
+      nl.advertise<PointCloudF>("base_frame_point_cloud", 10, false);
   lidar_callback_duration_pub_ =
       nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
   scan_to_scan_duration_pub_ =
       nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
   scan_to_submap_duration_pub_ =
       nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
-  approx_nearest_neighbors_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("approx_nearest_neighbors_duration", 10, false);
-  xy_cross_section_pub_ =  
+  approx_nearest_neighbors_duration_pub_ = nl.advertise<std_msgs::Float64>(
+      "approx_nearest_neighbors_duration", 10, false);
+  xy_cross_section_pub_ =
       nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
@@ -491,82 +496,64 @@ LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
   return odometry_pose_previous_.inverseTimes(odometry_pose);
 }
 
-void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-
-  // TODO: move to class members 
-  ros::Time lidar_callback_start;
-  ros::Time scan_to_scan_start;
-  ros::Time scan_to_submap_start;
-  ros::Time approx_nearest_neighbors_start;
-
-  if (b_enable_computation_time_profiling_) {
-    lidar_callback_start = ros::Time::now();
+void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
+  pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
+  auto size_x = maxPoint_.x - minPoint_.x;
+  auto size_y = maxPoint_.y - minPoint_.y;
+  if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
+    b_is_open_space_ = true;
+    translation_threshold_kf_ = translation_threshold_open_space_kf_;
+    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
+  } else {
+    b_is_open_space_ = false;
+    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
+    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
   }
-
-  if (b_use_osd_) {
-    pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
-    auto size_x = maxPoint_.x - minPoint_.x;
-    auto size_y = maxPoint_.y - minPoint_.y;
-    if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
-      b_is_open_space_ = true;
-      translation_threshold_kf_ = translation_threshold_open_space_kf_; 
-      rotation_threshold_kf_ = rotation_threshold_open_space_kf_;  
-    }
-    else {
-      b_is_open_space_ = false;
-      translation_threshold_kf_ = translation_threshold_closed_space_kf_; 
-      rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;  
-    }
-    if (b_publish_xy_cross_section_) {
-      auto xy_cross_section_msg = std_msgs::Float64();
-      xy_cross_section_msg.data = size_x * size_y;
-      xy_cross_section_pub_.publish(xy_cross_section_msg);
-    }
+  if (b_publish_xy_cross_section_) {
+    auto xy_cross_section_msg = std_msgs::Float64();
+    xy_cross_section_msg.data = size_x * size_y;
+    xy_cross_section_pub_.publish(xy_cross_section_msg);
   }
+}
 
-  
+void LoFrontend::CheckingIfMsgArrived(const PointCloudF::ConstPtr& msg) {
   if (!b_pcld_received_) {
     statistics_start_time_ = ros::Time::now();
     pcld_seq_prev_ = msg->header.seq;
     b_pcld_received_ = true;
-  } 
-  else {
-
+  } else {
     auto sequence_difference = (int)msg->header.seq - (int)pcld_seq_prev_;
-    if (sequence_difference != 1) scans_dropped_ = scans_dropped_ + sequence_difference - 1;    
+    if (sequence_difference != 1)
+      scans_dropped_ = scans_dropped_ + sequence_difference - 1;
     if (sequence_difference <= 0) {
       ROS_WARN("--------- sequence_difference <= 0 ---------");
       ROS_INFO_STREAM("Current sequence: " << msg->header.seq);
       ROS_INFO_STREAM("Previous sequence: " << pcld_seq_prev_);
       ROS_WARN("--------------------------------------------");
-    } 
-
-    if (statistics_verbosity_level_ == "high") ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans");    
-    if (statistics_verbosity_level_ == "low") {
-      if (ros::Time::now().toSec() - statistics_start_time_.toSec() > statistics_time_window_) {
-        auto drop_rate = (float)scans_dropped_ / (float)statistics_time_window_; 
-        ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans over " << statistics_time_window_ << 
-                        " s ---> drop rate is: " << drop_rate << " scans/s");
-      scans_dropped_ = 0; 
-      statistics_start_time_ = ros::Time::now();
-      }
     }
 
-    pcld_seq_prev_ = msg->header.seq;  
-  
+    //    if (statistics_verbosity_level_ == "high")
+    //      ROS_INFO_STREAM("Dropped " << scans_dropped_ << " scans");
+    //    if (statistics_verbosity_level_ == "low") {
+    //      if (ros::Time::now().toSec() - statistics_start_time_.toSec() >
+    //          statistics_time_window_) {
+    //        auto drop_rate = (float)scans_dropped_ /
+    //        (float)statistics_time_window_; ROS_INFO_STREAM("Dropped " <<
+    //        scans_dropped_ << " scans over "
+    //                                   << statistics_time_window_
+    //                                   << " s ---> drop rate is: " <<
+    //                                   drop_rate
+    //                                   << " scans/s");
+    //        scans_dropped_ = 0;
+    //        statistics_start_time_ = ros::Time::now();
+    //      }
+    //    }
+
+    pcld_seq_prev_ = msg->header.seq;
   }
+}
 
-  /*
-  auto number_of_points = msg->width;
-  if (number_of_points > number_of_points_open_space_)
-    b_is_open_space_ = true;
-  else
-    b_is_open_space_ = false;
-  */
-
-  auto msg_stamp = msg->header.stamp;
-  ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
-
+void LoFrontend::PreintegrationUpdate(const ros::Time& stamp) {
   if (!b_interpolate_) {
     if (b_use_odometry_integration_) {
       Odometry odometry_msg;
@@ -643,14 +630,32 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     odometry_.SetOdometryDelta(GetOdometryDelta(tf_transform));
     odometry_pose_previous_ = tf_transform;
   }
+}
 
-  filter_.Filter(msg, msg_filtered_, b_is_open_space_);
-  odometry_.SetLidar(*msg_filtered_);
-
+void LoFrontend::LidarCallback(const PointCloudF::ConstPtr& msg) {
   if (b_enable_computation_time_profiling_) {
-    scan_to_scan_start = ros::Time::now();
+    lidar_callback_start_ = ros::Time::now();
+  }
+  if (b_use_osd_) {
+    CalculateCrossSection(msg);
   }
 
+  CheckingIfMsgArrived(msg);
+  /*
+  auto number_of_points = msg->width;
+  if (number_of_points > number_of_points_open_space_)
+    b_is_open_space_ = true;
+  else
+    b_is_open_space_ = false;
+  */
+  auto msg_stamp = msg->header.stamp;
+  ros::Time stamp = pcl_conversions::fromPCL(msg_stamp);
+  PreintegrationUpdate(stamp);
+  filter_.Filter(msg, msg_filtered_, b_is_open_space_);
+  odometry_.SetLidar(*msg_filtered_);
+  if (b_enable_computation_time_profiling_) {
+    scan_to_scan_start_ = ros::Time::now();
+  }
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
   }
@@ -658,15 +663,13 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
       odometry_.GetDiagnostics();
   if (diagnostics_odometry.level == 0)
     odometry_.PublishAll();
-
   if (b_enable_computation_time_profiling_) {
     auto scan_to_scan_end = ros::Time::now();
-    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start;
+    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start_;
     auto scan_to_scan_duration_msg = std_msgs::Float64();
     scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec());
     scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
   }
-
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
     localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
     mapper_->InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
@@ -678,26 +681,25 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     previous_stamp_ = stamp;
     return;
   }
-
   if (b_enable_computation_time_profiling_) {
-    scan_to_submap_start = ros::Time::now();
+    scan_to_submap_start_ = ros::Time::now();
   }
-
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
   localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-
   if (b_enable_computation_time_profiling_) {
-    approx_nearest_neighbors_start = ros::Time::now();
+    approx_nearest_neighbors_start_ = ros::Time::now();
   }
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
   if (b_enable_computation_time_profiling_) {
     auto approx_nearest_neighbors_end = ros::Time::now();
-    auto approx_nearest_neighbors_duration = approx_nearest_neighbors_end - approx_nearest_neighbors_start;
+    auto approx_nearest_neighbors_duration =
+        approx_nearest_neighbors_end - approx_nearest_neighbors_start_;
     auto approx_nearest_neighbors_duration_msg = std_msgs::Float64();
-    approx_nearest_neighbors_duration_msg.data = float(approx_nearest_neighbors_duration.toSec());
-    approx_nearest_neighbors_duration_pub_.publish(approx_nearest_neighbors_duration_msg); 
+    approx_nearest_neighbors_duration_msg.data =
+        float(approx_nearest_neighbors_duration.toSec());
+    approx_nearest_neighbors_duration_pub_.publish(
+        approx_nearest_neighbors_duration_msg);
   }
-
   localization_.TransformPointsToSensorFrame(*msg_neighbors_,
                                              msg_neighbors_.get());
   localization_.MeasurementUpdate(
@@ -710,7 +712,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_enable_computation_time_profiling_) {
     auto scan_to_submap_end = ros::Time::now();
-    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start;
+    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start_;
     auto scan_to_submap_duration_msg = std_msgs::Float64();
     scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec());
     scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
@@ -736,7 +738,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     if (b_publish_map_) {
       counter_++;
       if (counter_ == map_publishment_meters_) {
-        if (b_enable_msw_) mapper_->Refresh(current_pose);       
+        if (b_enable_msw_)
+          mapper_->Refresh(current_pose);
         mapper_->PublishMap();
         counter_ = 0;
       }
@@ -745,14 +748,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   if (base_frame_pcld_pub_.getNumSubscribers() != 0) {
-    PointCloud base_frame_pcld = *msg;
+    PointCloudF base_frame_pcld = *msg;
     base_frame_pcld.header.frame_id = base_frame_id_;
     base_frame_pcld_pub_.publish(base_frame_pcld);
   }
 
   if (b_enable_computation_time_profiling_) {
     auto lidar_callback_end = ros::Time::now();
-    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start;
+    auto lidar_callback_duration = lidar_callback_end - lidar_callback_start_;
     auto lidar_callback_duration_msg = std_msgs::Float64();
     lidar_callback_duration_msg.data = float(lidar_callback_duration.toSec());
     lidar_callback_duration_pub_.publish(lidar_callback_duration_msg);
@@ -825,12 +828,12 @@ void LoFrontend::InitWithGTPointCloud(const std::string filename) {
 
   // Read ground truth from file
   pcl::PCDReader pcd_reader;
-  PointCloud gt_point_cloud;
+  PointCloudF gt_point_cloud;
   pcd_reader.read(filename, gt_point_cloud);
-  PointCloud::Ptr gt_pc_ptr(new PointCloud(gt_point_cloud));
+  PointCloudF::Ptr gt_pc_ptr(new PointCloudF(gt_point_cloud));
 
   // Create octree map to select only the parts needed
-  PointCloud::Ptr unused(new PointCloud);
+  PointCloudF::Ptr unused(new PointCloudF);
   mapper_->InsertPoints(gt_pc_ptr, unused.get());
 
   ROS_INFO("Completed addition of GT point cloud to map");

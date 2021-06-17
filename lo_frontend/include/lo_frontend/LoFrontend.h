@@ -11,49 +11,44 @@ Authors:
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 #include <math.h>
+#include <message_filters/subscriber.h>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
+#include <pcl/common/common.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 #include <point_cloud_filter/PointCloudFilter.h>
 #include <point_cloud_localization/PointCloudLocalization.h>
+#include <point_cloud_mapper/IPointCloudMapper.h>
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <point_cloud_mapper/settings.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Time.h>
+#include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
-#include <visualization_msgs/Marker.h>
-#include <message_filters/subscriber.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <tf/message_filter.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/message_filter.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#include <point_cloud_mapper/IPointCloudMapper.h>
-#include <pcl/common/common.h>
-
-
+#include <visualization_msgs/Marker.h>
 
 class LoFrontend {
-
   friend class LoFrontendTest;
 
 public:
-
-  typedef pcl::PointXYZI Point;
-  typedef pcl::PointCloud<Point> PointCloud;
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef geometry_msgs::PoseStamped PoseStamped;
@@ -70,7 +65,6 @@ public:
   bool Initialize(const ros::NodeHandle& n, bool from_log);
 
 private:
-
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;
@@ -84,7 +78,7 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  message_filters::Subscriber<PointCloud> lidar_sub_mf_;
+  message_filters::Subscriber<PointCloudF> lidar_sub_mf_;
 
   ros::Subscriber lidar_sub_;
   ros::Subscriber imu_sub_;
@@ -94,9 +88,9 @@ private:
   ros::Publisher base_frame_pcld_pub_;
   ros::Publisher diagnostics_pub_;
 
-  tf2_ros::MessageFilter<PointCloud>* lidar_odometry_filter_;
+  tf2_ros::MessageFilter<PointCloudF>* lidar_odometry_filter_;
 
-  void LidarCallback(const PointCloud::ConstPtr& msg);
+  void LidarCallback(const PointCloudF::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
   void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
@@ -156,18 +150,19 @@ private:
   bool b_pcld_received_;
   int pcld_seq_prev_;
 
-  PointCloud::Ptr msg_filtered_;
-  PointCloud::Ptr msg_transformed_;
-  PointCloud::Ptr msg_neighbors_;
-  PointCloud::Ptr msg_base_;
-  PointCloud::Ptr msg_fixed_;
-  PointCloud::Ptr mapper_unused_fixed_;
-  PointCloud::Ptr mapper_unused_out_;
+  PointCloudF::Ptr msg_filtered_;
+  PointCloudF::Ptr msg_transformed_;
+  PointCloudF::Ptr msg_neighbors_;
+  PointCloudF::Ptr msg_base_;
+  PointCloudF::Ptr msg_fixed_;
+  PointCloudF::Ptr mapper_unused_fixed_;
+  PointCloudF::Ptr mapper_unused_out_;
 
   /*--------------
   Data integration
   --------------*/
 
+  void PreintegrationUpdate(const ros::Time& stamp);
   bool SetDataIntegrationMode();
   int data_integration_mode_;
   int max_number_of_calls_;
@@ -209,11 +204,12 @@ private:
   /*-----------------
   BB based OSD
   ------------------*/
-  bool b_use_osd_; 
+  void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
+  bool b_use_osd_;
   double osd_size_threshold_;
-  Point minPoint_;
-  Point maxPoint_;  
-  bool b_publish_xy_cross_section_; 
+  PointF minPoint_;
+  PointF maxPoint_;
+  bool b_publish_xy_cross_section_;
   ros::Publisher xy_cross_section_pub_;
   // Closed space keyframe policy
   double translation_threshold_closed_space_kf_;
@@ -221,7 +217,6 @@ private:
   // Open space keyframe policy
   double translation_threshold_open_space_kf_;
   double rotation_threshold_open_space_kf_;
-
 
   /* ----------------------------------
   Dynamic hierarchical data integration
@@ -246,6 +241,11 @@ private:
   ros::Publisher scan_to_scan_duration_pub_;
   ros::Publisher scan_to_submap_duration_pub_;
   ros::Publisher approx_nearest_neighbors_duration_pub_;
+
+  ros::Time lidar_callback_start_;
+  ros::Time scan_to_scan_start_;
+  ros::Time scan_to_submap_start_;
+  ros::Time approx_nearest_neighbors_start_;
 
   /* -------------------------
   Ground Truth
@@ -282,13 +282,13 @@ private:
   bool b_interpolate_;
 
   /*------------------------------
-  Lidar Scan Dropped Statistics 
+  Lidar Scan Dropped Statistics
   -------------------------------*/
+  void CheckingIfMsgArrived(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
-  ros::Time statistics_start_time_; 
-  std::string statistics_verbosity_level_; 
-
+  ros::Time statistics_start_time_;
+  std::string statistics_verbosity_level_;
 };
 
 #endif

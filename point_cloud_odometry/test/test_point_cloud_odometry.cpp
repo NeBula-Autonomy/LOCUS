@@ -20,39 +20,51 @@
 const float epsilion = 1e-2f;
 const double epsiliond = 1e-2;
 
-PointCloudOdometry::PointCloud::Ptr
-GenerateCubic(size_t x_points = 10,
-              size_t y_points = 10,
-              size_t z_points = 10,
-              float step_x = 0.1f,
-              float step_y = 0.1f,
-              float step_z = 0.1f,
-              std::string frame_name = "dummy") {
-  auto pc_out = boost::make_shared<PointCloudOdometry::PointCloud>();
+PointCloudF::Ptr GenerateCubic(size_t x_points = 10,
+                               size_t y_points = 10,
+                               size_t z_points = 10,
+                               float step_x = 0.1f,
+                               float step_y = 0.1f,
+                               float step_z = 0.1f,
+                               std::string frame_name = "dummy") {
+  auto pc_out = boost::make_shared<PointCloudF>();
   pc_out->reserve(x_points * y_points * z_points);
   pc_out->header.frame_id = frame_name;
 
   for (size_t ix = 0; ix < x_points; ix++) {
     for (size_t iy = 0; iy < y_points; iy++) {
       for (size_t iz = 0; iz < z_points; iz++) {
-        pc_out->push_back(
-            pcl::PointXYZI({ix * step_x, iy * step_y, iz * step_z, 0}));
+        pc_out->push_back(PointF({ix * step_x, iy * step_y, iz * step_z, 0}));
       }
     }
   }
+  pcl::NormalEstimation<pcl::PointXYZINormal, pcl::Normal> ne;
+  ne.setInputCloud(pc_out);
+  pcl::search::KdTree<pcl::PointXYZINormal>::Ptr tree(
+      new pcl::search::KdTree<pcl::PointXYZINormal>());
+  ne.setSearchMethod(tree);
 
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(
+      new pcl::PointCloud<pcl::Normal>);
+  ne.setKSearch(5);
+  ne.compute(*cloud_normals);
+
+  for (size_t i = 0; i < pc_out->size(); ++i) {
+    pc_out->points[i].normal_x = cloud_normals->points[i].normal_x;
+    pc_out->points[i].normal_y = cloud_normals->points[i].normal_y;
+    pc_out->points[i].normal_z = cloud_normals->points[i].normal_z;
+  }
   return pc_out;
 }
 
-PointCloudOdometry::PointCloud::Ptr
-GenerateHollowCubic(size_t x_points = 10,
-                    size_t y_points = 10,
-                    size_t z_points = 10,
-                    float step_x = 0.1f,
-                    float step_y = 0.1f,
-                    float step_z = 0.1f,
-                    std::string frame_name = "dummy") {
-  auto pc_out = boost::make_shared<PointCloudOdometry::PointCloud>();
+PointCloudF::Ptr GenerateHollowCubic(size_t x_points = 10,
+                                     size_t y_points = 10,
+                                     size_t z_points = 10,
+                                     float step_x = 0.1f,
+                                     float step_y = 0.1f,
+                                     float step_z = 0.1f,
+                                     std::string frame_name = "dummy") {
+  auto pc_out = boost::make_shared<PointCloudF>();
   pc_out->reserve(x_points * y_points * z_points);
   pc_out->header.frame_id = frame_name;
 
@@ -60,20 +72,34 @@ GenerateHollowCubic(size_t x_points = 10,
     for (size_t iy = 0; iy < y_points; iy++) {
       for (size_t iz = 0; iz < z_points; iz++) {
         if (ix == 0 || iy == 0 || ix == x_points - 1 || iy == y_points - 1) {
-          pc_out->push_back(
-              pcl::PointXYZI({ix * step_x, iy * step_y, iz * step_z, 0}));
+          pc_out->push_back(PointF({ix * step_x, iy * step_y, iz * step_z, 0}));
         }
       }
     }
   }
+  pcl::NormalEstimation<pcl::PointXYZINormal, pcl::Normal> ne;
+  ne.setInputCloud(pc_out);
+  pcl::search::KdTree<pcl::PointXYZINormal>::Ptr tree(
+      new pcl::search::KdTree<pcl::PointXYZINormal>());
+  ne.setSearchMethod(tree);
 
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(
+      new pcl::PointCloud<pcl::Normal>);
+  ne.setKSearch(5);
+  ne.compute(*cloud_normals);
+
+  for (size_t i = 0; i < pc_out->size(); ++i) {
+    pc_out->points[i].normal_x = cloud_normals->points[i].normal_x;
+    pc_out->points[i].normal_y = cloud_normals->points[i].normal_y;
+    pc_out->points[i].normal_z = cloud_normals->points[i].normal_z;
+  }
   return pc_out;
 }
 
-PointCloudOdometry::PointCloud::Ptr
+PointCloudF::Ptr
 CreateBox(float width = 1.0f, float height = 1.0f, float depth = 1.0f) {
   size_t points = 8;
-  auto pc = boost::make_shared<PointCloudOdometry::PointCloud>();
+  auto pc = boost::make_shared<PointCloudF>();
   if (width <= 0) {
     throw std::runtime_error("[CreateBox] width <= 0");
   }
@@ -85,14 +111,14 @@ CreateBox(float width = 1.0f, float height = 1.0f, float depth = 1.0f) {
   }
   pc->points.reserve(points);
 
-  pc->push_back(pcl::PointXYZI({0.0, 0.0, 0.0, 0.0}));
-  pc->push_back(pcl::PointXYZI({width, 0.0, 0.0, 0.0}));
-  pc->push_back(pcl::PointXYZI({0.0, 0.0, depth, 0.0}));
-  pc->push_back(pcl::PointXYZI({width, 0.0, depth, 0.0}));
-  pc->push_back(pcl::PointXYZI({0.0, height, 0.0, 0.0}));
-  pc->push_back(pcl::PointXYZI({width, height, 0.0, 0.0}));
-  pc->push_back(pcl::PointXYZI({0.0, height, depth, 0.0}));
-  pc->push_back(pcl::PointXYZI({width, height, depth, 0.0}));
+  pc->push_back(PointF({0.0, 0.0, 0.0, 0.0}));
+  pc->push_back(PointF({width, 0.0, 0.0, 0.0}));
+  pc->push_back(PointF({0.0, 0.0, depth, 0.0}));
+  pc->push_back(PointF({width, 0.0, depth, 0.0}));
+  pc->push_back(PointF({0.0, height, 0.0, 0.0}));
+  pc->push_back(PointF({width, height, 0.0, 0.0}));
+  pc->push_back(PointF({0.0, height, depth, 0.0}));
+  pc->push_back(PointF({width, height, depth, 0.0}));
 
   return pc;
 }
@@ -112,10 +138,10 @@ class PointCloudOdometryTest : public ::testing::Test {
 public:
   size_t n_points_;
   PointCloudOdometry pco;
-  PointCloudOdometry::PointCloud::Ptr data;
+  PointCloudF::Ptr data;
 
   PointCloudOdometryTest()
-    : n_points_(30), data(new PointCloudOdometry::PointCloud(n_points_, 1)) {
+    : n_points_(30), data(new PointCloudF(n_points_, 1)) {
     std::system("rosparam load $(rospack find "
                 "point_cloud_odometry)/config/parameters.yaml");
     // TODO: maybe is there a way to load this from config file?
@@ -164,7 +190,7 @@ protected:
   bool isGroundFlat() {
     return pco.b_is_flat_ground_assumption_;
   }
-  PointCloudOdometry::PointCloud GetPoints() {
+  PointCloudF GetPoints() {
     return pco.points_;
   }
   Eigen::Matrix3d GetImuDelta() {
@@ -179,7 +205,8 @@ protected:
   ros::Time GetStamp() {
     return pco.stamp_;
   }
-  pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr GetICP() {
+
+  pcl::Registration<PointF, PointF>::Ptr GetICP() {
     return pco.icp_;
   }
 };
@@ -267,7 +294,7 @@ TEST_F(PointCloudOdometryTest, GetDiagnostics) {
 }
 
 TEST_F(PointCloudOdometryTest, GetLastPointCloud) {
-  PointCloudOdometry::PointCloud::Ptr pc(new PointCloudOdometry::PointCloud);
+  PointCloudF::Ptr pc(new PointCloudF);
   EXPECT_FALSE(pco.GetLastPointCloud(pc));
   pco.UpdateEstimate();
   EXPECT_TRUE(pco.GetLastPointCloud(pc));
@@ -281,9 +308,8 @@ TEST_F(PointCloudOdometryTest, SetFlatGroundAssumptionValue) {
 }
 
 TEST_F(PointCloudOdometryTest, UpdateEstimateUpdateICP) {
-  auto pc_box = GenerateHollowCubic(100, 100, 100, 0.1f, 0.1f, 0.1f);
-  PointCloudOdometry::PointCloud::Ptr translated_pc_box(
-      new PointCloudOdometry::PointCloud());
+  auto pc_box = GenerateHollowCubic(10, 10, 10, 0.1, 0.1, 0.1);
+  PointCloudF::Ptr translated_pc_box(new PointCloudF());
   translated_pc_box->resize(pc_box->size());
   float offset = 0.05f;
   for (size_t i = 0; i < pc_box->points.size(); i++) {
@@ -298,8 +324,8 @@ TEST_F(PointCloudOdometryTest, UpdateEstimateUpdateICP) {
   EXPECT_FALSE(pco.UpdateEstimate());
   EXPECT_TRUE(pco.SetLidar(*translated_pc_box));
   EXPECT_TRUE(pco.UpdateEstimate());
-  //  ASSERT_EQ(GetICP()->hasConverged(), true);
-  EXPECT_LT(GetICP()->getFitnessScore(), 1e-6);
+  ASSERT_EQ(GetICP()->hasConverged(), true);
+  EXPECT_LT(GetICP()->getFitnessScore(), 0.1);
   EXPECT_NEAR(
       GetICP()->getFinalTransformation().inverse()(0, 3), offset, epsiliond);
   EXPECT_NEAR(
