@@ -1,6 +1,6 @@
 # Configure body filter
 body_filter:
-  min_x: -0.6
+  min_x: -1.0
   max_x: 0.6
   min_y: -0.5
   max_y: 0.5
