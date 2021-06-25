@@ -1,4 +1,6 @@
 localization:
+  # Registration method
+  registration_method: gicp
 
   # Compute ICP covariance and condition number
   compute_icp_covariance: true
@@ -26,10 +28,18 @@ localization:
   max_rotation: 0.1
 
   # Number of threads GICP can use (3 threads ~ 3x speedup)
-  # num_threads: 2 - defined in launch files to adapt to robot
+  #num_threads: 2 - defined in launch files to adapt to robot
 
   # Enable GICP timing output
   enable_timing_output: false
   
   # Radius for normal search
   normal_search_radius: 10
+
+  # scan-to-map, scan has normals, map has normals as well, but the data comes
+  # from scan sparse data therefore may be beneficial to recompute the covariance matrix
+  recompute_covariance_local_map: false
+
+# in general if there is no particular reason it should always be false,
+# since it recomputes the covariances from scratch but we calculate them from normals
+  recompute_covariance_scan: false

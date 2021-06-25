@@ -11,6 +11,7 @@ Authors:
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
@@ -34,9 +35,9 @@ Authors:
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Bool.h>
-#include <std_msgs/Time.h>
-#include <std_msgs/String.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Time.h>
 #include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
@@ -48,13 +49,9 @@ Authors:
 #include <visualization_msgs/Marker.h>
 
 class LoFrontend {
-
   friend class LoFrontendTest;
 
 public:
-
-  typedef pcl::PointXYZI Point;
-  typedef pcl::PointCloud<Point> PointCloud;
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef geometry_msgs::PoseStamped PoseStamped;
@@ -73,7 +70,6 @@ public:
   std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
 
 private:
-
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;
@@ -87,7 +83,7 @@ private:
   bool RegisterOnlineCallbacks(const ros::NodeHandle& n);
   bool CreatePublishers(const ros::NodeHandle& n);
 
-  message_filters::Subscriber<PointCloud> lidar_sub_mf_;
+  message_filters::Subscriber<PointCloudF> lidar_sub_mf_;
 
   ros::Subscriber lidar_sub_;
   ros::Subscriber imu_sub_;
@@ -109,12 +105,12 @@ private:
 
   ros::Publisher diagnostics_pub_;
 
-  tf2_ros::MessageFilter<PointCloud>* lidar_odometry_filter_;
+  tf2_ros::MessageFilter<PointCloudF>* lidar_odometry_filter_;
 
-  void LidarCallback(const PointCloud::ConstPtr& msg);
+  void LidarCallback(const PointCloudF::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
-
+  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
   // Main msg callback queue
   ros::CallbackQueue imu_queue_;
   ros::CallbackQueue odom_queue_;
@@ -183,18 +179,19 @@ private:
   bool b_pcld_received_;
   int pcld_seq_prev_;
 
-  PointCloud::Ptr msg_filtered_;
-  PointCloud::Ptr msg_transformed_;
-  PointCloud::Ptr msg_neighbors_;
-  PointCloud::Ptr msg_base_;
-  PointCloud::Ptr msg_fixed_;
-  PointCloud::Ptr mapper_unused_fixed_;
-  PointCloud::Ptr mapper_unused_out_;
+  PointCloudF::Ptr msg_filtered_;
+  PointCloudF::Ptr msg_transformed_;
+  PointCloudF::Ptr msg_neighbors_;
+  PointCloudF::Ptr msg_base_;
+  PointCloudF::Ptr msg_fixed_;
+  PointCloudF::Ptr mapper_unused_fixed_;
+  PointCloudF::Ptr mapper_unused_out_;
 
   /*--------------
   Data integration
   --------------*/
 
+  void PreintegrationUpdate(const ros::Time& stamp);
   bool SetDataIntegrationMode();
   int data_integration_mode_;
   int max_number_of_calls_;
@@ -229,6 +226,24 @@ private:
   bool b_pose_stamped_has_been_received_;
   int pose_stamped_number_of_calls_;
 
+  /*-----------------
+  Open space detector
+  ------------------*/
+
+  int number_of_points_open_space_;
+
+  /*-----------------
+  BB based OSD
+  ------------------*/
+  void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
+  bool b_use_osd_;
+  double osd_size_threshold_;
+  PointF minPoint_;
+  PointF maxPoint_;
+  bool b_publish_xy_cross_section_;
+  ros::Publisher xy_cross_section_pub_;
+  // Closed space keyframe policy
+
   /* ----------------------------------
   Dynamic hierarchical data integration
   ---------------------------------- */
@@ -250,6 +265,15 @@ private:
   bool b_enable_computation_time_profiling_;
   ros::Publisher lidar_callback_duration_pub_;
 
+  ros::Time lidar_callback_start_;
+  ros::Time scan_to_scan_start_;
+  ros::Time scan_to_submap_start_;
+  ros::Time approx_nearest_neighbors_start_;
+
+  ros::Publisher scan_to_scan_duration_pub_;
+  ros::Publisher scan_to_submap_duration_pub_;
+  ros::Publisher approx_nearest_neighbors_duration_pub_;
+
   /* -------------------------
   Ground Truth
   ------------------------- */
@@ -262,6 +286,8 @@ private:
   Diagnostics
   ------------------------- */
   bool publish_diagnostics_;
+
+  ros::Publisher base_frame_pcld_pub_;
 
   /*--------------------------
   Map Sliding Window 2
@@ -285,32 +311,25 @@ private:
   bool b_interpolate_;
 
   /*------------------------------
-  Lidar Scan Dropped Statistics 
+  Lidar Scan Dropped Statistics
   -------------------------------*/
+  void CheckingIfMsgArrived(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
-  ros::Time statistics_start_time_; 
-  std::string statistics_verbosity_level_; 
 
-  // Debug utilities 
-  bool b_debug_transforms_; 
-  ros::Publisher time_difference_pub_; 
+  ros::Time statistics_start_time_;
+  std::string statistics_verbosity_level_;
 
-  double wait_for_odom_transform_timeout_; 
+  // Debug utilities
+  bool b_debug_transforms_;
+  ros::Publisher time_difference_pub_;
 
-  /*------------------------------
-  Time profiling 
-  -------------------------------*/
-  ros::Time lidar_callback_start_;
-  ros::Time scan_to_scan_start_;
-  ros::Time scan_to_submap_start_;
-  ros::Time approx_nearest_neighbors_start_;
+  double wait_for_odom_transform_timeout_;
 
   /*----------------------------------
-  Subscribe to localizer space monitor 
+  Subscribe to localizer space monitor
   ----------------------------------*/
 
-  bool b_use_osd_;
   bool b_is_open_space_;
   ros::Subscriber space_monitor_sub_;
   void SpaceMonitorCallback(const std_msgs::String& msg);
@@ -318,7 +337,6 @@ private:
   double rotation_threshold_closed_space_kf_;
   double translation_threshold_open_space_kf_;
   double rotation_threshold_open_space_kf_;
-
 };
 
 #endif

@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   parameter_utils
   pcl_ros
+  frontend_utils
 )
 
 catkin_package(
@@ -20,6 +21,7 @@ catkin_package(
     roscpp
     parameter_utils
     pcl_ros
+    frontend_utils
 )
 
 find_package(PCL 1.7 REQUIRED)

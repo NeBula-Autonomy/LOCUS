@@ -31,6 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
     sensor_msgs
     tf
     tf2_ros
+    frontend_utils
 )
 
 catkin_package(
@@ -48,6 +49,7 @@ catkin_package(
     sensor_msgs
     tf
     tf2_ros  
+    frontend_utils
 )
 
 # find_package(PCL 1.7 REQUIRED)

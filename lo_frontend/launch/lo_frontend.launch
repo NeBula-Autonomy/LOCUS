@@ -27,7 +27,7 @@
       <!-- Load parameters -->
       <rosparam file="$(find ugv_traversability)/config/pointcloud_proc.yaml" 
                 subst_value="true"/>
-      <rosparam file="$(find ugv_traversability)/config/pointcloud_proc_$(arg robot_type).yaml"
+      <rosparam file="$(find lo_frontend)/config/lo_filtering_$(arg robot_type).yaml"
                 subst_value="true"/>
    
         <node
@@ -35,6 +35,7 @@
             name="lo_frontend"
             type="lo_frontend_node"
             output="screen">
+
            
             <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
 
@@ -158,9 +159,9 @@
           <remap from="~input" to="velodyne_points/transformed" unless="$(arg b_use_multiple_pc)"/>
         </node>
 
-        <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
+            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
             <remap from="~input" to="body_filter/output" />
-            <remap from="~output" to="locus_input" />
+
             <rosparam subst_value="true">
             filter_field_name: z
             filter_limit_min: -100
@@ -169,6 +170,15 @@
             leaf_size: 0.1
             output_frame: $(arg robot_namespace)/base_link
             </rosparam>
+        </node>
+
+        <node pkg="nodelet"
+            type="nodelet"
+            name="normal_computation"
+            args="load traversability_filters/NormalComputation $(arg nodelet_manager) $(arg nodelet_args)"
+            respawn="$(arg respawn)">
+            <remap from="~input" to="voxel_grid/output"/>
+            <remap from="~output" to="$(arg pc_input)" />
         </node>
       
     </group>

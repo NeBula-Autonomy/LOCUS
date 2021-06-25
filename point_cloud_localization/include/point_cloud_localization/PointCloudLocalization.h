@@ -38,6 +38,8 @@
 #define POINT_CLOUD_LOCALIZATION_H
 
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <frontend_utils/CommonFunctions.h>
+#include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -45,24 +47,23 @@
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
 #include <multithreaded_gicp/gicp.h>
+#include <multithreaded_ndt/ndt_omp.h>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/search/impl/search.hpp>
 #include <pcl_ros/point_cloud.h>
+#include <registration_settings.h>
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/MarkerArray.h>
 
-using pcl::PointCloud;
-using pcl::PointXYZI;
 using pcl::transformPointCloud;
 
 class PointCloudLocalization {
 public:
-  typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
   typedef pcl::PointCloud<pcl::PointNormal> PointNormal;
-  typedef pcl::search::KdTree<pcl::PointXYZI> KdTree;
+  typedef pcl::search::KdTree<PointF> KdTree;
 
   PointCloudLocalization();
   ~PointCloudLocalization();
@@ -72,38 +73,33 @@ public:
 
   // Transform a point cloud from the sensor frame into the fixed frame using
   // the current best position estimate
-  bool TransformPointsToFixedFrame(const PointCloud& points,
-                                   PointCloud* points_transformed) const;
+  bool TransformPointsToFixedFrame(const PointCloudF& points,
+                                   PointCloudF* points_transformed) const;
 
   // Transform a point cloud from the fixed frame into the sensor frame using
   // the current best position estimate
-  bool TransformPointsToSensorFrame(const PointCloud& points,
-                                    PointCloud* points_transformed) const;
+  bool TransformPointsToSensorFrame(const PointCloudF& points,
+                                    PointCloudF* points_transformed) const;
 
   // Store incremental estimate from odometry
   bool MotionUpdate(const geometry_utils::Transform3& incremental_odom);
 
   // Align incoming point cloud with a reference point cloud from the map.
   // Output the query scan aligned in the localization frame
-  bool MeasurementUpdate(const PointCloud::Ptr& query,
-                         const PointCloud::Ptr& reference,
-                         PointCloud* aligned_query);
-
-  // Compute ICP Covariance Matrix
-  bool ComputePoint2PointICPCovariance(const PointCloud& pointCloud,
-                                       const Eigen::Matrix4f& T,
-                                       Eigen::Matrix<double, 6, 6>* covariance);
+  bool MeasurementUpdate(const PointCloudF::Ptr& query,
+                         const PointCloudF::Ptr& reference,
+                         PointCloudF* aligned_query);
 
   bool
-  ComputePoint2PlaneICPCovariance(const PointCloud& query_cloud,
-                                  const PointCloud& reference_cloud,
+  ComputePoint2PlaneICPCovariance(const PointCloudF& query_cloud,
+                                  const PointCloudF& reference_cloud,
                                   const std::vector<size_t>& correspondences,
                                   const Eigen::Matrix4f& T,
                                   Eigen::Matrix<double, 6, 6>* covariance);
 
   // Compute observability of ICP for two pointclouds
-  void ComputeIcpObservability(const PointCloud& query_cloud,
-                               const PointCloud& reference_cloud,
+  void ComputeIcpObservability(const PointCloudF& query_cloud,
+                               const PointCloudF& reference_cloud,
                                const std::vector<size_t>& correspondences,
                                const Eigen::Matrix4f& T,
                                Eigen::Matrix<double, 6, 6>* eigenvectors_ptr,
@@ -143,7 +139,7 @@ public:
   Eigen::Matrix<double, 6, 6> GetLatestDeltaCovariance();
 
   // Aligned point cloud returned by ICP
-  PointCloud icpAlignedPointsLocalization_;
+  PointCloudF icpAlignedPointsLocalization_;
 
   void SetFlatGroundAssumptionValue(const bool& value);
 
@@ -194,6 +190,8 @@ private:
 
   // Parameters for filtering and ICP
   struct Parameters {
+    // What registration method should be used: GICP, NDT
+    std::string registration_method;
     // Compute ICP covariance and condition number
     bool compute_icp_covariance;
     // Point-to-point or Point-to-plane
@@ -216,6 +214,7 @@ private:
     // Radius used when computing ptcld normals
     //    double normal_radius_;
     int k_nearest_neighbours_;
+    ;
   } params_;
 
   // Maximum acceptable translation and rotation tolerances.
@@ -227,17 +226,25 @@ private:
   // double max_power_;
 
   // ICP
-  pcl::MultithreadedGeneralizedIterativeClosestPoint<pcl::PointXYZI,
-                                                     pcl::PointXYZI>
-      icp_;
+
+  pcl::Registration<PointF, PointF>::Ptr icp_;
+
   bool SetupICP();
 
-  void ComputeAp_ForPoint2PlaneICP(const PointCloud::Ptr query_normalized,
+  void ComputeAp_ForPoint2PlaneICP(const PointCloudF::Ptr query_normalized,
                                    const PointNormal::Ptr reference_normals,
                                    const std::vector<size_t>& correspondences,
                                    const Eigen::Matrix4f& T,
                                    Eigen::Matrix<double, 6, 6>& Ap);
 
+  void ComputeAp_ForPoint2PlaneICP(const PointCloudF::Ptr query_normalized,
+                                   const PointCloudF& reference_normals,
+                                   const std::vector<size_t>& correspondences,
+                                   const Eigen::Matrix4f& T,
+                                   Eigen::Matrix<double, 6, 6>& Ap);
+
+  bool recompute_covariance_local_map_;
+  bool recompute_covariance_scan_;
   /*--------------------
   Flat ground assumption
   --------------------*/
@@ -265,9 +272,8 @@ private:
   --------------------*/
   friend class PointCloudLocalizationTest;
 
-  // Reductions 
+  // Reductions
   KdTree::Ptr search_tree_;
-
 };
 
 #endif
