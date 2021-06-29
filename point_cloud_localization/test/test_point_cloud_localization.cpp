@@ -423,27 +423,26 @@ TEST_F(PointCloudLocalizationTest, ComputePoint2PlaneICPCovariance) {
 
   // Add another plane
   // Perform transformation
-  PointCloudF::Ptr transformed_dummy(new PointCloudF());
+  PointCloudF::Ptr transformed_dummy1(new PointCloudF());
   Eigen::Matrix4f T_dummy = Eigen::Matrix4f::Zero();
   T_dummy(0, 0) = 1;
   T_dummy(1, 2) = -1;
   T_dummy(2, 1) = 1;
-  T_dummy(3, 3) = 1; 
-  T_dummy(0, 2) = 1;
-  pcl::transformPointCloudWithNormals(*dummy_normalized, *transformed_dummy,
-  T_dummy,true);
-  *dummy_normalized += *transformed_dummy;
+  T_dummy(3, 3) = 1;
+  pcl::transformPointCloudWithNormals(
+      *dummy_normalized, *transformed_dummy1, T_dummy, true);
 
   // And another
+  PointCloudF::Ptr transformed_dummy2(new PointCloudF());
   T_dummy = Eigen::Matrix4f::Zero();
   T_dummy(0, 2) = 1;
   T_dummy(1, 1) = 1;
   T_dummy(2, 0) = -1;
-  T_dummy(3, 3) = 1; 
-  T_dummy(0, 3) = 1;
-  pcl::transformPointCloudWithNormals(*dummy_normalized, *transformed_dummy,
-  T_dummy,true);
-  *dummy_normalized += *transformed_dummy;
+  T_dummy(3, 3) = 1;
+  pcl::transformPointCloudWithNormals(
+      *dummy_normalized, *transformed_dummy2, T_dummy, true);
+  *dummy_normalized += *transformed_dummy1;
+  *dummy_normalized += *transformed_dummy2;
 
   cov = Eigen::Matrix<double, 6, 6>::Zero();
   tf = Eigen::Matrix4f::Identity();
