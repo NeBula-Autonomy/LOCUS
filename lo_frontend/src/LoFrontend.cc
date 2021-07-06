@@ -430,19 +430,7 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     latest_odom_stamp_ = odometry_msg->header.stamp;
   }
 }
-
-void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-  // To test delays
-  // ros::Duration(0.4).sleep();
-
-  if (b_enable_computation_time_profiling_) {
-    lidar_callback_start_ = ros::Time::now();
-  }
-
-  if (b_use_osd_) {
-    CalculateCrossSection(msg);
-  }
-
+void LoFrontend::CheckMsgDropRate(const PointCloudF::ConstPtr& msg) {
   if (!b_pcld_received_) {
     statistics_start_time_ = ros::Time::now();
     pcld_seq_prev_ = msg->header.seq;
@@ -464,6 +452,21 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     }
     pcld_seq_prev_ = msg->header.seq;
   }
+}
+
+void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
+  // To test delays
+  // ros::Duration(0.4).sleep();
+
+  if (b_enable_computation_time_profiling_) {
+    lidar_callback_start_ = ros::Time::now();
+  }
+
+  if (b_use_osd_) {
+    CalculateCrossSection(msg);
+  }
+
+  CheckMsgDropRate(msg);
 
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
 
@@ -533,6 +536,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_interpolate_ true for:
         - Spot with VO integration
     */
+    ROS_INFO_STREAM("INTERPOLATING!!");
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
       b_odometry_has_been_received_ = true;

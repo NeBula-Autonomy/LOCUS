@@ -313,7 +313,7 @@ private:
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
-  void CheckingIfMsgArrived(const PointCloudF::ConstPtr& msg);
+  void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
 
