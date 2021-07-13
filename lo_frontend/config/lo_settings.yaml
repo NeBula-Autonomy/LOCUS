@@ -55,7 +55,7 @@ b_enable_msw: false
 
 window_local_mapping_type: ikdtree_mapper
 
-box_filter_size: 25
+box_filter_size: 100
 velocity_buffer_size: 10
 translation_threshold_msw: 5 
 rotational_velocity_threshold: 1

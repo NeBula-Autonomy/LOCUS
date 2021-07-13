@@ -536,7 +536,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_interpolate_ true for:
         - Spot with VO integration
     */
-    ROS_INFO_STREAM("INTERPOLATING!!");
+
     if (!b_odometry_has_been_received_) {
       ROS_INFO("Receiving odometry for the first time");
       b_odometry_has_been_received_ = true;
@@ -620,7 +620,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
     localization_.TransformPointsToFixedFrame(*msg, msg_transformed_.get());
-     mapper_->UpdateCurrentPose(localization_.GetIntegratedEstimate());
+    mapper_->UpdateCurrentPose(localization_.GetIntegratedEstimate());
     mapper_->InsertPoints(msg_transformed_, mapper_unused_fixed_.get());
     localization_.UpdateTimestamp(stamp);
     localization_.PublishPoseNoUpdate();
@@ -691,7 +691,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
                       << " deg");
     localization_.MotionUpdate(gu::Transform3::Identity());
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
-     mapper_->UpdateCurrentPose(localization_.GetIntegratedEstimate());
+    mapper_->UpdateCurrentPose(localization_.GetIntegratedEstimate());
     mapper_->InsertPoints(msg_fixed_, mapper_unused_out_.get());
     if (b_publish_map_) {
       counter_++;
