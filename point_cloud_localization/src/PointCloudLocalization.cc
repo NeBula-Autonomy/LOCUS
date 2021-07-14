@@ -454,6 +454,12 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
   double lower_bound = 1e-12;
   double upper_bound = params_.icp_max_covariance;
 
+  if (vecD.hasNaN()) {
+    *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
+    ROS_ERROR("Failed to find eigen values when computing ICP covariance. ");
+    return false;
+  }
+
   bool recompute = false;
   for (size_t i = 0; i < vecD.size(); i++) {
     if (vecD(i) <= 0) {
@@ -468,6 +474,14 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
 
   if (recompute)
     *covariance = L * vecD.asDiagonal() * L.transpose();
+
+  if (covariance->array().hasNaN()) { // Prevent NaNs in covariance
+    *covariance = Eigen::MatrixXd::Zero(6, 6);
+    for (int i = 0; i < 3; ++i)
+      (*covariance)(i, i) = upper_bound;
+    for (int i = 3; i < 6; ++i)
+      (*covariance)(i, i) = upper_bound;
+  }
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
