@@ -414,7 +414,7 @@ TEST_F(PointCloudLocalizationTest, ComputePoint2PlaneICPCovariance) {
   for (size_t i = 0; i < 6; i++) {
     for (size_t j = 0; j < 6; j++) {
       if (i == j) {
-        EXPECT_NEAR(cov(i, j), 1000.0, epsilion);
+        EXPECT_NEAR(cov(i, j), 0.01, epsilion);
       } else {
         EXPECT_NEAR(cov(i, j), 0.0, epsilion);
       }
