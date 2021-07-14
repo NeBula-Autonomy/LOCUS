@@ -7,7 +7,7 @@ localization:
   # 0: point to point 1: point to plane
   icp_covariance_method: 1
 
-  icp_max_covariance: 1000
+  icp_max_covariance: 0.01
 
   # Compute ICP observability 
   compute_icp_observability: false
