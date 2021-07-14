@@ -451,12 +451,12 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
   Eigen::MatrixXd L = ldlt.matrixL();
   Eigen::VectorXd vecD = ldlt.vectorD();
 
-  double lower_bound = 1e-6;
+  double lower_bound = 1e-12;
   double upper_bound = params_.icp_max_covariance;
 
   bool recompute = false;
   for (size_t i = 0; i < vecD.size(); i++) {
-    if (vecD(i) < lower_bound) {
+    if (vecD(i) <= 0) {
       vecD(i) = lower_bound;
       recompute = true;
     }
