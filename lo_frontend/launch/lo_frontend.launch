@@ -25,8 +25,8 @@
     <group ns="$(arg robot_namespace)">
 
       <!-- Load parameters -->
-      <rosparam file="$(find ugv_traversability)/config/pointcloud_proc.yaml" 
-                subst_value="true"/>
+      <!-- <rosparam file="$(find ugv_traversability)/config/pointcloud_proc.yaml" 
+                subst_value="true"/> -->
       <rosparam file="$(find lo_frontend)/config/lo_filtering_$(arg robot_type).yaml"
                 subst_value="true"/>
    
