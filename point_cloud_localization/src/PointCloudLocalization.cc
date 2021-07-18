@@ -446,26 +446,42 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
   *covariance = 0.01 * 0.01 * Ap.inverse();
 
   // Here bound the covariance using eigen values
-  Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
-  eigensolver.compute(*covariance);
-  Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
-  Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
-  double lower_bound = 0.001; // Should be positive semidef
+  //// First find ldlt decomposition
+  auto ldlt = covariance->ldlt();
+  Eigen::MatrixXd L = ldlt.matrixL();
+  Eigen::VectorXd vecD = ldlt.vectorD();
+
+  double lower_bound = 1e-12;
   double upper_bound = params_.icp_max_covariance;
-  if (eigen_values.size() < 6) {
+
+  if (vecD.hasNaN()) {
     *covariance = Eigen::MatrixXd::Identity(6, 6) * upper_bound;
-    ROS_ERROR("Failed to find eigen values when computing icp covariance");
+    ROS_ERROR("Failed to find eigen values when computing ICP covariance. ");
     return false;
   }
-  for (size_t i = 0; i < eigen_values.size(); i++) {
-    if (eigen_values(i) < lower_bound)
-      eigen_values(i) = lower_bound;
-    if (eigen_values(i) > upper_bound)
-      eigen_values(i) = upper_bound;
+
+  bool recompute = false;
+  for (size_t i = 0; i < vecD.size(); i++) {
+    if (vecD(i) <= 0) {
+      vecD(i) = lower_bound;
+      recompute = true;
+    }
+    if (vecD(i) > upper_bound) {
+      vecD(i) = upper_bound;
+      recompute = true;
+    }
   }
-  // Update covariance matrix after bound
-  *covariance =
-      eigen_vectors * eigen_values.asDiagonal() * eigen_vectors.inverse();
+
+  if (recompute)
+    *covariance = L * vecD.asDiagonal() * L.transpose();
+
+  if (covariance->array().hasNaN()) { // Prevent NaNs in covariance
+    *covariance = Eigen::MatrixXd::Zero(6, 6);
+    for (int i = 0; i < 3; ++i)
+      (*covariance)(i, i) = upper_bound;
+    for (int i = 3; i < 6; ++i)
+      (*covariance)(i, i) = upper_bound;
+  }
 
   // Compute the SVD of the covariance matrix
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
@@ -654,8 +670,9 @@ void PointCloudLocalization::ComputeAp_ForPoint2PlaneICP(
       continue;
 
     Eigen::Matrix<double, 1, 6> H = Eigen::Matrix<double, 1, 6>::Zero();
-    H.block(0, 0, 1, 3) = (a_i.cross(n_i)).transpose();
-    H.block(0, 3, 1, 3) = n_i.transpose();
+    Eigen::Matrix3d R = T.block<3, 3>(0, 0).cast<double>();
+    H.block(0, 0, 1, 3) = (a_i.cross(R * n_i)).transpose();
+    H.block(0, 3, 1, 3) = (R * n_i).transpose();
     Ap += H.transpose() * H;
   }
 }
