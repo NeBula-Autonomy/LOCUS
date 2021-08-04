@@ -150,7 +150,6 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "observability_marker", 10, false);
   observability_vector_pub_ =
       nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
-  // odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   return true;
 }
 
@@ -218,6 +217,7 @@ bool PointCloudLocalization::TransformPointsToSensorFrame(
 
 bool PointCloudLocalization::SetupICP() {
   ROS_INFO("PointCloudLocalization - SetupICP");
+
   switch (getRegistrationMethodFromString(params_.registration_method)) {
   case RegistrationMethod::GICP: {
     ROS_INFO_STREAM("RegistrationMethod::GICP activated.");
@@ -235,8 +235,30 @@ bool PointCloudLocalization::SetupICP() {
     gicp->enableTimingOutput(params_.enable_timing_output);
     gicp->RecomputeTargetCovariance(recompute_covariance_local_map_);
     gicp->RecomputeSourceCovariance(
-        recompute_covariance_scan_); // local scan we don't need to recompute
+        recompute_covariance_scan_); // local scan we don't need to
+                                     // recompute
+    gicp->setEuclideanFitnessEpsilon(0.01);
+
+    ROS_INFO_STREAM("GICP");
+
+    ROS_INFO_STREAM("getMaxCorrespondenceDistance: "
+                    << gicp->getMaxCorrespondenceDistance());
+    ROS_INFO_STREAM("getMaximumIterations: " << gicp->getMaximumIterations());
+    ROS_INFO_STREAM(
+        "getTransformationEpsilon: " << gicp->getTransformationEpsilon());
+    ROS_INFO_STREAM(
+        "getEuclideanFitnessEpsilon: " << gicp->getEuclideanFitnessEpsilon());
+
+    ROS_INFO_STREAM("Ransac: " << gicp->getRANSACIterations());
+
+    ROS_INFO_STREAM("getRANSACIterations: " << gicp->getRANSACIterations());
+
+    ROS_INFO_STREAM(
+        "RANSACOutlie: " << gicp->getRANSACOutlierRejectionThreshold());
+    ROS_INFO_STREAM("CLASS NAME: " << gicp->getClassName());
+
     icp_ = gicp;
+
     break;
   }
   case RegistrationMethod::NDT: {
@@ -259,7 +281,7 @@ bool PointCloudLocalization::SetupICP() {
         "No such Registration mode or not implemented yet " +
         params_.registration_method);
   }
-  // TODO: double check thissearch_tree_ = icp_->getSearchMethodTarget();
+
   return true;
 }
 
@@ -284,11 +306,22 @@ bool PointCloudLocalization::MeasurementUpdate(
 
   // Retrieve transformation and estimate and update
   const Eigen::Matrix4f T = icp_->getFinalTransformation();
+
+  //  ROS_INFO_STREAM("LOC INPUT");
+  //  gicp.setInputSource(query);
+  //  ROS_INFO_STREAM("LOC TARGET");
+  //  gicp.setInputTarget(reference);
+  //  ROS_INFO_STREAM("LOC ALIGN");
+  //  gicp.align(icpAlignedPointsLocalization_);
+  //  // gicp.swapSourceAndTarget();
+  //  ROS_INFO_STREAM("LOC TRANSFORM");
+  //  const Eigen::Matrix4f T = gicp.getFinalTransformation();
+
   pcl::transformPointCloudWithNormals(*query, *aligned_query, T);
 
   KdTree::Ptr search_tree_ = icp_->getSearchMethodTarget();
 
-  // Get the correspondence indices
+  // Get the correspondence indices iterate over references TODO?
   std::vector<size_t> correspondences;
   for (auto point : aligned_query->points) {
     std::vector<int> matched_indices;

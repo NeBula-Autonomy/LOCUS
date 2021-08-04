@@ -11,6 +11,7 @@ Authors:
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <dynamic_reconfigure/Reconfigure.h>
 #include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
@@ -47,7 +48,6 @@ Authors:
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <visualization_msgs/Marker.h>
-
 class LoFrontend {
   friend class LoFrontendTest;
 
@@ -242,6 +242,7 @@ private:
   PointF maxPoint_;
   bool b_publish_xy_cross_section_;
   ros::Publisher xy_cross_section_pub_;
+  ros::ServiceClient voxel_leaf_size_changer_srv_;
   // Closed space keyframe policy
 
   /* ----------------------------------
@@ -337,6 +338,9 @@ private:
   double rotation_threshold_closed_space_kf_;
   double translation_threshold_open_space_kf_;
   double rotation_threshold_open_space_kf_;
+
+  dynamic_reconfigure::Reconfigure voxel_param;
+  dynamic_reconfigure::DoubleParameter double_param;
 };
 
 #endif

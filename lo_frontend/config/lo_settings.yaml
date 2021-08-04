@@ -1,27 +1,27 @@
 b_verbose: false
 
-odom_pub_rate: 10 
+odom_pub_rate: 10
 # How long to wait for transform between timestamps
 transform_wait_duration: 0.01
 
-translation_threshold_kf: 1.0 
-rotation_threshold_kf: 0.3 
+translation_threshold_kf: 1.0
+rotation_threshold_kf: 0.3
 
 number_of_points_open_space: 9999999 # Disabled - baseline to use is: 11000
 
-map_publishment: 
+map_publishment:
   b_publish_map: true
   meters: 1
 
-queues: 
+queues:
   lidar_queue_size: 1
   imu_queue_size: 100
-  odom_queue_size: 100  
+  odom_queue_size: 100
   pose_queue_size: 100
 
-buffers: 
+buffers:
   imu_buffer_size_limit: 100
-  odometry_buffer_size_limit: 100 
+  odometry_buffer_size_limit: 100
   pose_stamped_buffer_size_limit: 100
 
 # DATA INTEGRATION 
@@ -31,7 +31,7 @@ buffers:
   # 3   ---> odometry integration 
   # 4   ---> pose_stamped integration
 
-data_integration: 
+data_integration:
   mode: 3
   max_number_of_calls: 25
 
@@ -46,7 +46,7 @@ publish_diagnostics: false
 
 # SLIDING WINDOW PARAMETERS
 
-b_enable_msw: false
+b_enable_msw: true
 #options
 # mapper -> PointCloudMapper
 # multi_threaded_mapper -> PointCloudMultiThreadedMapper
@@ -55,11 +55,11 @@ b_enable_msw: false
 
 window_local_mapping_type: ikdtree_mapper
 
-box_filter_size: 100
+box_filter_size: 50
 velocity_buffer_size: 10
-translation_threshold_msw: 5 
+translation_threshold_msw: 5
 rotational_velocity_threshold: 1
-translational_velocity_threshold: 0.1 
+translational_velocity_threshold: 0.1
 
 # Statistics 
 statistics_time_window: 5
@@ -69,13 +69,13 @@ statistics_verbosity_level: low # off, low, high
 
 # Subscribe to localizer space monitor
 b_use_osd: true
-osd_size_threshold: 40
+osd_size_threshold: 99999
 b_publish_xy_cross_section: true
 # Closed space keyframe policy
-translation_threshold_closed_space_kf: 1.0 
+translation_threshold_closed_space_kf: 1.0
 rotation_threshold_closed_space_kf: 0.3
 # Open space keyframe policy
-translation_threshold_open_space_kf: 2.0 
+translation_threshold_open_space_kf: 2.0
 rotation_threshold_open_space_kf: 0.6
 
 # ------------- Debug utilities -------------------------------

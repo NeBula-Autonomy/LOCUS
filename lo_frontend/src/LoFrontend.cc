@@ -40,7 +40,9 @@ LoFrontend::LoFrontend()
     publish_diagnostics_(false),
     tf_buffer_authority_("transform_odometry"),
     scans_dropped_(0),
-    previous_stamp_(0) {}
+    previous_stamp_(0) {
+  double_param.value = 0.25;
+}
 
 LoFrontend::~LoFrontend() {}
 
@@ -361,6 +363,11 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   space_monitor_sub_ = nl_.subscribe(
       "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
+
+  voxel_leaf_size_changer_srv_ =
+      nl_.serviceClient<dynamic_reconfigure::Reconfigure>(
+          "/husky4/voxel_grid/set_parameters");
+
   return CreatePublishers(n);
 }
 
@@ -455,6 +462,7 @@ void LoFrontend::CheckMsgDropRate(const PointCloudF::ConstPtr& msg) {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
+  ROS_INFO_STREAM("Lidar callback: " << msg->points.size());
   // To test delays
   // ros::Duration(0.4).sleep();
 
@@ -596,7 +604,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     odometry_.SetOdometryDelta(tf_transform_);
   }
 
-  filter_.Filter(msg, msg_filtered_, b_is_open_space_);
+  filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
   odometry_.SetLidar(*msg_filtered_);
   if (b_enable_computation_time_profiling_) {
     scan_to_scan_start_ = ros::Time::now();
@@ -975,6 +983,35 @@ void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
     xy_cross_section_msg.data = size_x * size_y;
     xy_cross_section_pub_.publish(xy_cross_section_msg);
   }
+  // TO TEST:
+  //  bool change = false;
+  //  if (msg->points.size() < 5000 and double_param.value == 0.25) {
+  //    voxel_param.request.config.doubles.clear();
+  //    double_param.name = "leaf_size";
+  //    double_param.value = 0.15;
+  //    ROS_INFO_STREAM("CHAINGING LEAF SIZE TO : " << double_param.value);
+  //    voxel_param.request.config.doubles.push_back(double_param);
+  //    change = true;
+  //  } else if (msg->points.size() > 5000 and double_param.value == 0.15) {
+  //    voxel_param.request.config.doubles.clear();
+  //    double_param.name = "leaf_size";
+  //    double_param.value = 0.25;
+  //    ROS_INFO_STREAM("CHAINGING LEAF SIZE TO : " << double_param.value);
+  //    voxel_param.request.config.doubles.push_back(double_param);
+  //    change = true;
+  //  } else {
+  //    ROS_INFO_STREAM("Number of points "
+  //                    << msg->points.size()
+  //                    << " current leaf size: " << double_param.value);
+  //  }
+
+  //  if (change) {
+  //    if (voxel_leaf_size_changer_srv_.call(voxel_param)) {
+  //      ROS_INFO_STREAM("Calling: ");
+  //    } else {
+  //      ROS_ERROR("Failed to call service add_two_ints");
+  //    }
+  //  }
 }
 
 Eigen::Matrix3d LoFrontend::GetImuDelta() {

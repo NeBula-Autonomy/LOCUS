@@ -12,11 +12,11 @@ localization:
   compute_icp_observability: false
 
   # Stop ICP if the transformation from the last iteration was this small.
-  tf_epsilon: 0.0000000001
+  tf_epsilon: 0.001
 
   # During ICP, two points won't be considered a correspondence if they are
   # at least this far from one another.
-  corr_dist: 0.2
+  corr_dist: 0.5 #1.0
 
   # Iterate ICP this many times.
   iterations: 20 # 20 # Default from original branch is 10
