@@ -414,47 +414,66 @@ TEST_F(PointCloudLocalizationTest, ComputePoint2PlaneICPCovariance) {
   for (size_t i = 0; i < 6; i++) {
     for (size_t j = 0; j < 6; j++) {
       if (i == j) {
-        EXPECT_NEAR(cov(i, j), 1000.0, epsilion);
+        EXPECT_NEAR(cov(i, j), 0.01, epsilion);
       } else {
         EXPECT_NEAR(cov(i, j), 0.0, epsilion);
       }
     }
   }
 
-  // TODO FIX THIS BELOW!!
-  // // Add another plane
-  // // Perform transformation
-  // PointCloudF::Ptr transformed_dummy(new PointCloudF());
-  // Eigen::Matrix4f T_dummy = Eigen::Matrix4f::Zero();
-  // T_dummy(0, 0) = 1;
-  // T_dummy(1, 2) = -1;
-  // T_dummy(2, 1) = 1;
-  // T_dummy(0, 3) = 1;
-  // pcl::transformPointCloudWithNormals(*dummy_normalized, *transformed_dummy,
-  // T_dummy,true);
-  // // addNormal(*transformed_dummy, transformed_dummy, 10);
-  // *dummy_normalized += *transformed_dummy;
+  // Add another plane
+  // Perform transformation
+  PointCloudF::Ptr transformed_dummy1(new PointCloudF());
+  Eigen::Matrix4f T_dummy = Eigen::Matrix4f::Zero();
+  T_dummy(0, 0) = 1;
+  T_dummy(1, 2) = -1;
+  T_dummy(2, 1) = 1;
+  T_dummy(3, 3) = 1;
+  pcl::transformPointCloudWithNormals(
+      *dummy_normalized, *transformed_dummy1, T_dummy, true);
 
-  // cov = Eigen::Matrix<double, 6, 6>::Zero();
-  // tf = Eigen::Matrix4f::Identity();
-  // std::vector<size_t> correspondences2(dummy_normalized->size());
-  // std::iota(std::begin(correspondences2),
-  //           std::end(correspondences2),
-  //           0);  // Fill with 0, 1, ...
-  // point_cloud_localization.ComputePoint2PlaneICPCovariance(
-  //     *dummy_normalized, *dummy_normalized, correspondences2, tf, &cov);
+  // And another
+  PointCloudF::Ptr transformed_dummy2(new PointCloudF());
+  T_dummy = Eigen::Matrix4f::Zero();
+  T_dummy(0, 2) = 1;
+  T_dummy(1, 1) = 1;
+  T_dummy(2, 0) = -1;
+  T_dummy(3, 3) = 1;
+  pcl::transformPointCloudWithNormals(
+      *dummy_normalized, *transformed_dummy2, T_dummy, true);
+  *dummy_normalized += *transformed_dummy1;
+  *dummy_normalized += *transformed_dummy2;
 
-  // pcl::io::savePCDFileASCII ("/home/bmorrell/test2.pcd", *dummy_normalized);
-  // // Default to max value since single plane not "observable"
-  // for (size_t i = 0; i < 6; i++) {
-  //   for (size_t j = 0; j < 6; j++) {
-  //     if (i == j) {
-  //       EXPECT_NEAR(cov(i, j), 0.0011, epsilion);
-  //     } else {
-  //       EXPECT_NEAR(cov(i, j), 0.0, epsilion);
-  //     }
-  //   }
-  // }
+  // Introduce a bit of rotation and translation for more realistic scenario
+  tf = Eigen::Matrix4f::Zero();
+  tf(0, 0) = 0.866;
+  tf(0, 1) = -0.5;
+  tf(1, 0) = 0.5;
+  tf(1, 1) = 0.866;
+  tf(0, 3) = 0.001;
+  tf(3, 3) = 1;
+  PointCloudF::Ptr offset_dummy(new PointCloudF());
+  pcl::transformPointCloudWithNormals(
+      *dummy_normalized, *offset_dummy, tf, true);
+
+  cov = Eigen::Matrix<double, 6, 6>::Zero();
+  std::vector<size_t> correspondences2(dummy_normalized->size());
+  std::iota(std::begin(correspondences2),
+            std::end(correspondences2),
+            0); // Fill with 0, 1, ...
+  point_cloud_localization.ComputePoint2PlaneICPCovariance(
+      *offset_dummy, *dummy_normalized, correspondences2, tf, &cov);
+
+  // Default to max value since single plane not "observable"
+  for (size_t i = 0; i < 6; i++) {
+    for (size_t j = 0; j < 6; j++) {
+      if (i == j) {
+        EXPECT_NEAR(cov(i, j), 1e-6, epsilion);
+      } else {
+        EXPECT_NEAR(cov(i, j), 0.0, epsilion);
+      }
+    }
+  }
 }
 // TODO: since i don't have a reference, i just outputed the result and i'm
 // checking consistency assuming that the implementation was correct.
