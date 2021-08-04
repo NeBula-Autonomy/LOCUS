@@ -17,7 +17,7 @@ localization:
 
   # During ICP, two points won't be considered a correspondence if they are
   # at least this far from one another.
-  corr_dist: 1.0
+  corr_dist: 0.5
 
   # Iterate ICP this many times.
   iterations: 25 # 20 # Default from original branch is 10

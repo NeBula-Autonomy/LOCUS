@@ -462,7 +462,6 @@ void LoFrontend::CheckMsgDropRate(const PointCloudF::ConstPtr& msg) {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-  ROS_INFO_STREAM("Lidar callback: " << msg->points.size());
   // To test delays
   // ros::Duration(0.4).sleep();
 
