@@ -64,14 +64,18 @@
             <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot' or robot_type == 'xmaxx')"/>
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace.startswith('husky'))" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace.startswith('husky'))" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace.startswith('spot'))" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace.startswith('spot'))" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+            <param name="localization/num_threads"       value="4" if="$(eval robot_namespace.startswith('husky'))" />
+            <param name="icp/num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
+
+            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('spot'))" />
+            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
+
+            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+
+            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+
 
         </node>
 
@@ -172,6 +176,13 @@
             respawn="$(arg respawn)">
             <remap from="~input" to="voxel_grid/output"/>
             <remap from="~output" to="$(arg pc_input)" />
+
+           <param name="num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
+           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
+           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+
+
         </node>
       
     </group>
