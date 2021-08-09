@@ -564,7 +564,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
     auto wait_for_transform_start_time = ros::Time::now();
     while (latest_odom_stamp_ < stamp) {
-      ros::Duration(0.01).sleep();
       if ((ros::Time::now() - wait_for_transform_start_time).toSec() >
           wait_for_odom_transform_timeout_) {
         ROS_WARN("Could not retrieve odom transform");

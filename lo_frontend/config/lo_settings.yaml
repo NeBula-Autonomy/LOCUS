@@ -86,4 +86,4 @@ points_to_process_in_callback: 3000
 # ------------- Debug utilities -------------------------------
 b_debug_transforms: false
 
-wait_for_odom_transform_timeout: 0.3
+wait_for_odom_transform_timeout: 0.1
