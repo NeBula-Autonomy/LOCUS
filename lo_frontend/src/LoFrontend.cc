@@ -1007,6 +1007,7 @@ void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
       voxel_param.request.config.doubles.clear();
       double_param.name = "leaf_size";
       double_param.value = dchange_voxel;
+      ROS_INFO_STREAM("Changing voxel size to : " << dchange_voxel);
       //      ROS_INFO_STREAM(points_to_process_in_callback_
       //                      << " leaf size current : " << double_param.value
       //                      << " No of points: " << msg->points.size() << "
