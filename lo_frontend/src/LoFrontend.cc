@@ -258,6 +258,13 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
                wait_for_odom_transform_timeout_))
     return false;
 
+  // adaptive filtering variable
+  if (!pu::Get("b_adaptive_input_voxelization", b_adaptive_input_voxelization_))
+    return false;
+
+  if (!pu::Get("points_to_process_in_callback", points_to_process_in_callback_))
+    return false;
+
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || (data_integration_mode_ == 1) ||
         (data_integration_mode_ == 2))
@@ -330,8 +337,6 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
 //}
 
 bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
-  ROS_INFO("LoFrontend - RegisterOnlineCallbacks");
-  ROS_INFO("%s: Registering online callbacks.", name_.c_str());
   nl_ = ros::NodeHandle(n);
 
   //  if (!b_interpolate_) {
@@ -366,7 +371,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
 
   voxel_leaf_size_changer_srv_ =
       nl_.serviceClient<dynamic_reconfigure::Reconfigure>(
-          "/husky4/voxel_grid/set_parameters");
+          ros::this_node::getNamespace() + "/voxel_grid/set_parameters");
 
   return CreatePublishers(n);
 }
@@ -387,6 +392,9 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
   xy_cross_section_pub_ =
       nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
 
+  dchange_voxel_pub_ =
+      nl.advertise<std_msgs::Float64>("dchange_voxel", 10, false);
+
   odom_pub_timer_ =
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);
   odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
@@ -394,6 +402,7 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   time_difference_pub_ =
       nl.advertise<std_msgs::Float64>("time_difference", 10, false);
+
   return true;
 }
 
@@ -982,35 +991,50 @@ void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
     xy_cross_section_msg.data = size_x * size_y;
     xy_cross_section_pub_.publish(xy_cross_section_msg);
   }
-  // TO TEST:
-  //  bool change = false;
-  //  if (msg->points.size() < 5000 and double_param.value == 0.25) {
-  //    voxel_param.request.config.doubles.clear();
-  //    double_param.name = "leaf_size";
-  //    double_param.value = 0.15;
-  //    ROS_INFO_STREAM("CHAINGING LEAF SIZE TO : " << double_param.value);
-  //    voxel_param.request.config.doubles.push_back(double_param);
-  //    change = true;
-  //  } else if (msg->points.size() > 5000 and double_param.value == 0.15) {
-  //    voxel_param.request.config.doubles.clear();
-  //    double_param.name = "leaf_size";
-  //    double_param.value = 0.25;
-  //    ROS_INFO_STREAM("CHAINGING LEAF SIZE TO : " << double_param.value);
-  //    voxel_param.request.config.doubles.push_back(double_param);
-  //    change = true;
-  //  } else {
-  //    ROS_INFO_STREAM("Number of points "
-  //                    << msg->points.size()
-  //                    << " current leaf size: " << double_param.value);
-  //  }
 
-  //  if (change) {
-  //    if (voxel_leaf_size_changer_srv_.call(voxel_param)) {
-  //      ROS_INFO_STREAM("Calling: ");
-  //    } else {
-  //      ROS_ERROR("Failed to call service add_two_ints");
-  //    }
-  //  }
+  if (b_adaptive_input_voxelization_) {
+    bool change = false;
+
+    double dchange_voxel = double_param.value *
+        (static_cast<double>(msg->points.size()) /
+         static_cast<double>(points_to_process_in_callback_));
+    if (dchange_voxel < 0.01)
+      dchange_voxel = 0.01;
+    if (dchange_voxel > 5.0)
+      dchange_voxel = 5.0;
+    //    ROS_INFO_STREAM("DCHANGE VALUE: " << dchange_voxel);
+    if (std::abs(double_param.value - dchange_voxel) > 0.01 or
+        counter_voxel_ % 20 == 0) {
+      voxel_param.request.config.doubles.clear();
+      double_param.name = "leaf_size";
+      double_param.value = dchange_voxel;
+      //      ROS_INFO_STREAM(points_to_process_in_callback_
+      //                      << " leaf size current : " << double_param.value
+      //                      << " No of points: " << msg->points.size() << "
+      //                      division"
+      //                      << static_cast<double>(msg->points.size()) /
+      //                          static_cast<double>(points_to_process_in_callback_));
+      voxel_param.request.config.doubles.push_back(double_param);
+      change = true;
+      counter_voxel_ = 0;
+    } else {
+      //      ROS_INFO_STREAM("Doesn't pay off to change! Old voxel: "
+      //                      << double_param.value << " Counter: " <<
+      //                      counter_voxel_);
+    }
+    counter_voxel_++;
+
+    if (change) {
+      if (voxel_leaf_size_changer_srv_.call(voxel_param)) {
+        //        ROS_INFO_STREAM("Calling: ");
+      } else {
+        ROS_ERROR("Failed to call service voxel_leaf_size_changer_srv!");
+      }
+    }
+    std_msgs::Float64 change_voxel_ros;
+    change_voxel_ros.data = dchange_voxel;
+    dchange_voxel_pub_.publish(change_voxel_ros);
+  }
 }
 
 Eigen::Matrix3d LoFrontend::GetImuDelta() {

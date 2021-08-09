@@ -149,7 +149,10 @@
           <remap from="~input" to="velodyne_points/transformed" unless="$(arg b_use_multiple_pc)"/>
         </node>
 
-            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
+<!-- old way. TODO: removing after locus testing-->
+<!--node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true"-->
+
+            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load traversability_filters/CustomVoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
             <remap from="~input" to="body_filter/output" />
 
             <rosparam subst_value="true">

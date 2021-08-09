@@ -231,6 +231,8 @@ private:
   ------------------*/
 
   int number_of_points_open_space_;
+  bool b_adaptive_input_voxelization_{false};
+  uint points_to_process_in_callback_{3001};
 
   /*-----------------
   BB based OSD
@@ -243,6 +245,7 @@ private:
   bool b_publish_xy_cross_section_;
   ros::Publisher xy_cross_section_pub_;
   ros::ServiceClient voxel_leaf_size_changer_srv_;
+  int counter_voxel_{0};
   // Closed space keyframe policy
 
   /* ----------------------------------
@@ -274,6 +277,7 @@ private:
   ros::Publisher scan_to_scan_duration_pub_;
   ros::Publisher scan_to_submap_duration_pub_;
   ros::Publisher approx_nearest_neighbors_duration_pub_;
+  ros::Publisher dchange_voxel_pub_;
 
   /* -------------------------
   Ground Truth
