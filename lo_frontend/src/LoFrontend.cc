@@ -261,9 +261,12 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   // adaptive filtering variable
   if (!pu::Get("b_adaptive_input_voxelization", b_adaptive_input_voxelization_))
     return false;
-
   if (!pu::Get("points_to_process_in_callback", points_to_process_in_callback_))
     return false;
+
+  // Dynamic Switching 
+  if (!pu::Get("sensor_health_timeout", sensor_health_timeout_))
+    return false;  
 
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || (data_integration_mode_ == 1) ||
@@ -1073,13 +1076,13 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp,
 
 bool LoFrontend::IsOdomHealthy() {
   auto time_elapsed = (ros::Time::now() - last_reception_time_odom_).toSec(); 
-  auto is_odom_healthy = time_elapsed < 5; // TODO: parametrize 
+  auto is_odom_healthy = time_elapsed < sensor_health_timeout_;  
   return is_odom_healthy; 
 }
 
 bool LoFrontend::IsImuHealthy() {
   auto time_elapsed = (ros::Time::now() - last_reception_time_imu_).toSec(); 
-  auto is_imu_healthy = time_elapsed < 5; // TODO: parametrize 
+  auto is_imu_healthy = time_elapsed < sensor_health_timeout_;  
   return is_imu_healthy; 
 }
 

@@ -87,3 +87,6 @@ points_to_process_in_callback: 3000
 b_debug_transforms: false
 
 wait_for_odom_transform_timeout: 0.1
+
+# ------------------- Dynamic Switching -----------------------
+sensor_health_timeout: 1.0
