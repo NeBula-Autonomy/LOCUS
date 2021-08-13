@@ -354,6 +354,7 @@ private:
   ros::Time last_reception_time_imu_; 
   bool IsOdomHealthy();
   bool IsImuHealthy();
+  void IntegrateOdom(const ros::Time& stamp);
 
 };
 
