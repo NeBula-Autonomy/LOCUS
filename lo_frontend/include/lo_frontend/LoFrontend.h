@@ -355,6 +355,7 @@ private:
   bool IsOdomHealthy();
   bool IsImuHealthy();
   void IntegrateOdom(const ros::Time& stamp);
+  void IntegrateImu(const ros::Time& stamp); 
 
 };
 

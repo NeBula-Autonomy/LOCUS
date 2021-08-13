@@ -1144,3 +1144,22 @@ void LoFrontend::IntegrateOdom(const ros::Time& stamp) {
   tf_transform_.setRotation(tf_quaternion_);
   odometry_.SetOdometryDelta(tf_transform_);
 }
+
+void LoFrontend::IntegrateImu(const ros::Time& stamp) {
+  Imu imu_msg;
+  if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
+    ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
+             "given lidar timestamp");
+    return;
+  }
+  auto imu_quaternion = GetImuQuaternion(imu_msg);
+  if (!b_imu_has_been_received_) {
+    ROS_INFO("Receiving imu for the first time");
+    imu_quaternion_previous_ = imu_quaternion;
+    b_imu_has_been_received_ = true;
+    return;
+  }
+  imu_quaternion_change_ = imu_quaternion_previous_.inverse() * imu_quaternion;
+  odometry_.SetImuDelta(GetImuDelta());
+  imu_quaternion_previous_ = imu_quaternion;
+}
