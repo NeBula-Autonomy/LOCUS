@@ -354,6 +354,7 @@ private:
   ros::Time last_reception_time_imu_; 
   bool IsOdomHealthy();
   bool IsImuHealthy();
+  bool IntegrateSensors(const ros::Time& stamp);
   bool IntegrateOdom(const ros::Time& stamp);
   bool IntegrateImu(const ros::Time& stamp); 
 

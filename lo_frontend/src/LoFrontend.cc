@@ -555,7 +555,9 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_interpolate_ true for:
         - Spot with VO integration
     */
-    IntegrateOdom(stamp);     
+    if (!IntegrateSensors(stamp)) {
+      return;
+    }
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
@@ -1079,6 +1081,32 @@ bool LoFrontend::IsImuHealthy() {
   auto time_elapsed = (ros::Time::now() - last_reception_time_imu_).toSec(); 
   auto is_imu_healthy = time_elapsed < 5; // TODO: parametrize 
   return is_imu_healthy; 
+}
+
+bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
+  if (IsOdomHealthy()) {
+    ROS_INFO("OdomHealthy");
+    b_use_odometry_integration_ = true;
+    odometry_.EnableOdometryIntegration(); 
+    b_use_imu_integration_ = false;
+    odometry_.DisableImuIntegration();
+    return IntegrateOdom(stamp);
+  } 
+  else if (IsImuHealthy()) {
+    ROS_INFO("ImuHealthy");
+    b_use_odometry_integration_ = false; 
+    odometry_.DisableOdometryIntegration(); 
+    b_use_imu_integration_ = true;
+    odometry_.EnableImuIntegration();
+    return IntegrateImu(stamp);  
+  }
+  ROS_INFO("No sensor integration available");
+  b_use_odometry_integration_ = false; 
+  b_use_imu_integration_ = false;
+  odometry_.DisableOdometryIntegration(); 
+  odometry_.DisableImuIntegration(); 
+  // TODO: pure LO here 
+  return false;
 }
 
 bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
