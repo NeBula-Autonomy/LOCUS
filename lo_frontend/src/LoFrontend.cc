@@ -410,6 +410,7 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
 // ---------------------------------------------------------------------------------------
 
 void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
+  last_reception_time_imu_ = ros::Time::now();
   if (!b_imu_frame_is_correct_) {
     CheckImuFrame(imu_msg);
   }
@@ -426,6 +427,7 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 }
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
+  last_reception_time_odom_ = ros::Time::now();
   if (!b_interpolate_) {
     if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
       odometry_buffer_.erase(odometry_buffer_.begin());
@@ -446,6 +448,7 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     latest_odom_stamp_ = odometry_msg->header.stamp;
   }
 }
+
 void LoFrontend::CheckMsgDropRate(const PointCloudF::ConstPtr& msg) {
   if (!b_pcld_received_) {
     statistics_start_time_ = ros::Time::now();
