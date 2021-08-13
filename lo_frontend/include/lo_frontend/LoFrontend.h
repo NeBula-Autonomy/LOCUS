@@ -352,6 +352,8 @@ private:
   
   ros::Time last_reception_time_odom_; 
   ros::Time last_reception_time_imu_; 
+  bool IsOdomHealthy();
+  bool IsImuHealthy();
 
 };
 

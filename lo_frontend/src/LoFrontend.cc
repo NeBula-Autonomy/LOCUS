@@ -1122,3 +1122,17 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp,
   }
   return true;
 }
+
+// Dynamic Switch ----------------------------------------------------------
+
+bool LoFrontend::IsOdomHealthy() {
+  auto time_elapsed = (ros::Time::now() - last_reception_time_odom_).toSec(); 
+  auto is_odom_healthy = time_elapsed < 5; // TODO: parametrize 
+  return is_odom_healthy; 
+}
+
+bool LoFrontend::IsImuHealthy() {
+  auto time_elapsed = (ros::Time::now() - last_reception_time_imu_).toSec(); 
+  auto is_imu_healthy = time_elapsed < 5; // TODO: parametrize 
+  return is_imu_healthy; 
+}
