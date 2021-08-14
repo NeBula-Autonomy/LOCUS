@@ -124,7 +124,12 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!b_have_fiducial) {
     ROS_WARN("Can't find fiducials, using origin");
   } else {
-    ROS_INFO_STREAM("Using:\n" << integrated_estimate_);
+    ROS_INFO_STREAM(
+        "Using:\nTranslation:\n"
+        << integrated_estimate_.translation << "\nRotation\n"
+        << integrated_estimate_.rotation.Roll() * 180.0 / M_PI << ", "
+        << integrated_estimate_.rotation.Pitch() * 180.0 / M_PI << ", "
+        << integrated_estimate_.rotation.Yaw() * 180.0 / M_PI);
   }
 
   return true;
@@ -539,9 +544,13 @@ void PointCloudLocalization::PublishAll() {
 
   PublishPose(
       incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
+  // ROS_INFO_STREAM("Using:\nTranslation:\n" <<
+  // integrated_estimate_.translation << "\nRotation\n" <<
+  // integrated_estimate_.rotation.Roll()*180.0/M_PI << ", " <<
+  // integrated_estimate_.rotation.Pitch()*180.0/M_PI << ", " <<
+  // integrated_estimate_.rotation.Yaw()*180.0/M_PI);
   PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
 
-  PublishOdometry(integrated_estimate_, icp_covariance_);
 }
 
 void PointCloudLocalization::PublishPose(
@@ -735,23 +744,6 @@ void PointCloudLocalization::ComputeAp_ForPoint2PlaneICP(
     H.block(0, 3, 1, 3) = n_i.transpose();
     Ap += H.transpose() * H;
   }
-}
-
-void PointCloudLocalization::PublishOdometry(
-    const geometry_utils::Transform3& odometry,
-    const Eigen::Matrix<double, 6, 6>& covariance) {
-  nav_msgs::Odometry odometry_msg;
-  odometry_msg.header.stamp = stamp_;
-  odometry_msg.header.frame_id = fixed_frame_id_;
-  odometry_msg.pose.pose.position = gr::ToRosPoint(odometry.translation);
-  odometry_msg.pose.pose.orientation =
-      gr::ToRosQuat(gu::RToQuat(odometry.rotation));
-  for (size_t i = 0; i < 36; i++) {
-    size_t row = static_cast<size_t>(i / 6);
-    size_t col = i % 6;
-    odometry_msg.pose.covariance[i] = covariance(row, col);
-  }
-  odometry_pub_.publish(odometry_msg);
 }
 
 diagnostic_msgs::DiagnosticStatus PointCloudLocalization::GetDiagnostics() {

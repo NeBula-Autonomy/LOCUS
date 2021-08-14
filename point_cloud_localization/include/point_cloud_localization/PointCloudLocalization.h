@@ -251,12 +251,6 @@ private:
 
   bool b_is_flat_ground_assumption_;
 
-  /*--------------------
-  Odometry publishment
-  --------------------*/
-
-  ros::Publisher odometry_pub_;
-
   // ICP covariance
   Eigen::Matrix<double, 6, 6> icp_covariance_;
   double condition_number_;

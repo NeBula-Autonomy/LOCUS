@@ -158,6 +158,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   }
 
   last_refresh_pose_ = localization_.GetIntegratedEstimate();
+  latest_pose_ = localization_.GetIntegratedEstimate();
   latest_odom_stamp_ = ros::Time(0);
 
   return true;
