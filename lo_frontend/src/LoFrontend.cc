@@ -9,8 +9,7 @@ Authors:
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 
-// Constructor/destructor
-// -------------------------------------------------------------------------
+// Constructor/destructor --------------------------------------------------------
 
 LoFrontend::LoFrontend()
   : b_add_first_scan_to_key_(true),
@@ -46,13 +45,12 @@ LoFrontend::LoFrontend()
 
 LoFrontend::~LoFrontend() {}
 
-// Setup spinners/subscribers
-// ---------------------------------------------------------------------
+// Spinners/subscribers ----------------------------------------------------------
 
 std::vector<ros::AsyncSpinner>
 LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
   std::vector<ros::AsyncSpinner> async_spinners;
-  // IMU spinner
+  // Imu spinner
   {
     ros::AsyncSpinner spinner_imu(1, &this->imu_queue_);
     async_spinners.push_back(spinner_imu);
@@ -77,7 +75,7 @@ LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
 }
 
 void LoFrontend::setImuSubscriber(ros::NodeHandle& _nh) {
-  // create options for subscriber and pass pointer to our custom queue
+  // Create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts = ros::SubscribeOptions::create<sensor_msgs::Imu>(
       "IMU_TOPIC",                                     // topic name
       imu_queue_size_,                                 // queue length
@@ -89,7 +87,7 @@ void LoFrontend::setImuSubscriber(ros::NodeHandle& _nh) {
 }
 
 void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
-  // create options for subscriber and pass pointer to our custom queue
+  // Create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts =
       ros::SubscribeOptions::create<nav_msgs::Odometry>(
           "ODOMETRY_TOPIC",                                     // topic name
@@ -102,7 +100,7 @@ void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
 }
 
 void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
-  // create options for subscriber and pass pointer to our custom queue
+  // Create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts = ros::SubscribeOptions::create<PointCloud>(
       "LIDAR_TOPIC",                                     // topic name
       lidar_queue_size_,                                 // queue length
@@ -113,8 +111,7 @@ void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
   this->lidar_sub_ = _nh.subscribe(opts);
 }
 
-// Initialize
-// --------------------------------------------------------------------------------------
+// Initialize --------------------------------------------------------------------
 
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend::Initialize");
@@ -136,8 +133,7 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     ROS_ERROR("%s: Failed to load parameters.", name_.c_str());
     return false;
   }
-  // IMPORTANT - Initialize mapper after LoadParameters as we need to know the
-  // type
+  // IMPORTANT - Initialize mapper after LoadParameters as we need to know the type
   if (!mapper_->Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize mapper.", name_.c_str());
     return false;
@@ -328,54 +324,15 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
   return CreatePublishers(n);
 }
 
-// bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
-//  ROS_INFO("LoFrontend::RegisterOnlineCallbacks");
-//  ROS_INFO("%s: Registering online callbacks.", name_.c_str());
-//  nl_ = ros::NodeHandle(n);
-////  fga_sub_ = nl_.subscribe(
-////      "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
-////  space_monitor_sub_ = nl_.subscribe(
-////      "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
-//  return CreatePublishers(n);
-//}
-
 bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   nl_ = ros::NodeHandle(n);
-
-  //  if (!b_interpolate_) {
-  //    lidar_sub_ = nl_.subscribe(
-  //        "LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
-  //    if (data_integration_mode_ == 1 || data_integration_mode_ == 2)
-  //      imu_sub_ = nl_.subscribe(
-  //          "IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
-  //    else if (data_integration_mode_ == 3)
-  //      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
-  //                                odom_queue_size_,
-  //                                &LoFrontend::OdometryCallback,
-  //                                this);
-  //  } else {
-  //    odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
-  //                              odom_queue_size_,
-  //                              &LoFrontend::OdometryCallback,
-  //                              this);
-  //    lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
-  //    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloudF>(
-  //        lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10,
-  //        nl_);
-  //    lidar_odometry_filter_->registerCallback(
-  //        boost::bind(&LoFrontend::LidarCallback, this, _1));
-  //  }
-
   fga_sub_ = nl_.subscribe(
       "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
-
   space_monitor_sub_ = nl_.subscribe(
       "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
-
   voxel_leaf_size_changer_srv_ =
       nl_.serviceClient<dynamic_reconfigure::Reconfigure>(
           ros::this_node::getNamespace() + "/voxel_grid/set_parameters");
-
   return CreatePublishers(n);
 }
 
@@ -394,10 +351,8 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       "approx_nearest_neighbors_duration", 10, false);
   xy_cross_section_pub_ =
       nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
-
   dchange_voxel_pub_ =
       nl.advertise<std_msgs::Float64>("dchange_voxel", 10, false);
-
   odom_pub_timer_ =
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);
   odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
@@ -405,12 +360,10 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   time_difference_pub_ =
       nl.advertise<std_msgs::Float64>("time_difference", 10, false);
-
   return true;
 }
 
-// Callbacks
-// ---------------------------------------------------------------------------------------
+// Callbacks ---------------------------------------------------------------------
 
 void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
   last_reception_time_imu_ = ros::Time::now();
@@ -714,8 +667,7 @@ void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
   }
 }
 
-// Publish odometry at fixed rate
-// --------------------------------------------------------------------
+// Publish odometry at fixed rate ------------------------------------------------
 
 void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   // Publishes the latest odometry at a fixed rate (currently works for VO)
@@ -788,8 +740,7 @@ void LoFrontend::PublishOdometry(const geometry_utils::Transform3& odometry,
   odometry_pub_.publish(odometry_msg);
 }
 
-// Utilities
-// ----------------------------------------------------------------------------------------
+// Utilities ---------------------------------------------------------------------
 
 void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg) {
   if (b_convert_imu_to_base_link_frame_) {
@@ -882,17 +833,14 @@ bool LoFrontend::CheckNans(const Imu& imu_msg) {
 void LoFrontend::InitWithGTPointCloud(const std::string filename) {
   ROS_INFO_STREAM("Generating point cloud ground truth using point cloud from "
                   << filename);
-
   // Read ground truth from file
   pcl::PCDReader pcd_reader;
   PointCloud gt_point_cloud;
   pcd_reader.read(filename, gt_point_cloud);
   PointCloud::Ptr gt_pc_ptr(new PointCloud(gt_point_cloud));
-
   // Create octree map to select only the parts needed
   PointCloud::Ptr unused(new PointCloud);
   mapper_->InsertPoints(gt_pc_ptr, unused.get());
-
   ROS_INFO("Completed addition of GT point cloud to map");
 }
 
@@ -904,8 +852,7 @@ void LoFrontend::SwitchToImuIntegration() {
   odometry_.EnableImuIntegration();
 }
 
-// Getters
-// ------------------------------------------------------------------------------------------
+// Getters -----------------------------------------------------------------------
 
 Eigen::Quaterniond LoFrontend::GetImuQuaternion(const Imu& imu_msg) {
   Eigen::Quaterniond imu_quaternion =
@@ -1015,8 +962,7 @@ double LoFrontend::GetVectorAverage(const std::vector<double>& vector) {
       std::accumulate(vector.begin(), vector.end(), 0.0) / vector.size();
 }
 
-// Buffer management
-// --------------------------------------------------------------------------------
+// Buffer management -------------------------------------------------------------
 
 template <typename T1, typename T2>
 bool LoFrontend::InsertMsgInBuffer(const T1& msg, T2& buffer) {
@@ -1072,7 +1018,7 @@ bool LoFrontend::GetMsgAtTime(const ros::Time& stamp,
   return true;
 }
 
-// Dynamic Switch ----------------------------------------------------------
+// Dynamic Switch ----------------------------------------------------------------
 
 bool LoFrontend::IsOdomHealthy() {
   auto time_elapsed = (ros::Time::now() - last_reception_time_odom_).toSec(); 
