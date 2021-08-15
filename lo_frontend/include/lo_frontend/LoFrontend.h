@@ -353,7 +353,7 @@ private:
   bool IsOdomHealthy();
   bool IsImuHealthy();
   bool IntegrateSensors(const ros::Time& stamp);
-  bool IntegrateOdom(const ros::Time& stamp);
+  bool IntegrateInterpolatedOdom(const ros::Time& stamp);
   bool IntegrateImu(const ros::Time& stamp); 
 
 };

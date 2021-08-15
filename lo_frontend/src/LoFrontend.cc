@@ -606,8 +606,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     if (b_verbose_)
       ROS_INFO_STREAM("Adding to map with translation "
                       << delta.translation().norm() << " and rotation "
-                      << 2 * acos(delta.rotation().toQuaternion().w()) * 180.0 /
-                          M_PI
+                      << 2*acos(delta.rotation().toQuaternion().w())*180.0/M_PI
                       << " deg");
     localization_.MotionUpdate(gu::Transform3::Identity());
     localization_.TransformPointsToFixedFrame(*msg, msg_fixed_.get());
@@ -1033,7 +1032,7 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
     odometry_.EnableOdometryIntegration(); 
     b_use_imu_integration_ = false;
     odometry_.DisableImuIntegration();
-    return IntegrateOdom(stamp);
+    return IntegrateInterpolatedOdom(stamp);
   } 
   else if (IsImuHealthy()) {
     ROS_INFO("ImuHealthy");
@@ -1052,7 +1051,7 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
   return false;
 }
 
-bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
+bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
   // Integrates interpolated low-rate VO for Spot 
 
   if (!b_odometry_has_been_received_) {
