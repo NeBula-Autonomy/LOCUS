@@ -27,6 +27,7 @@ LoFrontend::LoFrontend()
     b_use_imu_yaw_integration_(false),
     b_use_odometry_integration_(false),
     b_use_pose_stamped_integration_(false),
+    b_process_pure_lo_(false),
     b_imu_has_been_received_(false),
     b_odometry_has_been_received_(false),
     b_pose_stamped_has_been_received_(false),
@@ -441,11 +442,14 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
 
   if (!IntegrateSensors(stamp)) {
-    return;
+    if (!b_process_pure_lo_) {
+      return;
+    }    
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
   odometry_.SetLidar(*msg_filtered_);
+
   if (b_enable_computation_time_profiling_) {
     scan_to_scan_start_ = ros::Time::now();
   }
@@ -458,6 +462,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if (diagnostics_odometry.level == 0) {
     odometry_.PublishAll();
   }
+
   if (b_enable_computation_time_profiling_) {
     auto scan_to_scan_end = ros::Time::now();
     auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start_;
@@ -477,6 +482,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     previous_stamp_ = stamp;
     return;
   }
+
   if (b_enable_computation_time_profiling_) {
     scan_to_submap_start_ = ros::Time::now();
   }
@@ -509,6 +515,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   if (diagnostics_localization.level == 0) {
     localization_.PublishAll();
   }
+  
   if (b_enable_computation_time_profiling_) {
     auto scan_to_submap_end = ros::Time::now();
     auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start_;
@@ -946,8 +953,8 @@ bool LoFrontend::IsImuHealthy() {
 }
 
 bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
+  b_process_pure_lo_ = false;
   if (IsOdomHealthy()) {
-    ROS_INFO("Odom healthy");
     odometry_.EnableOdometryIntegration(); 
     if (b_integrate_interpolated_odom_) {
       return IntegrateInterpolatedOdom(stamp);
@@ -957,13 +964,11 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
     }    
   } 
   else if (IsImuHealthy()) {
-    ROS_INFO("Imu healthy");
     odometry_.EnableImuIntegration();
     return IntegrateImu(stamp);  
   }
-  ROS_INFO("No sensor integration available");
   odometry_.DisableSensorIntegration(); 
-  // TODO: pure LO here 
+  b_process_pure_lo_ = true;
   return false;
 }
 

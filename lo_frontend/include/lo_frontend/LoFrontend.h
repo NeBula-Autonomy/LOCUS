@@ -349,6 +349,7 @@ private:
   double sensor_health_timeout_;
   ros::Time last_reception_time_odom_; 
   ros::Time last_reception_time_imu_; 
+  bool b_process_pure_lo_;
   bool IsOdomHealthy();
   bool IsImuHealthy();
   bool IntegrateSensors(const ros::Time& stamp);
