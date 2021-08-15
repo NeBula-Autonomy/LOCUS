@@ -22,14 +22,11 @@ LoFrontend::LoFrontend()
     msg_fixed_(new PointCloud()),
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
-    b_interpolate_(false),
+    b_integrate_interpolated_odom_(false),
     b_use_imu_integration_(false),
     b_use_imu_yaw_integration_(false),
     b_use_odometry_integration_(false),
     b_use_pose_stamped_integration_(false),
-    imu_number_of_calls_(0),
-    odometry_number_of_calls_(0),
-    pose_stamped_number_of_calls_(0),
     b_imu_has_been_received_(false),
     b_odometry_has_been_received_(false),
     b_pose_stamped_has_been_received_(false),
@@ -204,8 +201,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("data_integration/mode", data_integration_mode_))
     return false;
-  if (!pu::Get("data_integration/max_number_of_calls", max_number_of_calls_))
-    return false;
   if (!pu::Get("b_enable_computation_time_profiling",
                b_enable_computation_time_profiling_))
     return false;
@@ -232,7 +227,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("statistics_time_window", statistics_time_window_))
     return false;
-  if (!pu::Get("b_interpolate", b_interpolate_))
+  if (!pu::Get("b_integrate_interpolated_odom", b_integrate_interpolated_odom_))
     return false;
   if (!pu::Get("b_use_osd", b_use_osd_))
     return false;
@@ -267,9 +262,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (n.getNamespace().find("spot") != std::string::npos) {
     if ((data_integration_mode_ == 0) || (data_integration_mode_ == 1) ||
         (data_integration_mode_ == 2))
-      b_interpolate_ = false;
+      b_integrate_interpolated_odom_ = false;
   }
-  ROS_INFO_STREAM("b_interpolate_: " << b_interpolate_);
+  ROS_INFO_STREAM("b_integrate_interpolated_odom_: " << b_integrate_interpolated_odom_);
 
   mapper_ = mapperFabric(window_local_mapping_type_);
   mapper_->SetBoxFilterSize(box_filter_size_);
@@ -384,7 +379,7 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
   last_reception_time_odom_ = ros::Time::now();
-  if (!b_interpolate_) {
+  if (!b_integrate_interpolated_odom_) {
     if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
       odometry_buffer_.erase(odometry_buffer_.begin());
     }
@@ -984,6 +979,26 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
   return false;
 }
 
+bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
+  Odometry odometry_msg;
+  if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+    ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
+              "given lidar timestamp");
+    return false;
+  }
+  if (!b_odometry_has_been_received_) {
+    ROS_INFO("Receiving odometry for the first time");
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+    b_odometry_has_been_received_ = true;
+    return false;
+  }
+  tf::Transform odometry_pose;
+  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
+  odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
+  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+  return true;
+}
+
 bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
   // Integrates interpolated low-rate VO for Spot 
 
@@ -1071,24 +1086,4 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
   odometry_.SetImuDelta(GetImuDelta());
   imu_quaternion_previous_ = imu_quaternion;
   return true; 
-}
-
-bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
-  Odometry odometry_msg;
-  if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-    ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
-              "given lidar timestamp");
-    return false;
-  }
-  if (!b_odometry_has_been_received_) {
-    ROS_INFO("Receiving odometry for the first time");
-    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-    b_odometry_has_been_received_ = true;
-    return false;
-  }
-  tf::Transform odometry_pose;
-  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-  odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
-  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-  return true;
 }

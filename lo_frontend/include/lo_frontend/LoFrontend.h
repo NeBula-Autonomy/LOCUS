@@ -193,7 +193,6 @@ private:
 
   bool SetDataIntegrationMode();
   int data_integration_mode_;
-  int max_number_of_calls_;
 
   // Imu
   void CheckImuFrame(const ImuConstPtr& imu_msg);
@@ -204,7 +203,6 @@ private:
   bool b_use_imu_integration_;
   bool b_use_imu_yaw_integration_;
   bool b_imu_has_been_received_;
-  int imu_number_of_calls_;
   Eigen::Quaterniond imu_quaternion_previous_;
   Eigen::Quaterniond imu_quaternion_change_;
   Eigen::Matrix3d GetImuDelta();
@@ -213,7 +211,6 @@ private:
   // Odometry
   bool b_use_odometry_integration_;
   bool b_odometry_has_been_received_;
-  int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
   tf::Transform tf_transform_;
   tf::Vector3 tf_translation_;
@@ -223,7 +220,6 @@ private:
   // PoseStamped
   bool b_use_pose_stamped_integration_;
   bool b_pose_stamped_has_been_received_;
-  int pose_stamped_number_of_calls_;
 
   /*-----------------
   Open space detector
@@ -310,7 +306,7 @@ private:
   /*------------------------------
   Low-rate odom interpolation flag
   -------------------------------*/
-  bool b_interpolate_;
+  bool b_integrate_interpolated_odom_;
 
   /*------------------------------
   Lidar Scan Dropped Statistics
