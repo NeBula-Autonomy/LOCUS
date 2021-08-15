@@ -232,6 +232,7 @@ private:
   /*-----------------
   BB based OSD
   ------------------*/
+
   void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
   bool b_use_osd_;
   double osd_size_threshold_;
@@ -247,7 +248,6 @@ private:
   ---------------------------------- */
 
   ros::NodeHandle nl_;
-  void SwitchToImuIntegration();
 
   /* -------------------------
   Flat Ground Assumption (FGA)
@@ -284,13 +284,14 @@ private:
   /* -------------------------
   Diagnostics
   ------------------------- */
+  
   bool publish_diagnostics_;
-
   ros::Publisher base_frame_pcld_pub_;
 
   /*--------------------------
   Map Sliding Window 2
   --------------------------*/
+
   bool b_enable_msw_;
   int box_filter_size_;
   int velocity_buffer_size_;
@@ -306,11 +307,13 @@ private:
   /*------------------------------
   Low-rate odom interpolation flag
   -------------------------------*/
+
   bool b_integrate_interpolated_odom_;
 
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
+  
   void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;

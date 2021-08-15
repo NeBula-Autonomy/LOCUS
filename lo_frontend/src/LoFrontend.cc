@@ -771,14 +771,6 @@ void LoFrontend::InitWithGTPointCloud(const std::string filename) {
   ROS_INFO("Completed addition of GT point cloud to map");
 }
 
-void LoFrontend::SwitchToImuIntegration() {
-  ROS_WARN("LoFrontend::SwitchToImuIntegration");
-  b_use_odometry_integration_ = false;
-  odometry_.DisableOdometryIntegration();
-  b_use_imu_integration_ = true;
-  odometry_.EnableImuIntegration();
-}
-
 // Getters -----------------------------------------------------------------------
 
 Eigen::Quaterniond LoFrontend::GetImuQuaternion(const Imu& imu_msg) {
@@ -960,7 +952,12 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
     odometry_.EnableOdometryIntegration(); 
     b_use_imu_integration_ = false;
     odometry_.DisableImuIntegration();
-    return IntegrateInterpolatedOdom(stamp);
+    if (b_integrate_interpolated_odom_) {
+      return IntegrateInterpolatedOdom(stamp);
+    }
+    else {
+      return IntegrateOdom(stamp);
+    }    
   } 
   else if (IsImuHealthy()) {
     ROS_INFO("ImuHealthy");
@@ -1000,8 +997,6 @@ bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
 }
 
 bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
-  // Integrates interpolated low-rate VO for Spot 
-
   if (!b_odometry_has_been_received_) {
     ROS_INFO("Receiving odometry for the first time");
     b_odometry_has_been_received_ = true;
