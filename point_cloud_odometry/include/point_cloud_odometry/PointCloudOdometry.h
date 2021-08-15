@@ -87,10 +87,7 @@ public:
   void EnableImuIntegration();
   void EnableOdometryIntegration();
   void EnablePoseStampedIntegration();
-
-  void DisableImuIntegration();
-  void DisableOdometryIntegration();
-  void DisablePoseStampedIntegration();
+  void DisableSensorIntegration();
 
   void SetFlatGroundAssumptionValue(const bool& value);
 

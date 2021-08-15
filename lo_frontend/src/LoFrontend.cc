@@ -947,11 +947,8 @@ bool LoFrontend::IsImuHealthy() {
 
 bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
   if (IsOdomHealthy()) {
-    ROS_INFO("OdomHealthy");
-    b_use_odometry_integration_ = true;
+    ROS_INFO("Odom healthy");
     odometry_.EnableOdometryIntegration(); 
-    b_use_imu_integration_ = false;
-    odometry_.DisableImuIntegration();
     if (b_integrate_interpolated_odom_) {
       return IntegrateInterpolatedOdom(stamp);
     }
@@ -960,18 +957,12 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
     }    
   } 
   else if (IsImuHealthy()) {
-    ROS_INFO("ImuHealthy");
-    b_use_odometry_integration_ = false; 
-    odometry_.DisableOdometryIntegration(); 
-    b_use_imu_integration_ = true;
+    ROS_INFO("Imu healthy");
     odometry_.EnableImuIntegration();
     return IntegrateImu(stamp);  
   }
   ROS_INFO("No sensor integration available");
-  b_use_odometry_integration_ = false; 
-  b_use_imu_integration_ = false;
-  odometry_.DisableOdometryIntegration(); 
-  odometry_.DisableImuIntegration(); 
+  odometry_.DisableSensorIntegration(); 
   // TODO: pure LO here 
   return false;
 }
