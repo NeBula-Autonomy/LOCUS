@@ -956,12 +956,6 @@ Eigen::Matrix3d LoFrontend::GetImuYawDelta() {
   return rot_yaw_mat;
 }
 
-double LoFrontend::GetVectorAverage(const std::vector<double>& vector) {
-  return vector.empty() ?
-      0.0 :
-      std::accumulate(vector.begin(), vector.end(), 0.0) / vector.size();
-}
-
 // Buffer management -------------------------------------------------------------
 
 template <typename T1, typename T2>

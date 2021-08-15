@@ -191,7 +191,6 @@ private:
   Data integration
   --------------*/
 
-  void PreintegrationUpdate(const ros::Time& stamp);
   bool SetDataIntegrationMode();
   int data_integration_mode_;
   int max_number_of_calls_;
@@ -246,7 +245,6 @@ private:
   ros::Publisher xy_cross_section_pub_;
   ros::ServiceClient voxel_leaf_size_changer_srv_;
   int counter_voxel_{0};
-  // Closed space keyframe policy
 
   /* ----------------------------------
   Dynamic hierarchical data integration
@@ -308,7 +306,6 @@ private:
   ros::Time previous_stamp_;
   std::vector<double> translational_velocity_buffer_;
   std::vector<double> rotational_velocity_buffer_;
-  double GetVectorAverage(const std::vector<double>& vector);
 
   /*------------------------------
   Low-rate odom interpolation flag
