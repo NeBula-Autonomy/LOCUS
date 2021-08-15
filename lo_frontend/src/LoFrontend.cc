@@ -445,75 +445,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
 
-  if (!b_interpolate_) {
-    /*
-    b_interpolate_ false for:
-        - Husky with WIO/IMU/NO integration
-        - Spot with IMU/NO integration
-    */
-    if (b_use_odometry_integration_) {
-      Odometry odometry_msg;
-      if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-        ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
-                 "given lidar timestamp");
-        odometry_number_of_calls_++;
-        if (odometry_number_of_calls_ > max_number_of_calls_) {
-          ROS_WARN("Deactivating odometry_integration in LoFrontend");
-          SwitchToImuIntegration();
-        }
-        return;
-      }
-      odometry_number_of_calls_ = 0;
-      if (!b_odometry_has_been_received_) {
-        ROS_INFO("Receiving odometry for the first time");
-        tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-        b_odometry_has_been_received_ = true;
-        return;
-      }
-      tf::Transform odometry_pose;
-      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-      odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
-      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-    } else if (b_use_imu_integration_) {
-      Imu imu_msg;
-      if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
-        ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
-                 "given lidar timestamp");
-        imu_number_of_calls_++;
-        if (imu_number_of_calls_ > max_number_of_calls_) {
-          ROS_WARN("Deactivating imu_integration in LoFrontend");
-          b_use_imu_integration_ = false;
-          odometry_.DisableImuIntegration();
-        }
-        return;
-      }
-      imu_number_of_calls_ = 0;
-      auto imu_quaternion = GetImuQuaternion(imu_msg);
-      if (!b_imu_has_been_received_) {
-        ROS_INFO("Receiving imu for the first time");
-        imu_quaternion_previous_ = imu_quaternion;
-        b_imu_has_been_received_ = true;
-        return;
-      }
-      imu_quaternion_change_ =
-          imu_quaternion_previous_.inverse() * imu_quaternion;
-      if (b_use_imu_yaw_integration_) {
-        odometry_.SetImuDelta(GetImuYawDelta());
-      } else {
-        odometry_.SetImuDelta(GetImuDelta());
-      }
-      imu_quaternion_previous_ = imu_quaternion;
-    }
-  }
-
-  else {
-    /*
-    b_interpolate_ true for:
-        - Spot with VO integration
-    */
-    if (!IntegrateSensors(stamp)) {
-      return;
-    }
+  if (!IntegrateSensors(stamp)) {
+    return;
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
@@ -1135,3 +1068,69 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
   imu_quaternion_previous_ = imu_quaternion;
   return true; 
 }
+
+
+
+/*
+
+bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
+  // Odometry integration 
+  if (b_use_odometry_integration_) {
+    Odometry odometry_msg;
+    if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
+                "given lidar timestamp");
+      odometry_number_of_calls_++;
+      if (odometry_number_of_calls_ > max_number_of_calls_) {
+        ROS_WARN("Deactivating odometry_integration in LoFrontend");
+        SwitchToImuIntegration();
+      }
+      return;
+    }
+    odometry_number_of_calls_ = 0;
+    if (!b_odometry_has_been_received_) {
+      ROS_INFO("Receiving odometry for the first time");
+      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+      b_odometry_has_been_received_ = true;
+      return;
+    }
+    tf::Transform odometry_pose;
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
+    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+  }
+}
+
+bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
+  // Imu integration
+  Imu imu_msg;
+  if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
+    ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
+              "given lidar timestamp");
+    imu_number_of_calls_++;
+    if (imu_number_of_calls_ > max_number_of_calls_) {
+      ROS_WARN("Deactivating imu_integration in LoFrontend");
+      b_use_imu_integration_ = false;
+      odometry_.DisableImuIntegration();
+    }
+    return;
+  }
+  imu_number_of_calls_ = 0;
+  auto imu_quaternion = GetImuQuaternion(imu_msg);
+  if (!b_imu_has_been_received_) {
+    ROS_INFO("Receiving imu for the first time");
+    imu_quaternion_previous_ = imu_quaternion;
+    b_imu_has_been_received_ = true;
+    return;
+  }
+  imu_quaternion_change_ =
+      imu_quaternion_previous_.inverse() * imu_quaternion;
+  if (b_use_imu_yaw_integration_) {
+    odometry_.SetImuDelta(GetImuYawDelta());
+  } else {
+    odometry_.SetImuDelta(GetImuDelta());
+  }
+  imu_quaternion_previous_ = imu_quaternion;
+}
+
+*/
