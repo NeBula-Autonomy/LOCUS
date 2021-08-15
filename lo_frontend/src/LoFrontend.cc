@@ -1073,34 +1073,22 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
   return true; 
 }
 
-/*
-
 bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
-  // Odometry integration 
-  if (b_use_odometry_integration_) {
-    Odometry odometry_msg;
-    if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
-                "given lidar timestamp");
-      odometry_number_of_calls_++;
-      if (odometry_number_of_calls_ > max_number_of_calls_) {
-        ROS_WARN("Deactivating odometry_integration in LoFrontend");
-        SwitchToImuIntegration();
-      }
-      return;
-    }
-    odometry_number_of_calls_ = 0;
-    if (!b_odometry_has_been_received_) {
-      ROS_INFO("Receiving odometry for the first time");
-      tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
-      b_odometry_has_been_received_ = true;
-      return;
-    }
-    tf::Transform odometry_pose;
-    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
-    odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
-    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+  Odometry odometry_msg;
+  if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+    ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
+              "given lidar timestamp");
+    return false;
   }
+  if (!b_odometry_has_been_received_) {
+    ROS_INFO("Receiving odometry for the first time");
+    tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+    b_odometry_has_been_received_ = true;
+    return false;
+  }
+  tf::Transform odometry_pose;
+  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose);
+  odometry_.SetOdometryDelta(GetOdometryDelta(odometry_pose));
+  tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
+  return true;
 }
-
-*/
