@@ -16,8 +16,8 @@ in_imu_bag   = rosbag.Bag("spot2_state_tcp_no_delay_2021-08-05-14-04-48_0.bag")
 out_odom_bag = rosbag.Bag("spot2_visual_odom_drop.bag", "w")
 out_imu_bag  = rosbag.Bag("spot2_imu_drop.bag", "w")
 
-odom_health = [[0,230], [320,350]]
-imu_health  = [[0,260], [290,350]]
+odom_health = [[0,230], [260,290], [320,350]]
+imu_health  = [[0,290], [340,370]]
 first_odom_time = None 
 first_imu_time  = None 
 
