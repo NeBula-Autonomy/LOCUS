@@ -68,7 +68,7 @@ statistics_verbosity_level: low # off, low, high
 # -------------------------------------------------------------
 
 # Subscribe to localizer space monitor
-b_use_osd: true
+b_use_osd: false
 osd_size_threshold: 99999
 b_publish_xy_cross_section: true
 # Closed space keyframe policy
@@ -80,8 +80,8 @@ rotation_threshold_open_space_kf: 0.6
 
 # -------------------Adaptive voxelization---------------------
 
-b_adaptive_input_voxelization: false
-points_to_process_in_callback: 3000
+b_adaptive_input_voxelization: true
+points_to_process_in_callback: 4000
 
 # ------------- Debug utilities -------------------------------
 b_debug_transforms: false
