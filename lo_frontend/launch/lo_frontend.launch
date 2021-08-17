@@ -66,15 +66,19 @@
 
             <param name="localization/num_threads"       value="4" if="$(eval robot_namespace.startswith('husky'))" />
             <param name="icp/num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
+            <param name="mapper/num_threads"             value="4" if="$(eval robot_namespace.startswith('husky'))" />
 
             <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('spot'))" />
             <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
+             <param name="mapper/num_threads"            value="1" if="$(eval robot_namespace.startswith('spot'))" />
 
             <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('aquila'))" />
             <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('aquila'))" />
 
             <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
             <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
 
 
         </node>

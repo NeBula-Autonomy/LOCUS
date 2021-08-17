@@ -70,6 +70,7 @@ public:
   std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
 
 private:
+  int mapper_threads_{1};
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;

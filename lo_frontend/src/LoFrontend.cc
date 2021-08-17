@@ -179,6 +179,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("map_publishment/b_publish_map", b_publish_map_))
     return false;
+  if (!pu::Get("mapper/num_threads", mapper_threads_))
+    return false;
   if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
   if (!pu::Get("frame_id/base", base_frame_id_))
@@ -274,6 +276,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
 
   mapper_ = mapperFabric(window_local_mapping_type_);
   mapper_->SetBoxFilterSize(box_filter_size_);
+  mapper_->SetupNumberThreads(mapper_threads_);
 
   return true;
 }
