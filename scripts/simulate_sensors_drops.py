@@ -8,16 +8,24 @@ Author:
 
 import rosbag 
 
-odom_topic = "/spot2/visual_odom"
-imu_topic = "/spot2/vn100/imu_wori_wcov"
+robot_name = "husky4"
+data_path = "/home/snuc/Downloads/Datasets/urban/beta_2/husky4/rosbag/"
 
-in_odom_bag  = rosbag.Bag("spot2_state_2021-08-05-14-04-51_0.bag")
-in_imu_bag   = rosbag.Bag("spot2_state_tcp_no_delay_2021-08-05-14-04-48_0.bag")
-out_odom_bag = rosbag.Bag("spot2_visual_odom_drop.bag", "w")
-out_imu_bag  = rosbag.Bag("spot2_imu_drop.bag", "w")
+odom_topic = None
+imu_topic = "/" + robot_name + "/vn100/imu_wori_wcov"
 
-odom_health = [[0,230], [260,290], [320,350]]
-imu_health  = [[0,290], [340,370]]
+if "spot" in robot_name: 
+    odom_topic = "/" + robot_name + "/visual_odom"
+elif "husky" in robot_name: 
+    odom_topic = "/" + robot_name + "/hero/wio_ekf/odom"
+
+in_odom_bag  = rosbag.Bag(data_path + "husky4_state_2020-02-26-12-51-09_0.bag")
+in_imu_bag   = rosbag.Bag(data_path + "husky4_state_tcp_no_delay_2020-02-26-12-51-09_0.bag")
+out_odom_bag = rosbag.Bag(data_path + "husky4_wio_drop.bag", "w")
+out_imu_bag  = rosbag.Bag(data_path + "husky4_imu_drop.bag", "w")
+
+odom_health = [[0,650], [740,780]]
+imu_health  = [[0,680], [710,770]]
 first_odom_time = None 
 first_imu_time  = None 
 
