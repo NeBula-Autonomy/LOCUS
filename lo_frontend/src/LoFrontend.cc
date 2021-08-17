@@ -23,14 +23,9 @@ LoFrontend::LoFrontend()
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
     b_integrate_interpolated_odom_(false),
-    b_use_imu_integration_(false),
-    b_use_imu_yaw_integration_(false),
-    b_use_odometry_integration_(false),
-    b_use_pose_stamped_integration_(false),
     b_process_pure_lo_(false),
     b_imu_has_been_received_(false),
     b_odometry_has_been_received_(false),
-    b_pose_stamped_has_been_received_(false),
     b_imu_frame_is_correct_(false),
     b_is_open_space_(false),
     b_run_with_gt_point_cloud_(false),
@@ -75,37 +70,36 @@ LoFrontend::setAsynchSpinners(ros::NodeHandle& _nh) {
 void LoFrontend::setImuSubscriber(ros::NodeHandle& _nh) {
   // Create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts = ros::SubscribeOptions::create<sensor_msgs::Imu>(
-      "IMU_TOPIC",                                     // topic name
-      imu_queue_size_,                                 // queue length
-      boost::bind(&LoFrontend::ImuCallback, this, _1), // callback
-      ros::VoidPtr(),   // tracked object, we don't need one thus NULL
-      &this->imu_queue_ // pointer to callback queue object
-  );
+    "IMU_TOPIC",                                     // topic name
+    imu_queue_size_,                                 // queue length
+    boost::bind(&LoFrontend::ImuCallback, this, _1), // callback
+    ros::VoidPtr(),   // tracked object, we don't need one thus NULL
+    &this->imu_queue_ // pointer to callback queue object
+    );
   this->imu_sub_ = _nh.subscribe(opts);
 }
 
 void LoFrontend::setOdomSubscriber(ros::NodeHandle& _nh) {
   // Create options for subscriber and pass pointer to our custom queue
-  ros::SubscribeOptions opts =
-      ros::SubscribeOptions::create<nav_msgs::Odometry>(
-          "ODOMETRY_TOPIC",                                     // topic name
-          odom_queue_size_,                                     // queue length
-          boost::bind(&LoFrontend::OdometryCallback, this, _1), // callback
-          ros::VoidPtr(),    // tracked object, we don't need one thus NULL
-          &this->odom_queue_ // pointer to callback queue object
-      );
+  ros::SubscribeOptions opts = ros::SubscribeOptions::create<nav_msgs::Odometry>(
+    "ODOMETRY_TOPIC",                                     // topic name
+    odom_queue_size_,                                     // queue length
+    boost::bind(&LoFrontend::OdometryCallback, this, _1), // callback
+    ros::VoidPtr(),    // tracked object, we don't need one thus NULL
+    &this->odom_queue_ // pointer to callback queue object
+    );
   this->odom_sub_ = _nh.subscribe(opts);
 }
 
 void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
   // Create options for subscriber and pass pointer to our custom queue
   ros::SubscribeOptions opts = ros::SubscribeOptions::create<PointCloud>(
-      "LIDAR_TOPIC",                                     // topic name
-      lidar_queue_size_,                                 // queue length
-      boost::bind(&LoFrontend::LidarCallback, this, _1), // callback
-      ros::VoidPtr(),     // tracked object, we don't need one thus NULL
-      &this->lidar_queue_ // pointer to callback queue object
-  );
+    "LIDAR_TOPIC",                                     // topic name
+    lidar_queue_size_,                                 // queue length
+    boost::bind(&LoFrontend::LidarCallback, this, _1), // callback
+    ros::VoidPtr(),     // tracked object, we don't need one thus NULL
+    &this->lidar_queue_ // pointer to callback queue object
+    );
   this->lidar_sub_ = _nh.subscribe(opts);
 }
 
@@ -114,7 +108,6 @@ void LoFrontend::setLidarSubscriber(ros::NodeHandle& _nh) {
 bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("LoFrontend::Initialize");
   name_ = ros::names::append(n.getNamespace(), "lo_frontend");
-
   if (!filter_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
     return false;
@@ -136,8 +129,8 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
     ROS_ERROR("%s: Failed to initialize mapper.", name_.c_str());
     return false;
   }
-  if (!SetDataIntegrationMode()) {
-    ROS_ERROR("Failed to set data integration mode");
+  if (!CheckDataIntegrationMode()) {
+    ROS_ERROR("Failed to check data integration mode.");
     return false;
   }
   if (!RegisterCallbacks(n, from_log)) {
@@ -150,10 +143,8 @@ bool LoFrontend::Initialize(const ros::NodeHandle& n, bool from_log) {
   if (b_run_with_gt_point_cloud_) {
     InitWithGTPointCloud(gt_point_cloud_filename_);
   }
-
   last_refresh_pose_ = localization_.GetIntegratedEstimate();
   latest_odom_stamp_ = ros::Time(0);
-
   return true;
 }
 
@@ -250,7 +241,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
                wait_for_odom_transform_timeout_))
     return false;
 
-  // adaptive filtering variable
+  // Adaptive filtering variable
   if (!pu::Get("b_adaptive_input_voxelization", b_adaptive_input_voxelization_))
     return false;
   if (!pu::Get("points_to_process_in_callback", points_to_process_in_callback_))
@@ -260,11 +251,6 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   if (!pu::Get("sensor_health_timeout", sensor_health_timeout_))
     return false;  
 
-  if (n.getNamespace().find("spot") != std::string::npos) {
-    if ((data_integration_mode_ == 0) || (data_integration_mode_ == 1) ||
-        (data_integration_mode_ == 2))
-      b_integrate_interpolated_odom_ = false;
-  }
   ROS_INFO_STREAM("b_integrate_interpolated_odom_: " << b_integrate_interpolated_odom_);
 
   mapper_ = mapperFabric(window_local_mapping_type_);
@@ -273,27 +259,19 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
   return true;
 }
 
-bool LoFrontend::SetDataIntegrationMode() {
-  ROS_INFO("LoFrontend::SetDataIntegrationMode");
+bool LoFrontend::CheckDataIntegrationMode() {
   switch (data_integration_mode_) {
   case 0:
     ROS_INFO("No integration requested");
     break;
   case 1:
     ROS_INFO("Imu integration requested");
-    b_use_imu_integration_ = true;
-    odometry_.EnableImuIntegration();
     break;
   case 2:
     ROS_INFO("Imu yaw integration requested");
-    b_use_imu_integration_ = true;
-    b_use_imu_yaw_integration_ = true;
-    odometry_.EnableImuIntegration();
     break;
   case 3:
     ROS_INFO("Odometry integration requested");
-    b_use_odometry_integration_ = true;
-    odometry_.EnableOdometryIntegration();
     break;
   case 4:
     ROS_ERROR("PoseStamped integration not currently supported");
@@ -441,10 +419,12 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
 
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
 
-  if (!IntegrateSensors(stamp)) {
-    if (!b_process_pure_lo_) {
-      return;
-    }    
+  if (data_integration_mode_ != 0) {
+    if (!IntegrateSensors(stamp)) {
+      if (!b_process_pure_lo_) {
+        return;
+      }    
+    }
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
@@ -524,8 +504,7 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
   }
 
-  geometry_utils::Transform3 current_pose =
-      localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
   // Update current pose for publishing
   latest_pose_ = current_pose;
@@ -954,7 +933,7 @@ bool LoFrontend::IsImuHealthy() {
 
 bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
   b_process_pure_lo_ = false;
-  if (IsOdomHealthy()) {
+  if (IsOdomHealthy() && data_integration_mode_>=3) {
     b_imu_has_been_received_ = false; 
     odometry_.EnableOdometryIntegration(); 
     if (b_integrate_interpolated_odom_) {
@@ -964,7 +943,7 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
       return IntegrateOdom(stamp);
     }    
   } 
-  else if (IsImuHealthy()) {
+  else if (IsImuHealthy() && data_integration_mode_>=1) {
     b_odometry_has_been_received_ = false; 
     odometry_.EnableImuIntegration();
     return IntegrateImu(stamp);  
@@ -1075,7 +1054,7 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
   }
   imu_quaternion_change_ = imu_quaternion_previous_.inverse() * imu_quaternion;
   /*
-  if (b_use_imu_yaw_integration_) {odometry_.SetImuDelta(GetImuYawDelta());}
+  if (data_integration_mode_ == 2) {odometry_.SetImuDelta(GetImuYawDelta());}
   else {odometry_.SetImuDelta(GetImuDelta());}
   */
   odometry_.SetImuDelta(GetImuDelta());

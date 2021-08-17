@@ -191,7 +191,7 @@ private:
   Data integration
   --------------*/
 
-  bool SetDataIntegrationMode();
+  bool CheckDataIntegrationMode();
   int data_integration_mode_;
 
   // Imu
@@ -200,8 +200,6 @@ private:
   Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
   bool b_convert_imu_to_base_link_frame_;
   bool b_imu_frame_is_correct_;
-  bool b_use_imu_integration_;
-  bool b_use_imu_yaw_integration_;
   bool b_imu_has_been_received_;
   Eigen::Quaterniond imu_quaternion_previous_;
   Eigen::Quaterniond imu_quaternion_change_;
@@ -209,17 +207,12 @@ private:
   Eigen::Matrix3d GetImuYawDelta();
 
   // Odometry
-  bool b_use_odometry_integration_;
   bool b_odometry_has_been_received_;
   tf::Transform odometry_pose_previous_;
   tf::Transform tf_transform_;
   tf::Vector3 tf_translation_;
   tf::Quaternion tf_quaternion_;
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
-
-  // PoseStamped
-  bool b_use_pose_stamped_integration_;
-  bool b_pose_stamped_has_been_received_;
 
   /*-----------------
   Open space detector
