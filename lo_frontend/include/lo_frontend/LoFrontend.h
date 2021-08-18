@@ -88,7 +88,6 @@ private:
   ros::Subscriber lidar_sub_;
   ros::Subscriber imu_sub_;
   ros::Subscriber odom_sub_;
-  ros::Subscriber pose_sub_;
 
   void setImuSubscriber(ros::NodeHandle& _nh);
   void setOdomSubscriber(ros::NodeHandle& _nh);
@@ -110,7 +109,6 @@ private:
   void LidarCallback(const PointCloudF::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
-  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
   // Main msg callback queue
   ros::CallbackQueue imu_queue_;
   ros::CallbackQueue odom_queue_;
@@ -119,11 +117,9 @@ private:
   int lidar_queue_size_;
   int imu_queue_size_;
   int odom_queue_size_;
-  int pose_queue_size_;
 
   ImuBuffer imu_buffer_;
   OdometryBuffer odometry_buffer_;
-  PoseStampedBuffer pose_stamped_buffer_;
 
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
@@ -137,7 +133,6 @@ private:
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
-  int pose_stamped_buffer_size_limit_;
 
   template <typename T1, typename T2>
   bool InsertMsgInBuffer(const T1& msg, T2& buffer);

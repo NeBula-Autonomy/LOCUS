@@ -181,15 +181,10 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("queues/odom_queue_size", odom_queue_size_))
     return false;
-  if (!pu::Get("queues/pose_queue_size", pose_queue_size_))
-    return false;
   if (!pu::Get("buffers/imu_buffer_size_limit", imu_buffer_size_limit_))
     return false;
   if (!pu::Get("buffers/odometry_buffer_size_limit",
                odometry_buffer_size_limit_))
-    return false;
-  if (!pu::Get("buffers/pose_stamped_buffer_size_limit",
-               pose_stamped_buffer_size_limit_))
     return false;
   if (!pu::Get("data_integration/mode", data_integration_mode_))
     return false;
@@ -273,9 +268,6 @@ bool LoFrontend::CheckDataIntegrationMode() {
   case 3:
     ROS_INFO("Odometry integration requested");
     break;
-  case 4:
-    ROS_ERROR("PoseStamped integration not currently supported");
-    return false;
   default:
     ROS_ERROR("Default case to be handled");
     return false;
