@@ -48,7 +48,9 @@ Authors:
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <visualization_msgs/Marker.h>
+
 class LoFrontend {
+  
   friend class LoFrontendTest;
 
 public:
@@ -228,16 +230,9 @@ private:
   int pose_stamped_number_of_calls_;
 
   /*-----------------
-  Open space detector
-  ------------------*/
-
-  int number_of_points_open_space_;
-  bool b_adaptive_input_voxelization_{false};
-  uint points_to_process_in_callback_{3001};
-
-  /*-----------------
   BB based OSD
   ------------------*/
+
   void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
   bool b_use_osd_;
   double osd_size_threshold_;
@@ -245,8 +240,6 @@ private:
   PointF maxPoint_;
   bool b_publish_xy_cross_section_;
   ros::Publisher xy_cross_section_pub_;
-  ros::ServiceClient voxel_leaf_size_changer_srv_;
-  int counter_voxel_{0};
   // Closed space keyframe policy
 
   /* ----------------------------------
@@ -278,7 +271,6 @@ private:
   ros::Publisher scan_to_scan_duration_pub_;
   ros::Publisher scan_to_submap_duration_pub_;
   ros::Publisher approx_nearest_neighbors_duration_pub_;
-  ros::Publisher dchange_voxel_pub_;
 
   /* -------------------------
   Ground Truth
@@ -291,6 +283,7 @@ private:
   /* -------------------------
   Diagnostics
   ------------------------- */
+
   bool publish_diagnostics_;
 
   ros::Publisher base_frame_pcld_pub_;
@@ -298,6 +291,7 @@ private:
   /*--------------------------
   Map Sliding Window 2
   --------------------------*/
+
   bool b_enable_msw_;
   int box_filter_size_;
   int velocity_buffer_size_;
@@ -314,11 +308,13 @@ private:
   /*------------------------------
   Low-rate odom interpolation flag
   -------------------------------*/
+
   bool b_interpolate_;
 
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
+
   void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
@@ -344,8 +340,19 @@ private:
   double translation_threshold_open_space_kf_;
   double rotation_threshold_open_space_kf_;
 
+  /*-------------------------
+  Adaptive Input Voxelization 
+  -------------------------*/
+
+  int counter_voxel_{0};
+  ros::Publisher dchange_voxel_pub_;
   dynamic_reconfigure::Reconfigure voxel_param;
   dynamic_reconfigure::DoubleParameter double_param;
+  ros::ServiceClient voxel_leaf_size_changer_srv_;
+  bool b_adaptive_input_voxelization_{false};
+  uint points_to_process_in_callback_{3001};
+  void ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg);
+
 };
 
 #endif

@@ -484,6 +484,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     lidar_callback_start_ = ros::Time::now();
   }
 
+  if (b_adaptive_input_voxelization_) {
+    ApplyAdaptiveInputVoxelization(msg);
+  }
+
   CheckMsgDropRate(msg);
 
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
@@ -992,10 +996,10 @@ void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
     xy_cross_section_msg.data = size_x * size_y;
     xy_cross_section_pub_.publish(xy_cross_section_msg);
   }
+}
 
-  if (b_adaptive_input_voxelization_) {
+void LoFrontend::ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg) {
     bool change = false;
-
     double dchange_voxel = double_param.value *
         (static_cast<double>(msg->points.size()) /
          static_cast<double>(points_to_process_in_callback_));
@@ -1003,40 +1007,43 @@ void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
       dchange_voxel = 0.01;
     if (dchange_voxel > 5.0)
       dchange_voxel = 5.0;
-    //    ROS_INFO_STREAM("DCHANGE VALUE: " << dchange_voxel);
+    // ROS_INFO_STREAM("DCHANGE VALUE: " << dchange_voxel);
+
     if (std::abs(double_param.value - dchange_voxel) > 0.01 or
         counter_voxel_ % 20 == 0) {
       voxel_param.request.config.doubles.clear();
       double_param.name = "leaf_size";
       double_param.value = dchange_voxel;
       ROS_INFO_STREAM("Changing voxel size to : " << dchange_voxel);
-      //      ROS_INFO_STREAM(points_to_process_in_callback_
-      //                      << " leaf size current : " << double_param.value
-      //                      << " No of points: " << msg->points.size() << "
-      //                      division"
-      //                      << static_cast<double>(msg->points.size()) /
-      //                          static_cast<double>(points_to_process_in_callback_));
+      // ROS_INFO_STREAM(points_to_process_in_callback_
+      //                 << " leaf size current : " << double_param.value
+      //                 << " No of points: " << msg->points.size() << "
+      //                 division"
+      //                 << static_cast<double>(msg->points.size()) /
+      //                 static_cast<double>(points_to_process_in_callback_));
       voxel_param.request.config.doubles.push_back(double_param);
       change = true;
       counter_voxel_ = 0;
-    } else {
-      //      ROS_INFO_STREAM("Doesn't pay off to change! Old voxel: "
-      //                      << double_param.value << " Counter: " <<
-      //                      counter_voxel_);
+    } 
+    else {
+      // ROS_INFO_STREAM("Doesn't pay off to change! Old voxel: "
+      //                 << double_param.value << " Counter: " <<
+      //                 counter_voxel_);
     }
     counter_voxel_++;
 
     if (change) {
       if (voxel_leaf_size_changer_srv_.call(voxel_param)) {
-        //        ROS_INFO_STREAM("Calling: ");
-      } else {
+        // ROS_INFO_STREAM("Calling: ");
+      } 
+      else {
         ROS_ERROR("Failed to call service voxel_leaf_size_changer_srv!");
       }
     }
+
     std_msgs::Float64 change_voxel_ros;
     change_voxel_ros.data = dchange_voxel;
-    dchange_voxel_pub_.publish(change_voxel_ros);
-  }
+    dchange_voxel_pub_.publish(change_voxel_ros);    
 }
 
 Eigen::Matrix3d LoFrontend::GetImuDelta() {
