@@ -45,6 +45,8 @@
             <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>            
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
+            <remap from="~SPACE_MONITOR_TOPIC" to="localizer_space_monitor/space_size"/>
+
             <!-- For Sim -->
             <!-- <remap from="~ODOMETRY_TOPIC" to="wheel_odom"/> -->         
 
