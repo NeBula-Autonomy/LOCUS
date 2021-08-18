@@ -1045,11 +1045,12 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
     return false;
   }
   imu_quaternion_change_ = imu_quaternion_previous_.inverse() * imu_quaternion;
-  /*
-  if (data_integration_mode_ == 2) {odometry_.SetImuDelta(GetImuYawDelta());}
-  else {odometry_.SetImuDelta(GetImuDelta());}
-  */
-  odometry_.SetImuDelta(GetImuDelta());
+  if (data_integration_mode_ == 2) {
+    odometry_.SetImuDelta(GetImuYawDelta());
+  }
+  else {
+    odometry_.SetImuDelta(GetImuDelta());
+  }
   imu_quaternion_previous_ = imu_quaternion;
   return true; 
 }
