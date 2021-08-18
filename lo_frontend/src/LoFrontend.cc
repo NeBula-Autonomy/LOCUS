@@ -484,10 +484,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     lidar_callback_start_ = ros::Time::now();
   }
 
-  if (b_use_osd_) {
-    CalculateCrossSection(msg);
-  }
-
   CheckMsgDropRate(msg);
 
   ros::Time stamp = pcl_conversions::fromPCL(msg->header.stamp);
