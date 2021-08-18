@@ -714,19 +714,11 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
   localization_.SetFlatGroundAssumptionValue(bool_msg.data);
 }
 
-void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
-  std::cout << "LoFrontend::SpaceMonitorCallback: " << msg.data << std::endl;
-  if (msg.data == "closed") {
-    b_is_open_space_ = false;
-    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
-  } 
-  else if (msg.data == "open") {
-    b_is_open_space_ = true;
-    translation_threshold_kf_ = translation_threshold_open_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
-  }
-  /*
+void LoFrontend::SpaceMonitorCallback(const std_msgs::Float32MultiArray& msg) {
+  // TODO: Can directly subscribe to localizer_space_monitor/space_type if wanted 
+  auto size_x = msg.data[0];
+  auto size_y = msg.data[1];
+  auto size_z = msg.data[2];  
   if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
     b_is_open_space_ = true;
     translation_threshold_kf_ = translation_threshold_open_space_kf_;
@@ -737,7 +729,6 @@ void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
     translation_threshold_kf_ = translation_threshold_closed_space_kf_;
     rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
   }
-  */
 }
 
 // Publish odometry at fixed rate
