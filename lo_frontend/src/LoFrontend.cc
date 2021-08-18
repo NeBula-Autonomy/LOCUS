@@ -331,49 +331,16 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
   return CreatePublishers(n);
 }
 
-// bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
-//  ROS_INFO("LoFrontend::RegisterOnlineCallbacks");
-//  ROS_INFO("%s: Registering online callbacks.", name_.c_str());
-//  nl_ = ros::NodeHandle(n);
-////  fga_sub_ = nl_.subscribe(
-////      "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
-////  space_monitor_sub_ = nl_.subscribe(
-////      "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
-//  return CreatePublishers(n);
-//}
-
 bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   nl_ = ros::NodeHandle(n);
 
-  //  if (!b_interpolate_) {
-  //    lidar_sub_ = nl_.subscribe(
-  //        "LIDAR_TOPIC", lidar_queue_size_, &LoFrontend::LidarCallback, this);
-  //    if (data_integration_mode_ == 1 || data_integration_mode_ == 2)
-  //      imu_sub_ = nl_.subscribe(
-  //          "IMU_TOPIC", imu_queue_size_, &LoFrontend::ImuCallback, this);
-  //    else if (data_integration_mode_ == 3)
-  //      odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
-  //                                odom_queue_size_,
-  //                                &LoFrontend::OdometryCallback,
-  //                                this);
-  //  } else {
-  //    odom_sub_ = nl_.subscribe("ODOMETRY_TOPIC",
-  //                              odom_queue_size_,
-  //                              &LoFrontend::OdometryCallback,
-  //                              this);
-  //    lidar_sub_mf_.subscribe(nl_, "LIDAR_TOPIC", lidar_queue_size_);
-  //    lidar_odometry_filter_ = new tf2_ros::MessageFilter<PointCloudF>(
-  //        lidar_sub_mf_, tf2_ros_odometry_buffer_, bd_odom_frame_id_, 10,
-  //        nl_);
-  //    lidar_odometry_filter_->registerCallback(
-  //        boost::bind(&LoFrontend::LidarCallback, this, _1));
-  //  }
-
   fga_sub_ = nl_.subscribe(
-      "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
+    "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
 
-  space_monitor_sub_ = nl_.subscribe(
+  if (b_use_osd_) { 
+    space_monitor_sub_ = nl_.subscribe(
       "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
+  }
 
   voxel_leaf_size_changer_srv_ =
       nl_.serviceClient<dynamic_reconfigure::Reconfigure>(
@@ -748,18 +715,16 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
 }
 
 void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
-  if (b_use_osd_) {
-    ROS_INFO("LoFrontend::SpaceMonitorCallback");
-    std::cout << "Received " << msg.data << std::endl;
-    if (msg.data == "closed") {
-      b_is_open_space_ = false;
-      translation_threshold_kf_ = translation_threshold_closed_space_kf_;
-      rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
-    } else if (msg.data == "open") {
-      b_is_open_space_ = true;
-      translation_threshold_kf_ = translation_threshold_open_space_kf_;
-      rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
-    }
+  std::cout << "LoFrontend::SpaceMonitorCallback: " << msg.data << std::endl;
+  if (msg.data == "closed") {
+    b_is_open_space_ = false;
+    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
+    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
+  } 
+  else if (msg.data == "open") {
+    b_is_open_space_ = true;
+    translation_threshold_kf_ = translation_threshold_open_space_kf_;
+    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
   }
   /*
   if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
