@@ -243,6 +243,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_use_osd", b_use_osd_))
     return false;
+  if (!pu::Get("osd_size_threshold", osd_size_threshold_))
+    return false;
   if (!pu::Get("translation_threshold_closed_space_kf",
                translation_threshold_closed_space_kf_))
     return false;
