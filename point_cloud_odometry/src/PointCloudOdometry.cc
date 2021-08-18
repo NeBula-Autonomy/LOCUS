@@ -2,11 +2,7 @@
 Authors:
   - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
   - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
-<<<<<<< HEAD
-  - Andrzej Reinke (andrzej.m.reinke@jpl.nasa.gov)
-=======
   - Andrzej Reinke    (andrzej.m.reinke@jpl.nasa.gov)
->>>>>>> b21bdb09c68a834dcfb3938cc254b673056c2144
 */
 
 #include <point_cloud_odometry/PointCloudOdometry.h>
@@ -210,28 +206,26 @@ bool PointCloudOdometry::SetupICP() {
   return true;
 }
 
-void PointCloudOdometry::EnableImuIntegration() {
-  b_use_imu_integration_ = true;
-}
-
 void PointCloudOdometry::EnableOdometryIntegration() {
   b_use_odometry_integration_ = true;
+  b_use_imu_integration_ = false; 
+  b_use_pose_stamped_integration_ = false; 
+}
+
+void PointCloudOdometry::EnableImuIntegration() {
+  b_use_imu_integration_ = true;
+  b_use_odometry_integration_ = false;
+  b_use_pose_stamped_integration_ = false; 
 }
 
 void PointCloudOdometry::EnablePoseStampedIntegration() {
-  b_use_pose_stamped_integration_ = true;
+  ROS_ERROR("EnablePoseStampedIntegration not implemented in PointCloudOdometry");
 }
 
-void PointCloudOdometry::DisableImuIntegration() {
+void PointCloudOdometry::DisableSensorIntegration() {
   b_use_imu_integration_ = false;
-}
-
-void PointCloudOdometry::DisableOdometryIntegration() {
   b_use_odometry_integration_ = false;
-}
-
-void PointCloudOdometry::DisablePoseStampedIntegration() {
-  b_use_pose_stamped_integration_ = false;
+  b_use_pose_stamped_integration_ = false; 
 }
 
 bool PointCloudOdometry::SetLidar(const PointCloudF& points) {
