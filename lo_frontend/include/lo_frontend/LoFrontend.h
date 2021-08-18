@@ -229,19 +229,6 @@ private:
   bool b_pose_stamped_has_been_received_;
   int pose_stamped_number_of_calls_;
 
-  /*-----------------
-  BB based OSD
-  ------------------*/
-
-  void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
-  bool b_use_osd_;
-  double osd_size_threshold_;
-  PointF minPoint_;
-  PointF maxPoint_;
-  bool b_publish_xy_cross_section_;
-  ros::Publisher xy_cross_section_pub_;
-  // Closed space keyframe policy
-
   /* ----------------------------------
   Dynamic hierarchical data integration
   ---------------------------------- */
@@ -332,6 +319,8 @@ private:
   Subscribe to localizer space monitor
   ----------------------------------*/
 
+  bool b_use_osd_;
+  double osd_size_threshold_;
   bool b_is_open_space_;
   ros::Subscriber space_monitor_sub_;
   void SpaceMonitorCallback(const std_msgs::String& msg);

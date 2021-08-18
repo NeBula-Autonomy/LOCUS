@@ -395,12 +395,8 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
   approx_nearest_neighbors_duration_pub_ = nl.advertise<std_msgs::Float64>(
       "approx_nearest_neighbors_duration", 10, false);
-  xy_cross_section_pub_ =
-      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
-
   dchange_voxel_pub_ =
       nl.advertise<std_msgs::Float64>("dchange_voxel", 10, false);
-
   odom_pub_timer_ =
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);
   odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
@@ -408,7 +404,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
   time_difference_pub_ =
       nl.advertise<std_msgs::Float64>("time_difference", 10, false);
-
   return true;
 }
 
@@ -766,6 +761,18 @@ void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
       rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
     }
   }
+  /*
+  if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
+    b_is_open_space_ = true;
+    translation_threshold_kf_ = translation_threshold_open_space_kf_;
+    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
+  } 
+  else {
+    b_is_open_space_ = false;
+    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
+    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
+  }
+  */
 }
 
 // Publish odometry at fixed rate
@@ -976,26 +983,6 @@ Eigen::Quaterniond LoFrontend::GetImuQuaternion(const Imu& imu_msg) {
 tf::Transform
 LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
   return odometry_pose_previous_.inverseTimes(odometry_pose);
-}
-
-void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
-  pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
-  auto size_x = maxPoint_.x - minPoint_.x;
-  auto size_y = maxPoint_.y - minPoint_.y;
-  if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
-    b_is_open_space_ = true;
-    translation_threshold_kf_ = translation_threshold_open_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
-  } else {
-    b_is_open_space_ = false;
-    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
-  }
-  if (b_publish_xy_cross_section_) {
-    auto xy_cross_section_msg = std_msgs::Float64();
-    xy_cross_section_msg.data = size_x * size_y;
-    xy_cross_section_pub_.publish(xy_cross_section_msg);
-  }
 }
 
 void LoFrontend::ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg) {
