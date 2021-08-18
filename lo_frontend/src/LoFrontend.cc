@@ -24,6 +24,7 @@ LoFrontend::LoFrontend()
     mapper_unused_out_(new PointCloud()),
     b_integrate_interpolated_odom_(false),
     b_process_pure_lo_(false),
+    b_process_pure_lo_prev_(false),
     b_imu_has_been_received_(false),
     b_odometry_has_been_received_(false),
     b_imu_frame_is_correct_(false),
@@ -417,6 +418,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
         return;
       }    
     }
+    if (b_process_pure_lo_ != b_process_pure_lo_prev_ && b_process_pure_lo_) {
+      ROS_WARN("Processing pure lo");
+    }
+    b_process_pure_lo_prev_ = b_process_pure_lo_;
   }
 
   filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
@@ -955,7 +960,7 @@ bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
     return false;
   }
   if (!b_odometry_has_been_received_) {
-    ROS_INFO("Receiving odometry for the first time");
+    ROS_WARN("Integrating odom");
     tf::poseMsgToTF(odometry_msg.pose.pose, odometry_pose_previous_);
     b_odometry_has_been_received_ = true;
     return false;
@@ -969,7 +974,7 @@ bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
 
 bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
   if (!b_odometry_has_been_received_) {
-    ROS_INFO("Receiving odometry for the first time");
+    ROS_WARN("Integrating interpolated odom");
     b_odometry_has_been_received_ = true;
     return false;
   }
@@ -1039,7 +1044,7 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
   }
   auto imu_quaternion = GetImuQuaternion(imu_msg);
   if (!b_imu_has_been_received_) {
-    ROS_INFO("Receiving imu for the first time");
+    ROS_WARN("Integrating imu");
     imu_quaternion_previous_ = imu_quaternion;
     b_imu_has_been_received_ = true;
     return false;
