@@ -1025,6 +1025,7 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
   } 
   else {
     // Don't have a valid tf so do pure LO
+    ROS_INFO("IntegrateInterpolatedOdom - Initializing with identity pose");
     tf_translation_ = tf::Vector3(0.0, 0.0, 0.0);
     tf_quaternion_ = tf::Quaternion(0.0, 0.0, 0.0, 1.0);
   }
