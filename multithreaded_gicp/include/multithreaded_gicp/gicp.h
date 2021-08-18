@@ -45,7 +45,6 @@
 
 #include <frontend_utils/CommonFunctions.h>
 #include <frontend_utils/CommonStructs.h>
-#include <omp.h>
 #include <pcl/registration/bfgs.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
