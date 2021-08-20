@@ -228,8 +228,6 @@ TEST_F(PointCloudOdometryTest, EnableDisableIMUIntegration) {
   ASSERT_TRUE(IsImuIntegrationUsed());
   pco.EnableImuIntegration();
   ASSERT_TRUE(IsImuIntegrationUsed());
-  pco.DisableImuIntegration();
-  ASSERT_FALSE(IsImuIntegrationUsed());
 }
 
 TEST_F(PointCloudOdometryTest, EnableDisableOdometryIntegration) {
@@ -238,8 +236,6 @@ TEST_F(PointCloudOdometryTest, EnableDisableOdometryIntegration) {
   ASSERT_TRUE(IsOdometryIntegrationUsed());
   pco.EnableOdometryIntegration();
   ASSERT_TRUE(IsOdometryIntegrationUsed());
-  pco.DisableOdometryIntegration();
-  ASSERT_FALSE(IsOdometryIntegrationUsed());
 }
 
 TEST_F(PointCloudOdometryTest, EnableDisablePoseStampedIntegration) {
@@ -248,8 +244,6 @@ TEST_F(PointCloudOdometryTest, EnableDisablePoseStampedIntegration) {
   ASSERT_TRUE(IsPoseStampedIntegrationUsed());
   pco.EnablePoseStampedIntegration();
   ASSERT_TRUE(IsPoseStampedIntegrationUsed());
-  pco.DisablePoseStampedIntegration();
-  ASSERT_FALSE(IsPoseStampedIntegrationUsed());
 }
 
 TEST_F(PointCloudOdometryTest, SetLidar) {

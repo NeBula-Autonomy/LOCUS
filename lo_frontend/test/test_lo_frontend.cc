@@ -37,9 +37,9 @@ public:
   LoFrontend lf;
 
 protected:
-  bool SetDataIntegrationMode() {
-    return lf.SetDataIntegrationMode();
-  }
+  // bool SetDataIntegrationMode() {
+  //   return lf.SetDataIntegrationMode();
+  // }
 
   void ImuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg) {
     lf.ImuCallback(imu_msg);
@@ -49,10 +49,10 @@ protected:
     lf.OdometryCallback(odometry_msg);
   }
 
-  void PoseStampedCallback(
-      const geometry_msgs::PoseStamped::ConstPtr& pose_stamped_msg) {
-    lf.PoseStampedCallback(pose_stamped_msg);
-  }
+  // void PoseStampedCallback(
+  //     const geometry_msgs::PoseStamped::ConstPtr& pose_stamped_msg) {
+  //   lf.PoseStampedCallback(pose_stamped_msg);
+  // }
 
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const {
     return lf.GetOdometryDelta(odometry_pose);
@@ -66,9 +66,9 @@ protected:
     return lf.GetImuYawDelta();
   }
 
-  void SwitchToImuIntegration() {
-    lf.SwitchToImuIntegration();
-  }
+  // void SwitchToImuIntegration() {
+  //   lf.SwitchToImuIntegration();
+  // }
 
 private:
 };
@@ -80,13 +80,13 @@ TEST_F(LoFrontendTest, TestInitialize) {
   ASSERT_TRUE(result);
 }
 
-/* TEST SetDataIntegratioMode*/
-TEST_F(LoFrontendTest, TestSetDataIntegrationMode) {
-  ros::NodeHandle nh;
-  lf.Initialize(nh, false);
-  bool result = SetDataIntegrationMode();
-  ASSERT_TRUE(result);
-}
+// /* TEST SetDataIntegratioMode*/
+// TEST_F(LoFrontendTest, TestSetDataIntegrationMode) {
+//   ros::NodeHandle nh;
+//   lf.Initialize(nh, false);
+//   bool result = SetDataIntegrationMode();
+//   ASSERT_TRUE(result);
+// }
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
