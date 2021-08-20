@@ -54,13 +54,10 @@ class LoFrontend {
 public:
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
-  typedef geometry_msgs::PoseStamped PoseStamped;
   typedef std::map<double, Imu> ImuBuffer;
   typedef std::map<double, Odometry> OdometryBuffer;
-  typedef std::map<double, PoseStamped> PoseStampedBuffer;
   typedef Imu::ConstPtr ImuConstPtr;
   typedef Odometry::ConstPtr OdometryConstPtr;
-  typedef PoseStamped::ConstPtr PoseStampedConstPtr;
 
   LoFrontend();
   ~LoFrontend();

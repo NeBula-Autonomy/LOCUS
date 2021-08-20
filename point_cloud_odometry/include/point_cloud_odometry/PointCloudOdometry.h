@@ -70,7 +70,6 @@ public:
   bool SetLidar(const PointCloudF& points);
   bool SetImuDelta(const Eigen::Matrix3d& imu_delta);
   bool SetOdometryDelta(const tf::Transform& odometry_delta);
-  bool SetPoseStampedDelta(const tf::Transform& pose_stamped_delta);
 
   bool UpdateEstimate();
 
@@ -86,7 +85,6 @@ public:
 
   void EnableImuIntegration();
   void EnableOdometryIntegration();
-  void EnablePoseStampedIntegration();
   void DisableSensorIntegration();
 
   void SetFlatGroundAssumptionValue(const bool& value);
@@ -170,10 +168,6 @@ private:
   bool b_use_odometry_integration_;
   tf::Transform odometry_delta_;
 
-  // PoseStamped
-  bool b_use_pose_stamped_integration_;
-  tf::Transform pose_stamped_delta_;
-
   /*--------------------
   Flat ground assumption
   --------------------*/
@@ -190,7 +184,6 @@ private:
   --------------*/
   Eigen::Matrix4d imu_prior_;
   Eigen::Matrix4d odometry_prior_;
-  Eigen::Matrix4d pose_stamped_prior_;
 
   /*--------------------
   Making some friends

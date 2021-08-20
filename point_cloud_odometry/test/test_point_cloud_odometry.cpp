@@ -184,9 +184,6 @@ protected:
   bool IsOdometryIntegrationUsed() {
     return pco.b_use_odometry_integration_;
   }
-  bool IsPoseStampedIntegrationUsed() {
-    return pco.b_use_pose_stamped_integration_;
-  }
   bool isGroundFlat() {
     return pco.b_is_flat_ground_assumption_;
   }
@@ -198,9 +195,6 @@ protected:
   }
   tf::Transform GetOdometryDelta() {
     return pco.odometry_delta_;
-  }
-  tf::Transform GetPoseStampedDelta() {
-    return pco.pose_stamped_delta_;
   }
   ros::Time GetStamp() {
     return pco.stamp_;
@@ -238,14 +232,6 @@ TEST_F(PointCloudOdometryTest, EnableDisableOdometryIntegration) {
   ASSERT_TRUE(IsOdometryIntegrationUsed());
 }
 
-// TEST_F(PointCloudOdometryTest, EnableDisablePoseStampedIntegration) {
-//   ASSERT_FALSE(IsPoseStampedIntegrationUsed());
-//   pco.EnablePoseStampedIntegration();
-//   ASSERT_TRUE(IsPoseStampedIntegrationUsed());
-//   pco.EnablePoseStampedIntegration();
-//   ASSERT_TRUE(IsPoseStampedIntegrationUsed());
-// }
-
 TEST_F(PointCloudOdometryTest, SetLidar) {
   ASSERT_TRUE(pco.SetLidar(*data));
   EXPECT_EQ(GetPoints().size(), n_points_);
@@ -263,15 +249,6 @@ TEST_F(PointCloudOdometryTest, SetOdometryDelta) {
   EXPECT_DOUBLE_EQ(GetOdometryDelta().getOrigin().getX(), 1.0);
   EXPECT_DOUBLE_EQ(GetOdometryDelta().getOrigin().getY(), 5.0);
   EXPECT_DOUBLE_EQ(GetOdometryDelta().getOrigin().getZ(), 10.0);
-}
-
-TEST_F(PointCloudOdometryTest, SetPoseStampedDelta) {
-  tf::Transform odom = tf::Transform::getIdentity();
-  odom.setOrigin(tf::Vector3(1.0, 5.0, 10.0));
-  ASSERT_TRUE(pco.SetPoseStampedDelta(odom));
-  EXPECT_DOUBLE_EQ(GetPoseStampedDelta().getOrigin().getX(), 1.0);
-  EXPECT_DOUBLE_EQ(GetPoseStampedDelta().getOrigin().getY(), 5.0);
-  EXPECT_DOUBLE_EQ(GetPoseStampedDelta().getOrigin().getZ(), 10.0);
 }
 
 TEST_F(PointCloudOdometryTest, GetDiagnostics) {
