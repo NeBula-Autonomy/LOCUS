@@ -479,7 +479,7 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
   ComputeAp_ForPoint2PlaneICP(
       query_normalized, reference_cloud, correspondences, T, Ap);
   // 1 cm covariance for now hard coded
-  *covariance = 0.01 * 0.01 * Ap.inverse();
+  *covariance = 0.05 * 0.05 * Ap.inverse();
 
   // Here bound the covariance using eigen values
   //// First find ldlt decomposition
