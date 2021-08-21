@@ -25,8 +25,8 @@
     <group ns="$(arg robot_namespace)">
 
       <!-- Load parameters -->
-      <rosparam file="$(find ugv_traversability)/config/pointcloud_proc.yaml" 
-                subst_value="true"/>
+      <!-- <rosparam file="$(find ugv_traversability)/config/pointcloud_proc.yaml" 
+                subst_value="true"/> -->
       <rosparam file="$(find lo_frontend)/config/lo_filtering_$(arg robot_type).yaml"
                 subst_value="true"/>
    
@@ -64,14 +64,22 @@
             <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot' or robot_type == 'xmaxx')"/>
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
-            <param name="localization/num_threads" value="4" if="$(eval robot_namespace.startswith('husky'))" />
-            <param name="icp/num_threads"          value="4" if="$(eval robot_namespace.startswith('husky'))" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace.startswith('spot'))" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace.startswith('spot'))" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="localization/num_threads" value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-            <param name="icp/num_threads"          value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+            <param name="localization/num_threads"       value="4" if="$(eval robot_namespace.startswith('husky'))" />
+            <param name="icp/num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
+            <param name="mapper/num_threads"             value="4" if="$(eval robot_namespace.startswith('husky'))" />
+
+            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('spot'))" />
+            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
+             <param name="mapper/num_threads"            value="1" if="$(eval robot_namespace.startswith('spot'))" />
+
+            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+
+            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+
 
         </node>
 
@@ -149,7 +157,10 @@
           <remap from="~input" to="velodyne_points/transformed" unless="$(arg b_use_multiple_pc)"/>
         </node>
 
-            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
+<!-- old way. TODO: removing after locus testing-->
+<!--node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true"-->
+
+            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load traversability_filters/CustomVoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
             <remap from="~input" to="body_filter/output" />
 
             <rosparam subst_value="true">
@@ -157,7 +168,7 @@
             filter_limit_min: -100
             filter_limit_max: 100
             filter_limit_negative: False
-            leaf_size: 0.1
+            leaf_size: 0.25
             output_frame: $(arg robot_namespace)/base_link
             </rosparam>
         </node>
@@ -169,6 +180,13 @@
             respawn="$(arg respawn)">
             <remap from="~input" to="voxel_grid/output"/>
             <remap from="~output" to="$(arg pc_input)" />
+
+           <param name="num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
+           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
+           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
+           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
+
+
         </node>
       
     </group>

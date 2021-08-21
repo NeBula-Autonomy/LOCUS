@@ -159,6 +159,29 @@ bool PointCloudOdometry::SetupICP() {
     gicp->enableTimingOutput(params_.enable_timing_output);
     gicp->RecomputeTargetCovariance(recompute_covariances_);
     gicp->RecomputeSourceCovariance(recompute_covariances_);
+    gicp->setEuclideanFitnessEpsilon(0.005);
+    ROS_INFO_STREAM("GICP");
+    ROS_INFO_STREAM("getMaxCorrespondenceDistance: "
+                    << gicp->getMaxCorrespondenceDistance());
+
+    ROS_INFO_STREAM("getMaximumIterations: " << gicp->getMaximumIterations());
+    ROS_INFO_STREAM(
+        "getTransformationEpsilon: " << gicp->getTransformationEpsilon());
+    ROS_INFO_STREAM(
+        "getEuclideanFitnessEpsilon: " << gicp->getEuclideanFitnessEpsilon());
+
+    ROS_INFO_STREAM("Ransac: " << gicp->getRANSACIterations());
+
+    ROS_INFO_STREAM("getRANSACIterations: " << gicp->getRANSACIterations());
+    ROS_INFO_STREAM(" ROTATION EPSILION: " << gicp->getRotationEpsilon());
+    ROS_INFO_STREAM(
+        "getCorrespondenceRandomness:" << gicp->getCorrespondenceRandomness());
+    ROS_INFO_STREAM("getMaximumOptimizerIterations:"
+                    << gicp->getMaximumOptimizerIterations());
+    ROS_INFO_STREAM("getConvergeCriteria:" << gicp->getConvergeCriteria());
+    ROS_INFO_STREAM(
+        "RANSACOutlie: " << gicp->getRANSACOutlierRejectionThreshold());
+    ROS_INFO_STREAM("CLASS NAME: " << gicp->getClassName());
 
     icp_ = gicp;
     break;
@@ -184,7 +207,6 @@ bool PointCloudOdometry::SetupICP() {
         "No such Registration mode or not implemented yet " +
         params_.registration_method);
   }
-
   return true;
 }
 
@@ -269,7 +291,6 @@ bool PointCloudOdometry::UpdateICP() {
   icp_->setInputSource(query_trans_);
   icp_->setInputTarget(reference_);
   icp_->align(icpAlignedPointsOdometry_);
-
   Eigen::Matrix4d T;
   T = icp_->getFinalTransformation().cast<double>();
 
