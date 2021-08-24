@@ -320,7 +320,7 @@ private:
   Subscribe to localizer space monitor
   ----------------------------------*/
 
-  bool b_use_osd_;
+  bool b_sub_to_lsm_;
   double osd_size_threshold_;
   bool b_is_open_space_;
   ros::Subscriber space_monitor_sub_;

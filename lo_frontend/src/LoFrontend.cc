@@ -241,7 +241,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_interpolate", b_interpolate_))
     return false;
-  if (!pu::Get("b_use_osd", b_use_osd_))
+  if (!pu::Get("b_sub_to_lsm", b_sub_to_lsm_))
     return false;
   if (!pu::Get("osd_size_threshold", osd_size_threshold_))
     return false;
@@ -337,7 +337,7 @@ bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   fga_sub_ = nl_.subscribe(
     "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
 
-  if (b_use_osd_) { 
+  if (b_sub_to_lsm_) { 
     space_monitor_sub_ = nl_.subscribe(
       "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
   }
