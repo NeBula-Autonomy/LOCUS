@@ -48,7 +48,6 @@ Authors:
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <visualization_msgs/Marker.h>
-#include <std_msgs/Float32MultiArray.h>
 
 class LoFrontend {
   
@@ -324,7 +323,7 @@ private:
   double osd_size_threshold_;
   bool b_is_open_space_;
   ros::Subscriber space_monitor_sub_;
-  void SpaceMonitorCallback(const std_msgs::Float32MultiArray& msg);
+  void SpaceMonitorCallback(const std_msgs::Float64& msg);
   double translation_threshold_closed_space_kf_;
   double rotation_threshold_closed_space_kf_;
   double translation_threshold_open_space_kf_;
