@@ -715,10 +715,20 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
 }
 
 void LoFrontend::SpaceMonitorCallback(const std_msgs::Float32MultiArray& msg) {
-  // TODO: Can directly subscribe to localizer_space_monitor/space_type if wanted 
+  /*
+  Can subscribe to what's preferred
+    - localizer_space_monitor/xy_cross_section 
+    - localizer_space_monitor/space_size 
+    - localizer_space_monitor/space_type 
+  */
   auto size_x = msg.data[0];
   auto size_y = msg.data[1];
-  auto size_z = msg.data[2];  
+  auto size_z = msg.data[2];
+  ROS_INFO("LoFrontend::SpaceMonitorCallback"); 
+  ROS_INFO_STREAM("size_x: " << size_x << " m"); 
+  ROS_INFO_STREAM("size_y: " << size_y << " m"); 
+  ROS_INFO_STREAM("size_z: " << size_z << " m"); 
+  /*
   if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
     b_is_open_space_ = true;
     translation_threshold_kf_ = translation_threshold_open_space_kf_;
@@ -729,6 +739,7 @@ void LoFrontend::SpaceMonitorCallback(const std_msgs::Float32MultiArray& msg) {
     translation_threshold_kf_ = translation_threshold_closed_space_kf_;
     rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
   }
+  */
 }
 
 // Publish odometry at fixed rate
