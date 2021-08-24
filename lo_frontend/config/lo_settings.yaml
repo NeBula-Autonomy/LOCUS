@@ -68,7 +68,7 @@ statistics_verbosity_level: low # off, low, high
 
 # Subscribe to localizer space monitor
 b_sub_to_lsm: false
-osd_size_threshold: 99999
+xy_cross_section_threshold: 2500 # m^2
 b_publish_xy_cross_section: true
 # Closed space keyframe policy
 translation_threshold_closed_space_kf: 1.0

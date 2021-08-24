@@ -320,7 +320,7 @@ private:
   ----------------------------------*/
 
   bool b_sub_to_lsm_;
-  double osd_size_threshold_;
+  double xy_cross_section_threshold_;
   bool b_is_open_space_;
   ros::Subscriber space_monitor_sub_;
   void SpaceMonitorCallback(const std_msgs::Float64& msg);

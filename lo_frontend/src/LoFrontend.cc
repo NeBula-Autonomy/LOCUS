@@ -243,7 +243,7 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_sub_to_lsm", b_sub_to_lsm_))
     return false;
-  if (!pu::Get("osd_size_threshold", osd_size_threshold_))
+  if (!pu::Get("xy_cross_section_threshold", xy_cross_section_threshold_))
     return false;
   if (!pu::Get("translation_threshold_closed_space_kf",
                translation_threshold_closed_space_kf_))
