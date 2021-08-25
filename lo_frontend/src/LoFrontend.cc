@@ -718,18 +718,7 @@ void LoFrontend::SpaceMonitorCallback(const std_msgs::Float64& msg) {
   auto xy_cross_section = msg.data;
   ROS_INFO("LoFrontend::SpaceMonitorCallback"); 
   ROS_INFO_STREAM("xy_cross_section: " << xy_cross_section << " m^2");
-  /*
-  if (xy_cross_section > xy_cross_section_threshold_) {
-    b_is_open_space_ = true;
-    translation_threshold_kf_ = translation_threshold_open_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
-  } 
-  else {
-    b_is_open_space_ = false;
-    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
-  }
-  */
+  // TODO: add back keyframe addition policy updates
 }
 
 // Publish odometry at fixed rate
