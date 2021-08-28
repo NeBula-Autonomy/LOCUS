@@ -343,12 +343,13 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
   if (!b_imu_frame_is_correct_) {
     CheckImuFrame(imu_msg);
   }
-  if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
-    imu_buffer_.erase(imu_buffer_.begin());
-  }
   if (CheckNans(*imu_msg)) {
     ROS_WARN("Throwing IMU message as it contains NANS");
     return;
+  }
+  std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
+  if (CheckBufferSize(imu_buffer_) > imu_buffer_size_limit_) {
+    imu_buffer_.erase(imu_buffer_.begin());
   }
   if (!InsertMsgInBuffer(imu_msg, imu_buffer_)) {
     ROS_WARN("Unable to store IMU message in buffer");
@@ -1044,10 +1045,13 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
 
 bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
   Imu imu_msg;
-  if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
-    ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
-             "given lidar timestamp");
-    return false;
+  {
+    std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
+    if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
+      ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
+              "given lidar timestamp");
+      return false;
+    }
   }
   auto imu_quaternion = GetImuQuaternion(imu_msg);
   if (!b_imu_has_been_received_) {

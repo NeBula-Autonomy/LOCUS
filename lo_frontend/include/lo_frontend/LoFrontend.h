@@ -7,6 +7,7 @@ Authors:
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
+#include <mutex>
 #include <chrono>
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
@@ -343,6 +344,12 @@ private:
   bool IntegrateInterpolatedOdom(const ros::Time& stamp);
   bool IntegrateOdom(const ros::Time& stamp);
   bool IntegrateImu(const ros::Time& stamp); 
+
+  /*--- 
+  Mutex
+  ---*/
+
+  std::mutex imu_buffer_mutex_; 
 
 };
 
