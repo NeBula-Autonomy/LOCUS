@@ -887,7 +887,7 @@ int LoFrontend::CheckBufferSize(const T& buffer) const {
 template <typename T1, typename T2>
 bool LoFrontend::GetMsgAtTime(const ros::Time& stamp,
                               T1& msg,
-                              T2& buffer) const {
+                              const T2& buffer) const {
   if (buffer.size() == 0) {
     return false;
   }

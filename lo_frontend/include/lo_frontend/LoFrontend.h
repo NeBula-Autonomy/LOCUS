@@ -139,7 +139,7 @@ private:
   int CheckBufferSize(const T& buffer) const;
 
   template <typename T1, typename T2>
-  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const;
+  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, const T2& buffer) const;
 
   double translation_threshold_kf_;
   double rotation_threshold_kf_;
