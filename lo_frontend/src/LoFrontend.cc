@@ -359,6 +359,7 @@ void LoFrontend::ImuCallback(const ImuConstPtr& imu_msg) {
 void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
   last_reception_time_odom_ = ros::Time::now();
   if (!b_integrate_interpolated_odom_) {
+    std::lock_guard<std::mutex> lock(odometry_buffer_mutex_);
     if (CheckBufferSize(odometry_buffer_) > odometry_buffer_size_limit_) {
       odometry_buffer_.erase(odometry_buffer_.begin());
     }
@@ -961,10 +962,13 @@ bool LoFrontend::IntegrateSensors(const ros::Time& stamp) {
 
 bool LoFrontend::IntegrateOdom(const ros::Time& stamp) {
   Odometry odometry_msg;
-  if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
-    ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
-              "given lidar timestamp");
-    return false;
+  {
+    std::lock_guard<std::mutex> lock(odometry_buffer_mutex_);
+    if (!GetMsgAtTime(stamp, odometry_msg, odometry_buffer_)) {
+      ROS_WARN("Unable to retrieve odometry_msg from odometry_buffer_ "
+               "given lidar timestamp");
+      return false;
+    }
   }
   if (!b_odometry_has_been_received_) {
     ROS_WARN("Integrating odom");

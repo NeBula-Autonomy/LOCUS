@@ -350,6 +350,7 @@ private:
   ---*/
 
   std::mutex imu_buffer_mutex_; 
+  std::mutex odometry_buffer_mutex_; 
 
 };
 
