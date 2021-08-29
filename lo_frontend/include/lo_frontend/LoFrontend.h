@@ -8,6 +8,7 @@ Authors:
 #define LO_FRONTEND_LO_FRONTEND_H
 
 #include <mutex>
+#include <atomic>
 #include <chrono>
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
@@ -49,10 +50,13 @@ Authors:
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <visualization_msgs/Marker.h>
+
 class LoFrontend {
+
   friend class LoFrontendTest;
 
 public:
+
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef std::map<double, Imu> ImuBuffer;
@@ -68,6 +72,7 @@ public:
   std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
 
 private:
+
   int mapper_threads_{1};
   std::string robot_type_;
 
@@ -334,8 +339,8 @@ private:
   ---------------*/
   
   double sensor_health_timeout_;
-  ros::Time last_reception_time_odom_; 
-  ros::Time last_reception_time_imu_; 
+  std::atomic<ros::Time> last_reception_time_odom_ = {{ros::Time()}};
+  std::atomic<ros::Time> last_reception_time_imu_ = {{ros::Time()}};
   bool b_process_pure_lo_;
   bool b_process_pure_lo_prev_;
   bool IsOdomHealthy();
