@@ -133,7 +133,7 @@ private:
   ros::Time stamp_transform_to_;
   bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
-  bool b_have_published_odom_ = false;
+  std::atomic<bool> b_have_published_odom_ = {{bool(false)}};
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
