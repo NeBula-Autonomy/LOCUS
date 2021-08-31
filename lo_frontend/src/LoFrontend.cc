@@ -603,19 +603,21 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   // Check if we can get additional transforms from the odom source
   bool have_odom_transform = false;
   geometry_msgs::TransformStamped t;
-  if (latest_odom_stamp_ > lidar_stamp && data_integration_mode_ >= 3 &&
+  
+  ros::Time latest_odom_stamp = latest_odom_stamp_;
+  if (latest_odom_stamp > lidar_stamp && data_integration_mode_ >= 3 &&
       tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
                                             latest_pose_stamp_,
                                             base_frame_id_,
-                                            latest_odom_stamp_,
+                                            latest_odom_stamp,
                                             bd_odom_frame_id_)) {
     have_odom_transform = true;
-    publish_stamp = latest_odom_stamp_;
+    publish_stamp = latest_odom_stamp;
     // Get transform between latest lidar timestamp and latest odom timestamp
     t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
                                                  latest_pose_stamp_,
                                                  base_frame_id_,
-                                                 latest_odom_stamp_,
+                                                 latest_odom_stamp,
                                                  bd_odom_frame_id_);
   } else {
     publish_stamp = latest_pose_stamp_;
@@ -629,7 +631,7 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     geometry_utils::Transform3 odom_delta =
         geometry_utils::ros::FromROS(t.transform);
     latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
-    latest_pose_stamp_ = latest_odom_stamp_;
+    latest_pose_stamp_ = latest_odom_stamp;
   }
 
   // Publish as an odometry message
@@ -994,19 +996,21 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
   geometry_msgs::TransformStamped t;
 
   auto wait_for_transform_start_time = ros::Time::now();
-  while (latest_odom_stamp_ < stamp) {
+  ros::Time latest_odom_stamp = latest_odom_stamp_;  
+  while (latest_odom_stamp < stamp) {
+    latest_odom_stamp = latest_odom_stamp_;
     if ((ros::Time::now() - wait_for_transform_start_time).toSec() >
         wait_for_odom_transform_timeout_) {
       ROS_WARN("Could not retrieve odom transform");
       break;
     }
   }
-
-  if (latest_odom_stamp_ < stamp && latest_odom_stamp_ > previous_stamp_) {
-    stamp_transform_to_ = latest_odom_stamp_;
+  
+  if (latest_odom_stamp < stamp && latest_odom_stamp > previous_stamp_) {
+    stamp_transform_to_ = latest_odom_stamp;
     if (b_debug_transforms_) {
       auto time_difference_msg = std_msgs::Float64();
-      time_difference_msg.data = (stamp - latest_odom_stamp_).toSec();
+      time_difference_msg.data = (stamp - latest_odom_stamp).toSec();
       time_difference_pub_.publish(time_difference_msg);
     }
   } 

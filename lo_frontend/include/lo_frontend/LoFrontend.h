@@ -129,7 +129,7 @@ private:
 
   geometry_utils::Transform3 latest_pose_;
   ros::Time latest_pose_stamp_;
-  ros::Time latest_odom_stamp_;
+  std::atomic<ros::Time> latest_odom_stamp_ = {{ros::Time()}};
   ros::Time stamp_transform_to_;
   bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
