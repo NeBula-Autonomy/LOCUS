@@ -608,9 +608,10 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   geometry_msgs::TransformStamped t;
   
   ros::Time latest_odom_stamp = latest_odom_stamp_;
+  ros::Time latest_pose_stamp = latest_pose_stamp_;
   if (latest_odom_stamp > lidar_stamp && data_integration_mode_ >= 3 &&
       tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
-                                            latest_pose_stamp_,
+                                            latest_pose_stamp,
                                             base_frame_id_,
                                             latest_odom_stamp,
                                             bd_odom_frame_id_)) {
@@ -618,12 +619,12 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     publish_stamp = latest_odom_stamp;
     // Get transform between latest lidar timestamp and latest odom timestamp
     t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
-                                                 latest_pose_stamp_,
+                                                 latest_pose_stamp,
                                                  base_frame_id_,
                                                  latest_odom_stamp,
                                                  bd_odom_frame_id_);
   } else {
-    publish_stamp = latest_pose_stamp_;
+    publish_stamp = latest_pose_stamp;
     // TODO - don't print this warning if we have not chosen odom as an input
     // TODO - just do stats on this
     // ROS_WARN("Can not get transform from odom source");

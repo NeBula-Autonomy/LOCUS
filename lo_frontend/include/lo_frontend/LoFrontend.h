@@ -128,7 +128,7 @@ private:
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
   geometry_utils::Transform3 latest_pose_;
-  ros::Time latest_pose_stamp_;
+  std::atomic<ros::Time> latest_pose_stamp_ = {{ros::Time()}};
   std::atomic<ros::Time> latest_odom_stamp_ = {{ros::Time()}};
   ros::Time stamp_transform_to_;
   bool b_first_odom_timer_ = true;
