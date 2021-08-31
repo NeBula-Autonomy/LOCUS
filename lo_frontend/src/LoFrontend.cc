@@ -512,7 +512,10 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
   // Update current pose for publishing
-  latest_pose_ = current_pose;
+  {
+    std::lock_guard<std::mutex> lock(latest_pose_mutex_);
+    latest_pose_ = current_pose;
+  }  
   previous_stamp_ = stamp;
   latest_pose_stamp_ = stamp;
   b_have_published_odom_ = false;
@@ -626,18 +629,23 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     // ROS_WARN("Can not get transform from odom source");
   }
 
+  geometry_utils::Transform3 pose_to_publish; 
+
   if (have_odom_transform) {
     // Convert transform into common format
     geometry_utils::Transform3 odom_delta =
         geometry_utils::ros::FromROS(t.transform);
-    latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
+    {
+      std::lock_guard<std::mutex> lock(latest_pose_mutex_);
+      pose_to_publish = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
+    }     
     latest_pose_stamp_ = latest_odom_stamp;
   }
 
   // Publish as an odometry message
   if (!b_have_published_odom_ || have_odom_transform) {
     // TODO - add to the covariance with the delta from visual odom
-    PublishOdometry(latest_pose_, covariance, publish_stamp);
+    PublishOdometry(pose_to_publish, covariance, publish_stamp);
     b_have_published_odom_ = true;
   }
 }
