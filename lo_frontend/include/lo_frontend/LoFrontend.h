@@ -11,6 +11,7 @@ Authors:
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
+#include <dynamic_reconfigure/Reconfigure.h>
 #include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
@@ -30,10 +31,13 @@ Authors:
 #include <point_cloud_mapper/PointCloudMapper.h>
 #include <point_cloud_mapper/settings.h>
 #include <point_cloud_odometry/PointCloudOdometry.h>
+#include <ros/callback_queue.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Float64.h>
+#include <std_msgs/String.h>
 #include <std_msgs/Time.h>
 #include <tf/message_filter.h>
 #include <tf/transform_datatypes.h>
@@ -44,7 +48,6 @@ Authors:
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <visualization_msgs/Marker.h>
-
 class LoFrontend {
   friend class LoFrontendTest;
 
@@ -64,7 +67,10 @@ public:
 
   bool Initialize(const ros::NodeHandle& n, bool from_log);
 
+  std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
+
 private:
+  int mapper_threads_{1};
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;
@@ -85,7 +91,19 @@ private:
   ros::Subscriber odom_sub_;
   ros::Subscriber pose_sub_;
 
-  ros::Publisher base_frame_pcld_pub_;
+  void setImuSubscriber(ros::NodeHandle& _nh);
+  void setOdomSubscriber(ros::NodeHandle& _nh);
+  void setLidarSubscriber(ros::NodeHandle& _nh);
+
+  // Timer for odometry callback
+  double odom_pub_rate_;
+  ros::Timer odom_pub_timer_;
+  void PublishOdomOnTimer(const ros::TimerEvent& ev);
+  void PublishOdometry(const geometry_utils::Transform3& odometry,
+                       const Eigen::Matrix<double, 6, 6>& covariance,
+                       const ros::Time stamp);
+  ros::Publisher odometry_pub_;
+
   ros::Publisher diagnostics_pub_;
 
   tf2_ros::MessageFilter<PointCloudF>* lidar_odometry_filter_;
@@ -94,6 +112,10 @@ private:
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
   void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
+  // Main msg callback queue
+  ros::CallbackQueue imu_queue_;
+  ros::CallbackQueue odom_queue_;
+  ros::CallbackQueue lidar_queue_;
 
   int lidar_queue_size_;
   int imu_queue_size_;
@@ -105,6 +127,14 @@ private:
   PoseStampedBuffer pose_stamped_buffer_;
 
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
+
+  geometry_utils::Transform3 latest_pose_;
+  ros::Time latest_pose_stamp_;
+  ros::Time latest_odom_stamp_;
+  ros::Time stamp_transform_to_;
+  bool b_first_odom_timer_ = true;
+  double transform_wait_duration_;
+  bool b_have_published_odom_ = false;
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
@@ -187,6 +217,9 @@ private:
   bool b_odometry_has_been_received_;
   int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
+  tf::Transform tf_transform_;
+  tf::Vector3 tf_translation_;
+  tf::Quaternion tf_quaternion_;
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
 
   // PoseStamped
@@ -198,8 +231,9 @@ private:
   Open space detector
   ------------------*/
 
-  bool b_is_open_space_;
   int number_of_points_open_space_;
+  bool b_adaptive_input_voxelization_{false};
+  uint points_to_process_in_callback_{3001};
 
   /*-----------------
   BB based OSD
@@ -211,12 +245,9 @@ private:
   PointF maxPoint_;
   bool b_publish_xy_cross_section_;
   ros::Publisher xy_cross_section_pub_;
+  ros::ServiceClient voxel_leaf_size_changer_srv_;
+  int counter_voxel_{0};
   // Closed space keyframe policy
-  double translation_threshold_closed_space_kf_;
-  double rotation_threshold_closed_space_kf_;
-  // Open space keyframe policy
-  double translation_threshold_open_space_kf_;
-  double rotation_threshold_open_space_kf_;
 
   /* ----------------------------------
   Dynamic hierarchical data integration
@@ -238,14 +269,16 @@ private:
 
   bool b_enable_computation_time_profiling_;
   ros::Publisher lidar_callback_duration_pub_;
-  ros::Publisher scan_to_scan_duration_pub_;
-  ros::Publisher scan_to_submap_duration_pub_;
-  ros::Publisher approx_nearest_neighbors_duration_pub_;
 
   ros::Time lidar_callback_start_;
   ros::Time scan_to_scan_start_;
   ros::Time scan_to_submap_start_;
   ros::Time approx_nearest_neighbors_start_;
+
+  ros::Publisher scan_to_scan_duration_pub_;
+  ros::Publisher scan_to_submap_duration_pub_;
+  ros::Publisher approx_nearest_neighbors_duration_pub_;
+  ros::Publisher dchange_voxel_pub_;
 
   /* -------------------------
   Ground Truth
@@ -259,6 +292,8 @@ private:
   Diagnostics
   ------------------------- */
   bool publish_diagnostics_;
+
+  ros::Publisher base_frame_pcld_pub_;
 
   /*--------------------------
   Map Sliding Window 2
@@ -284,11 +319,33 @@ private:
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
-  void CheckingIfMsgArrived(const PointCloudF::ConstPtr& msg);
+  void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
+
   ros::Time statistics_start_time_;
   std::string statistics_verbosity_level_;
+
+  // Debug utilities
+  bool b_debug_transforms_;
+  ros::Publisher time_difference_pub_;
+
+  double wait_for_odom_transform_timeout_;
+
+  /*----------------------------------
+  Subscribe to localizer space monitor
+  ----------------------------------*/
+
+  bool b_is_open_space_;
+  ros::Subscriber space_monitor_sub_;
+  void SpaceMonitorCallback(const std_msgs::String& msg);
+  double translation_threshold_closed_space_kf_;
+  double rotation_threshold_closed_space_kf_;
+  double translation_threshold_open_space_kf_;
+  double rotation_threshold_open_space_kf_;
+
+  dynamic_reconfigure::Reconfigure voxel_param;
+  dynamic_reconfigure::DoubleParameter double_param;
 };
 
 #endif

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <frontend_utils/CommonFunctions.h>
 #include <gtest/gtest.h>
+#include <omp.h>
 
 const double epsiliond = 0.00000001;
 const double epsilionF = 0.00000001f;

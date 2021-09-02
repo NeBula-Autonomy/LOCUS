@@ -124,7 +124,12 @@ bool PointCloudLocalization::LoadParameters(const ros::NodeHandle& n) {
   if (!b_have_fiducial) {
     ROS_WARN("Can't find fiducials, using origin");
   } else {
-    ROS_INFO_STREAM("Using:\n" << integrated_estimate_);
+    ROS_INFO_STREAM(
+        "Using:\nTranslation:\n"
+        << integrated_estimate_.translation << "\nRotation\n"
+        << integrated_estimate_.rotation.Roll() * 180.0 / M_PI << ", "
+        << integrated_estimate_.rotation.Pitch() * 180.0 / M_PI << ", "
+        << integrated_estimate_.rotation.Yaw() * 180.0 / M_PI);
   }
 
   return true;
@@ -150,7 +155,6 @@ bool PointCloudLocalization::RegisterCallbacks(const ros::NodeHandle& n) {
       "observability_marker", 10, false);
   observability_vector_pub_ =
       nl.advertise<geometry_msgs::Vector3>("observability_vector", 10, false);
-  odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   return true;
 }
 
@@ -185,12 +189,10 @@ bool PointCloudLocalization::TransformPointsToFixedFrame(
   // integrated estimate, and transform the incoming point cloud
   const gu::Transform3 estimate =
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_);
-  const Eigen::Matrix<double, 3, 3> R = estimate.rotation.Eigen();
-  const Eigen::Matrix<double, 3, 1> T = estimate.translation.Eigen();
 
   Eigen::Matrix4d tf;
-  tf.block(0, 0, 3, 3) = R;
-  tf.block(0, 3, 3, 1) = T;
+  tf.block(0, 0, 3, 3) = estimate.rotation.Eigen();
+  tf.block(0, 3, 3, 1) = estimate.translation.Eigen();
 
   pcl::transformPointCloudWithNormals(points, *points_transformed, tf);
 
@@ -208,12 +210,10 @@ bool PointCloudLocalization::TransformPointsToSensorFrame(
   // integrated estimate, then invert to go from world to sensor frame
   const gu::Transform3 estimate = gu::PoseInverse(
       gu::PoseUpdate(integrated_estimate_, incremental_estimate_));
-  const Eigen::Matrix<double, 3, 3> R = estimate.rotation.Eigen();
-  const Eigen::Matrix<double, 3, 1> T = estimate.translation.Eigen();
 
   Eigen::Matrix4d tf;
-  tf.block(0, 0, 3, 3) = R;
-  tf.block(0, 3, 3, 1) = T;
+  tf.block(0, 0, 3, 3) = estimate.rotation.Eigen();
+  tf.block(0, 3, 3, 1) = estimate.translation.Eigen();
 
   pcl::transformPointCloudWithNormals(points, *points_transformed, tf);
 
@@ -222,6 +222,7 @@ bool PointCloudLocalization::TransformPointsToSensorFrame(
 
 bool PointCloudLocalization::SetupICP() {
   ROS_INFO("PointCloudLocalization - SetupICP");
+
   switch (getRegistrationMethodFromString(params_.registration_method)) {
   case RegistrationMethod::GICP: {
     ROS_INFO_STREAM("RegistrationMethod::GICP activated.");
@@ -239,8 +240,30 @@ bool PointCloudLocalization::SetupICP() {
     gicp->enableTimingOutput(params_.enable_timing_output);
     gicp->RecomputeTargetCovariance(recompute_covariance_local_map_);
     gicp->RecomputeSourceCovariance(
-        recompute_covariance_scan_); // local scan we don't need to recompute
+        recompute_covariance_scan_); // local scan we don't need to
+                                     // recompute
+    gicp->setEuclideanFitnessEpsilon(0.01);
+
+    ROS_INFO_STREAM("GICP");
+
+    ROS_INFO_STREAM("getMaxCorrespondenceDistance: "
+                    << gicp->getMaxCorrespondenceDistance());
+    ROS_INFO_STREAM("getMaximumIterations: " << gicp->getMaximumIterations());
+    ROS_INFO_STREAM(
+        "getTransformationEpsilon: " << gicp->getTransformationEpsilon());
+    ROS_INFO_STREAM(
+        "getEuclideanFitnessEpsilon: " << gicp->getEuclideanFitnessEpsilon());
+
+    ROS_INFO_STREAM("Ransac: " << gicp->getRANSACIterations());
+
+    ROS_INFO_STREAM("getRANSACIterations: " << gicp->getRANSACIterations());
+
+    ROS_INFO_STREAM(
+        "RANSACOutlie: " << gicp->getRANSACOutlierRejectionThreshold());
+    ROS_INFO_STREAM("CLASS NAME: " << gicp->getClassName());
+
     icp_ = gicp;
+
     break;
   }
   case RegistrationMethod::NDT: {
@@ -263,6 +286,7 @@ bool PointCloudLocalization::SetupICP() {
         "No such Registration mode or not implemented yet " +
         params_.registration_method);
   }
+
   return true;
 }
 
@@ -287,10 +311,22 @@ bool PointCloudLocalization::MeasurementUpdate(
 
   // Retrieve transformation and estimate and update
   const Eigen::Matrix4f T = icp_->getFinalTransformation();
+
+  //  ROS_INFO_STREAM("LOC INPUT");
+  //  gicp.setInputSource(query);
+  //  ROS_INFO_STREAM("LOC TARGET");
+  //  gicp.setInputTarget(reference);
+  //  ROS_INFO_STREAM("LOC ALIGN");
+  //  gicp.align(icpAlignedPointsLocalization_);
+  //  // gicp.swapSourceAndTarget();
+  //  ROS_INFO_STREAM("LOC TRANSFORM");
+  //  const Eigen::Matrix4f T = gicp.getFinalTransformation();
+
   pcl::transformPointCloudWithNormals(*query, *aligned_query, T);
 
   KdTree::Ptr search_tree_ = icp_->getSearchMethodTarget();
-  // Get the correspondence indices
+
+  // Get the correspondence indices iterate over references TODO?
   std::vector<size_t> correspondences;
   for (auto point : aligned_query->points) {
     std::vector<int> matched_indices;
@@ -443,7 +479,7 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
   ComputeAp_ForPoint2PlaneICP(
       query_normalized, reference_cloud, correspondences, T, Ap);
   // 1 cm covariance for now hard coded
-  *covariance = 0.01 * 0.01 * Ap.inverse();
+  *covariance = 0.05 * 0.05 * Ap.inverse();
 
   // Here bound the covariance using eigen values
   //// First find ldlt decomposition
@@ -508,8 +544,13 @@ void PointCloudLocalization::PublishAll() {
 
   PublishPose(
       incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
+  // ROS_INFO_STREAM("Using:\nTranslation:\n" <<
+  // integrated_estimate_.translation << "\nRotation\n" <<
+  // integrated_estimate_.rotation.Roll()*180.0/M_PI << ", " <<
+  // integrated_estimate_.rotation.Pitch()*180.0/M_PI << ", " <<
+  // integrated_estimate_.rotation.Yaw()*180.0/M_PI);
   PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
-  PublishOdometry(integrated_estimate_, icp_covariance_);
+
 }
 
 void PointCloudLocalization::PublishPose(
@@ -705,23 +746,6 @@ void PointCloudLocalization::ComputeAp_ForPoint2PlaneICP(
   }
 }
 
-void PointCloudLocalization::PublishOdometry(
-    const geometry_utils::Transform3& odometry,
-    const Eigen::Matrix<double, 6, 6>& covariance) {
-  nav_msgs::Odometry odometry_msg;
-  odometry_msg.header.stamp = stamp_;
-  odometry_msg.header.frame_id = fixed_frame_id_;
-  odometry_msg.pose.pose.position = gr::ToRosPoint(odometry.translation);
-  odometry_msg.pose.pose.orientation =
-      gr::ToRosQuat(gu::RToQuat(odometry.rotation));
-  for (size_t i = 0; i < 36; i++) {
-    size_t row = static_cast<size_t>(i / 6);
-    size_t col = i % 6;
-    odometry_msg.pose.covariance[i] = covariance(row, col);
-  }
-  odometry_pub_.publish(odometry_msg);
-}
-
 diagnostic_msgs::DiagnosticStatus PointCloudLocalization::GetDiagnostics() {
   diagnostic_msgs::DiagnosticStatus diag_status;
   diag_status.name = name_;
@@ -735,4 +759,12 @@ diagnostic_msgs::DiagnosticStatus PointCloudLocalization::GetDiagnostics() {
   }
 
   return diag_status;
+}
+
+ros::Time PointCloudLocalization::GetLatestTimestamp() {
+  return stamp_;
+}
+
+Eigen::Matrix<double, 6, 6> PointCloudLocalization::GetLatestDeltaCovariance() {
+  return icp_covariance_;
 }
