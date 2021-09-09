@@ -342,6 +342,7 @@ private:
 
   std::mutex imu_buffer_mutex_; 
   std::mutex odometry_buffer_mutex_; 
+  std::mutex tf2_ros_odometry_buffer_mutex_;
   std::mutex latest_pose_mutex_; 
 
 };

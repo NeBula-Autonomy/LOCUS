@@ -377,9 +377,10 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     tf_stamped.transform.translation.y = odometry_msg->pose.pose.position.y;
     tf_stamped.transform.translation.z = odometry_msg->pose.pose.position.z;
     tf_stamped.transform.rotation = odometry_msg->pose.pose.orientation;
-    tf2_ros_odometry_buffer_.setTransform(
-        tf_stamped, tf_buffer_authority_, false);
     latest_odom_stamp_ = odometry_msg->header.stamp;
+    std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
+    tf2_ros_odometry_buffer_.setTransform(
+        tf_stamped, tf_buffer_authority_, false);    
   }
 }
 
@@ -603,25 +604,29 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   
   ros::Time latest_odom_stamp = latest_odom_stamp_;
   ros::Time latest_pose_stamp = latest_pose_stamp_;
-  if (latest_odom_stamp > lidar_stamp && data_integration_mode_ >= 3 &&
+
+  {
+    std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
+    if (latest_odom_stamp > lidar_stamp && data_integration_mode_ >= 3 &&
       tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
                                             latest_pose_stamp,
                                             base_frame_id_,
                                             latest_odom_stamp,
                                             bd_odom_frame_id_)) {
-    have_odom_transform = true;
-    publish_stamp = latest_odom_stamp;
-    // Get transform between latest lidar timestamp and latest odom timestamp
-    t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
-                                                 latest_pose_stamp,
-                                                 base_frame_id_,
-                                                 latest_odom_stamp,
-                                                 bd_odom_frame_id_);
-  } else {
-    publish_stamp = latest_pose_stamp;
-    // TODO - don't print this warning if we have not chosen odom as an input
-    // TODO - just do stats on this
-    // ROS_WARN("Can not get transform from odom source");
+      have_odom_transform = true;
+      publish_stamp = latest_odom_stamp;
+      // Get transform between latest lidar timestamp and latest odom timestamp
+      t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
+                                                  latest_pose_stamp,
+                                                  base_frame_id_,
+                                                  latest_odom_stamp,
+                                                  bd_odom_frame_id_);
+    } else {
+      publish_stamp = latest_pose_stamp;
+      // TODO - don't print this warning if we have not chosen odom as an input
+      // TODO - just do stats on this
+      // ROS_WARN("Can not get transform from odom source");
+    }
   }
 
   geometry_utils::Transform3 pose_to_publish; 
@@ -1003,19 +1008,22 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
     stamp_transform_to_ = stamp;
   }
 
-  // Check if we can get an odometry source transform
-  // from the time of the last pointcloud to the latest VO timestamp
-  if (tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
-                                            previous_stamp_,
-                                            base_frame_id_,
-                                            stamp_transform_to_,
-                                            bd_odom_frame_id_)) {
-    have_odom_transform = true;
-    t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
-                                                  previous_stamp_,
-                                                  base_frame_id_,
-                                                  stamp_transform_to_,
-                                                  bd_odom_frame_id_);
+  {
+    std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
+    // Check if we can get an odometry source transform
+    // from the time of the last pointcloud to the latest VO timestamp
+    if (tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
+                                              previous_stamp_,
+                                              base_frame_id_,
+                                              stamp_transform_to_,
+                                              bd_odom_frame_id_)) {
+      have_odom_transform = true;
+      t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
+                                                   previous_stamp_,
+                                                   base_frame_id_,
+                                                   stamp_transform_to_,
+                                                   bd_odom_frame_id_);
+    }
   }
 
   if (have_odom_transform) {
