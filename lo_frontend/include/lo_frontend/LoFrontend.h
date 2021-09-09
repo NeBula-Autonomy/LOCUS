@@ -52,7 +52,7 @@ Authors:
 #include <visualization_msgs/Marker.h>
 
 class LoFrontend {
-
+  
   friend class LoFrontendTest;
 
 public:
@@ -213,28 +213,6 @@ private:
   tf::Quaternion tf_quaternion_;
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
 
-  /*-----------------
-  Open space detector
-  ------------------*/
-
-  int number_of_points_open_space_;
-  bool b_adaptive_input_voxelization_{false};
-  uint points_to_process_in_callback_{3001};
-
-  /*-----------------
-  BB based OSD
-  ------------------*/
-
-  void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
-  bool b_use_osd_;
-  double osd_size_threshold_;
-  PointF minPoint_;
-  PointF maxPoint_;
-  bool b_publish_xy_cross_section_;
-  ros::Publisher xy_cross_section_pub_;
-  ros::ServiceClient voxel_leaf_size_changer_srv_;
-  int counter_voxel_{0};
-
   /* ----------------------------------
   Dynamic hierarchical data integration
   ---------------------------------- */
@@ -263,7 +241,6 @@ private:
   ros::Publisher scan_to_scan_duration_pub_;
   ros::Publisher scan_to_submap_duration_pub_;
   ros::Publisher approx_nearest_neighbors_duration_pub_;
-  ros::Publisher dchange_voxel_pub_;
 
   /* -------------------------
   Ground Truth
@@ -276,7 +253,6 @@ private:
   /* -------------------------
   Diagnostics
   ------------------------- */
-  
   bool publish_diagnostics_;
   ros::Publisher base_frame_pcld_pub_;
 
@@ -299,13 +275,11 @@ private:
   /*------------------------------
   Low-rate odom interpolation flag
   -------------------------------*/
-
   bool b_integrate_interpolated_odom_;
 
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
-  
   void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
@@ -323,16 +297,28 @@ private:
   Subscribe to localizer space monitor
   ----------------------------------*/
 
+  bool b_sub_to_lsm_;
+  double xy_cross_section_threshold_;
   bool b_is_open_space_;
   ros::Subscriber space_monitor_sub_;
-  void SpaceMonitorCallback(const std_msgs::String& msg);
+  void SpaceMonitorCallback(const std_msgs::Float64& msg);
   double translation_threshold_closed_space_kf_;
   double rotation_threshold_closed_space_kf_;
   double translation_threshold_open_space_kf_;
   double rotation_threshold_open_space_kf_;
 
+  /*-------------------------
+  Adaptive Input Voxelization 
+  -------------------------*/
+
+  int counter_voxel_{0};
+  ros::Publisher dchange_voxel_pub_;
   dynamic_reconfigure::Reconfigure voxel_param;
   dynamic_reconfigure::DoubleParameter double_param;
+  ros::ServiceClient voxel_leaf_size_changer_srv_;
+  bool b_adaptive_input_voxelization_{false};
+  uint points_to_process_in_callback_{3001};
+  void ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg);
 
   /*--------------- 
   Dynamic Switching
