@@ -54,13 +54,10 @@ class LoFrontend {
 public:
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
-  typedef geometry_msgs::PoseStamped PoseStamped;
   typedef std::map<double, Imu> ImuBuffer;
   typedef std::map<double, Odometry> OdometryBuffer;
-  typedef std::map<double, PoseStamped> PoseStampedBuffer;
   typedef Imu::ConstPtr ImuConstPtr;
   typedef Odometry::ConstPtr OdometryConstPtr;
-  typedef PoseStamped::ConstPtr PoseStampedConstPtr;
 
   LoFrontend();
   ~LoFrontend();
@@ -89,7 +86,6 @@ private:
   ros::Subscriber lidar_sub_;
   ros::Subscriber imu_sub_;
   ros::Subscriber odom_sub_;
-  ros::Subscriber pose_sub_;
 
   void setImuSubscriber(ros::NodeHandle& _nh);
   void setOdomSubscriber(ros::NodeHandle& _nh);
@@ -111,7 +107,6 @@ private:
   void LidarCallback(const PointCloudF::ConstPtr& msg);
   void ImuCallback(const ImuConstPtr& imu_msg);
   void OdometryCallback(const OdometryConstPtr& odometry_msg);
-  void PoseStampedCallback(const PoseStampedConstPtr& pose_stamped_msg);
   // Main msg callback queue
   ros::CallbackQueue imu_queue_;
   ros::CallbackQueue odom_queue_;
@@ -120,11 +115,9 @@ private:
   int lidar_queue_size_;
   int imu_queue_size_;
   int odom_queue_size_;
-  int pose_queue_size_;
 
   ImuBuffer imu_buffer_;
   OdometryBuffer odometry_buffer_;
-  PoseStampedBuffer pose_stamped_buffer_;
 
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
@@ -138,7 +131,6 @@ private:
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
-  int pose_stamped_buffer_size_limit_;
 
   template <typename T1, typename T2>
   bool InsertMsgInBuffer(const T1& msg, T2& buffer);
@@ -192,10 +184,8 @@ private:
   Data integration
   --------------*/
 
-  void PreintegrationUpdate(const ros::Time& stamp);
-  bool SetDataIntegrationMode();
+  bool CheckDataIntegrationMode();
   int data_integration_mode_;
-  int max_number_of_calls_;
 
   // Imu
   void CheckImuFrame(const ImuConstPtr& imu_msg);
@@ -203,29 +193,19 @@ private:
   Eigen::Quaterniond GetImuQuaternion(const Imu& imu_msg);
   bool b_convert_imu_to_base_link_frame_;
   bool b_imu_frame_is_correct_;
-  bool b_use_imu_integration_;
-  bool b_use_imu_yaw_integration_;
   bool b_imu_has_been_received_;
-  int imu_number_of_calls_;
   Eigen::Quaterniond imu_quaternion_previous_;
   Eigen::Quaterniond imu_quaternion_change_;
   Eigen::Matrix3d GetImuDelta();
   Eigen::Matrix3d GetImuYawDelta();
 
   // Odometry
-  bool b_use_odometry_integration_;
   bool b_odometry_has_been_received_;
-  int odometry_number_of_calls_;
   tf::Transform odometry_pose_previous_;
   tf::Transform tf_transform_;
   tf::Vector3 tf_translation_;
   tf::Quaternion tf_quaternion_;
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const;
-
-  // PoseStamped
-  bool b_use_pose_stamped_integration_;
-  bool b_pose_stamped_has_been_received_;
-  int pose_stamped_number_of_calls_;
 
   /*-----------------
   Open space detector
@@ -238,6 +218,7 @@ private:
   /*-----------------
   BB based OSD
   ------------------*/
+
   void CalculateCrossSection(const PointCloudF::ConstPtr& msg);
   bool b_use_osd_;
   double osd_size_threshold_;
@@ -247,14 +228,12 @@ private:
   ros::Publisher xy_cross_section_pub_;
   ros::ServiceClient voxel_leaf_size_changer_srv_;
   int counter_voxel_{0};
-  // Closed space keyframe policy
 
   /* ----------------------------------
   Dynamic hierarchical data integration
   ---------------------------------- */
 
   ros::NodeHandle nl_;
-  void SwitchToImuIntegration();
 
   /* -------------------------
   Flat Ground Assumption (FGA)
@@ -291,13 +270,14 @@ private:
   /* -------------------------
   Diagnostics
   ------------------------- */
+  
   bool publish_diagnostics_;
-
   ros::Publisher base_frame_pcld_pub_;
 
   /*--------------------------
   Map Sliding Window 2
   --------------------------*/
+
   bool b_enable_msw_;
   int box_filter_size_;
   int velocity_buffer_size_;
@@ -309,16 +289,17 @@ private:
   ros::Time previous_stamp_;
   std::vector<double> translational_velocity_buffer_;
   std::vector<double> rotational_velocity_buffer_;
-  double GetVectorAverage(const std::vector<double>& vector);
 
   /*------------------------------
   Low-rate odom interpolation flag
   -------------------------------*/
-  bool b_interpolate_;
+
+  bool b_integrate_interpolated_odom_;
 
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
+  
   void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
@@ -346,6 +327,23 @@ private:
 
   dynamic_reconfigure::Reconfigure voxel_param;
   dynamic_reconfigure::DoubleParameter double_param;
+
+  /*--------------- 
+  Dynamic Switching
+  ---------------*/
+  
+  double sensor_health_timeout_;
+  ros::Time last_reception_time_odom_; 
+  ros::Time last_reception_time_imu_; 
+  bool b_process_pure_lo_;
+  bool b_process_pure_lo_prev_;
+  bool IsOdomHealthy();
+  bool IsImuHealthy();
+  bool IntegrateSensors(const ros::Time& stamp);
+  bool IntegrateInterpolatedOdom(const ros::Time& stamp);
+  bool IntegrateOdom(const ros::Time& stamp);
+  bool IntegrateImu(const ros::Time& stamp); 
+
 };
 
 #endif

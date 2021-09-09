@@ -2,11 +2,7 @@
 Authors:
   - Matteo Palieri    (matteo.palieri@jpl.nasa.gov)
   - Benjamin Morrell  (benjamin.morrell@jpl.nasa.gov)
-<<<<<<< HEAD
-  - Andrzej Reinke (andrzej.m.reinke@jpl.nasa.gov)
-=======
   - Andrzej Reinke    (andrzej.m.reinke@jpl.nasa.gov)
->>>>>>> b21bdb09c68a834dcfb3938cc254b673056c2144
 */
 
 #include <point_cloud_odometry/PointCloudOdometry.h>
@@ -20,8 +16,7 @@ using pcl::copyPointCloud;
 PointCloudOdometry::PointCloudOdometry()
   : initialized_(false),
     b_use_imu_integration_(false),
-    b_use_odometry_integration_(false),
-    b_use_pose_stamped_integration_(false) {
+    b_use_odometry_integration_(false) {
   query_.reset(new PointCloudF);
   reference_.reset(new PointCloudF);
   query_trans_.reset(new PointCloudF);
@@ -210,28 +205,19 @@ bool PointCloudOdometry::SetupICP() {
   return true;
 }
 
-void PointCloudOdometry::EnableImuIntegration() {
-  b_use_imu_integration_ = true;
-}
-
 void PointCloudOdometry::EnableOdometryIntegration() {
   b_use_odometry_integration_ = true;
+  b_use_imu_integration_ = false; 
 }
 
-void PointCloudOdometry::EnablePoseStampedIntegration() {
-  b_use_pose_stamped_integration_ = true;
-}
-
-void PointCloudOdometry::DisableImuIntegration() {
-  b_use_imu_integration_ = false;
-}
-
-void PointCloudOdometry::DisableOdometryIntegration() {
+void PointCloudOdometry::EnableImuIntegration() {
+  b_use_imu_integration_ = true;
   b_use_odometry_integration_ = false;
 }
 
-void PointCloudOdometry::DisablePoseStampedIntegration() {
-  b_use_pose_stamped_integration_ = false;
+void PointCloudOdometry::DisableSensorIntegration() {
+  b_use_imu_integration_ = false;
+  b_use_odometry_integration_ = false;
 }
 
 bool PointCloudOdometry::SetLidar(const PointCloudF& points) {
@@ -247,12 +233,6 @@ bool PointCloudOdometry::SetImuDelta(const Eigen::Matrix3d& imu_delta) {
 
 bool PointCloudOdometry::SetOdometryDelta(const tf::Transform& odometry_delta) {
   odometry_delta_ = odometry_delta;
-  return true;
-}
-
-bool PointCloudOdometry::SetPoseStampedDelta(
-    const tf::Transform& pose_stamped_delta) {
-  pose_stamped_delta_ = pose_stamped_delta;
   return true;
 }
 
@@ -280,10 +260,6 @@ bool PointCloudOdometry::UpdateICP() {
     pcl_ros::transformAsMatrix(odometry_delta_, temp);
     odometry_prior_ = temp.cast<double>();
     pcl::transformPointCloud(*query_, *query_trans_, odometry_prior_);
-  } else if (b_use_pose_stamped_integration_) {
-    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
-    is_healthy_ = false;
-    return false;
   } else {
     *query_trans_ = *query_;
   }
@@ -298,11 +274,7 @@ bool PointCloudOdometry::UpdateICP() {
     T = T * imu_prior_;
   } else if (b_use_odometry_integration_) {
     T = T * odometry_prior_;
-  } else if (b_use_pose_stamped_integration_) {
-    ROS_ERROR("To be implemented - b_use_pose_stamped_integration_");
-    is_healthy_ = false;
-    return false;
-  }
+  } 
 
   if (b_is_flat_ground_assumption_) {
     tf::Matrix3x3 rotation(T(0, 0),
