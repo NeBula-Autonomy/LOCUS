@@ -249,11 +249,6 @@ private:
   /* -------------------------
   Diagnostics
   ------------------------- */
-<<<<<<< lo_frontend/include/lo_frontend/LoFrontend.h
-
-=======
-  
->>>>>>> lo_frontend/include/lo_frontend/LoFrontend.h
   bool publish_diagnostics_;
   ros::Publisher base_frame_pcld_pub_;
 
@@ -276,21 +271,11 @@ private:
   /*------------------------------
   Low-rate odom interpolation flag
   -------------------------------*/
-
-<<<<<<< lo_frontend/include/lo_frontend/LoFrontend.h
-  bool b_interpolate_;
-=======
   bool b_integrate_interpolated_odom_;
->>>>>>> lo_frontend/include/lo_frontend/LoFrontend.h
 
   /*------------------------------
   Lidar Scan Dropped Statistics
   -------------------------------*/
-<<<<<<< lo_frontend/include/lo_frontend/LoFrontend.h
-
-=======
-  
->>>>>>> lo_frontend/include/lo_frontend/LoFrontend.h
   void CheckMsgDropRate(const PointCloudF::ConstPtr& msg);
   int scans_dropped_;
   int statistics_time_window_;
