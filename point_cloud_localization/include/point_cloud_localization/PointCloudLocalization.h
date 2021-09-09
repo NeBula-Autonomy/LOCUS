@@ -156,9 +156,6 @@ private:
                    const Eigen::Matrix<double, 6, 6>& covariance,
                    const ros::Publisher& pub);
 
-  void PublishOdometry(const geometry_utils::Transform3& odometry,
-                       const Eigen::Matrix<double, 6, 6>& covariance);
-
   // Publish condition number of ICP covariance matrix
   void PublishConditionNumber(double& k, const ros::Publisher& pub);
 

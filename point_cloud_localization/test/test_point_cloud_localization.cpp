@@ -8,7 +8,6 @@
  * PublishPoseNoUpdate - ros specific
  * PublishConditionNumber - ros specific
  * PublishObservableDirections - ros specific
- * PublishOdometry - ros specific
  * UpdateTimestamp - too simple
  * /////////////////////////////////////////////////////////////////////////
  *  TODO: decide whether GeneratePlane
