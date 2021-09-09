@@ -55,8 +55,8 @@
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
 
-            <param name="b_interpolate" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
-            <param name="b_interpolate" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+            <param name="b_integrate_interpolated_odom" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
+            <param name="b_integrate_interpolated_odom" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
 
             <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
             <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>

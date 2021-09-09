@@ -28,7 +28,7 @@ public:
            "point_cloud_mapper)/config/parameters.yaml");
     system("rosparam set icp/num_threads 1");
     system("rosparam set localization/num_threads 1");
-    system("rosparam set b_interpolate false");
+    system("rosparam set b_integrate_interpolated_odom false");
     ros::param::set("mapper/num_threads", 2);
   }
 
@@ -37,9 +37,6 @@ public:
   LoFrontend lf;
 
 protected:
-  bool SetDataIntegrationMode() {
-    return lf.SetDataIntegrationMode();
-  }
 
   void ImuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg) {
     lf.ImuCallback(imu_msg);
@@ -47,11 +44,6 @@ protected:
 
   void OdometryCallback(const nav_msgs::Odometry::ConstPtr& odometry_msg) {
     lf.OdometryCallback(odometry_msg);
-  }
-
-  void PoseStampedCallback(
-      const geometry_msgs::PoseStamped::ConstPtr& pose_stamped_msg) {
-    lf.PoseStampedCallback(pose_stamped_msg);
   }
 
   tf::Transform GetOdometryDelta(const tf::Transform& odometry_pose) const {
@@ -66,25 +58,14 @@ protected:
     return lf.GetImuYawDelta();
   }
 
-  void SwitchToImuIntegration() {
-    lf.SwitchToImuIntegration();
-  }
-
 private:
+
 };
 
 /* TEST Initialize */
 TEST_F(LoFrontendTest, TestInitialize) {
   ros::NodeHandle nh;
   bool result = lf.Initialize(nh, false);
-  ASSERT_TRUE(result);
-}
-
-/* TEST SetDataIntegratioMode*/
-TEST_F(LoFrontendTest, TestSetDataIntegrationMode) {
-  ros::NodeHandle nh;
-  lf.Initialize(nh, false);
-  bool result = SetDataIntegrationMode();
   ASSERT_TRUE(result);
 }
 
