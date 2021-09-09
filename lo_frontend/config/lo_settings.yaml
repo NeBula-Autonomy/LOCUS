@@ -1,6 +1,7 @@
 b_verbose: false
 
 odom_pub_rate: 10
+
 # How long to wait for transform between timestamps
 transform_wait_duration: 0.01
 
@@ -17,23 +18,19 @@ queues:
   lidar_queue_size: 1
   imu_queue_size: 100
   odom_queue_size: 100
-  pose_queue_size: 100
 
 buffers:
   imu_buffer_size_limit: 100
   odometry_buffer_size_limit: 100
-  pose_stamped_buffer_size_limit: 100
 
 # DATA INTEGRATION 
   # 0   ---> no integration 
   # 1   ---> imu integration 
   # 2   ---> imu yaw integration
   # 3   ---> odometry integration 
-  # 4   ---> pose_stamped integration
 
 data_integration:
   mode: 3
-  max_number_of_calls: 25
 
 b_is_flat_ground_assumption: false
 
@@ -47,10 +44,11 @@ publish_diagnostics: false
 # SLIDING WINDOW PARAMETERS
 
 b_enable_msw: true
-#options
-# mapper -> PointCloudMapper
-# multi_threaded_mapper -> PointCloudMultiThreadedMapper
-# ikdtree_mapper -> PointCloudIkdTreeMapper
+
+# Options
+  # mapper -> PointCloudMapper
+  # multi_threaded_mapper -> PointCloudMultiThreadedMapper
+  # ikdtree_mapper -> PointCloudIkdTreeMapper
 
 window_local_mapping_type: ikdtree_mapper
 
@@ -61,14 +59,15 @@ rotational_velocity_threshold: 1
 translational_velocity_threshold: 0.1
 
 # Statistics 
+
 statistics_time_window: 5
 statistics_verbosity_level: low # off, low, high
 
-# -------------------------------------------------------------
+# ------------ Subscribe to localizer space monitor -----------
 
 # Subscribe to localizer space monitor
-b_use_osd: true
-osd_size_threshold: 99999
+b_sub_to_lsm: false
+xy_cross_section_threshold: 2500 # m^2
 b_publish_xy_cross_section: true
 # Closed space keyframe policy
 translation_threshold_closed_space_kf: 1.0
@@ -83,6 +82,10 @@ b_adaptive_input_voxelization: true
 points_to_process_in_callback: 3000
 
 # ------------- Debug utilities -------------------------------
-b_debug_transforms: false
 
+b_debug_transforms: false
 wait_for_odom_transform_timeout: 0.1
+
+# ------------------- Dynamic Switching -----------------------
+
+sensor_health_timeout: 1.0

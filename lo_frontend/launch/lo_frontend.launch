@@ -45,6 +45,8 @@
             <remap from="~IMU_TOPIC" to="vn100/imu_wori_wcov"/>            
             <remap from="~POSE_TOPIC" to="not_currently_used"/>
 
+            <remap from="~SPACE_MONITOR_TOPIC" to="localizer_space_monitor/xy_cross_section"/>
+
             <!-- For Sim -->
             <!-- <remap from="~ODOMETRY_TOPIC" to="wheel_odom"/> -->         
 
@@ -53,8 +55,8 @@
             <param name="robot_name" value="$(arg robot_namespace)"/>
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
 
-            <param name="b_interpolate" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
-            <param name="b_interpolate" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+            <param name="b_integrate_interpolated_odom" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
+            <param name="b_integrate_interpolated_odom" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
 
             <rosparam file="$(find lo_frontend)/config/lo_settings.yaml"/>
             <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
@@ -190,6 +192,10 @@
         </node>
       
     </group>
+
+    <include file="$(find localizer_space_monitor)/launch/space_monitor.launch">
+        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+    </include>
 
     <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
         <arg name="robot_namespace" value="$(arg robot_namespace)"/>
