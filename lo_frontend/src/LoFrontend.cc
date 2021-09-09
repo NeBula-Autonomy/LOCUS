@@ -220,9 +220,9 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_integrate_interpolated_odom", b_integrate_interpolated_odom_))
     return false;
-  if (!pu::Get("b_use_osd", b_use_osd_))
+  if (!pu::Get("b_sub_to_lsm", b_sub_to_lsm_))
     return false;
-  if (!pu::Get("osd_size_threshold", osd_size_threshold_))
+  if (!pu::Get("xy_cross_section_threshold", xy_cross_section_threshold_))
     return false;
   if (!pu::Get("translation_threshold_closed_space_kf",
                translation_threshold_closed_space_kf_))
@@ -299,10 +299,15 @@ bool LoFrontend::RegisterLogCallbacks(const ros::NodeHandle& n) {
 
 bool LoFrontend::RegisterOnlineCallbacks(const ros::NodeHandle& n) {
   nl_ = ros::NodeHandle(n);
+
   fga_sub_ = nl_.subscribe(
       "FGA_TOPIC", 1, &LoFrontend::FlatGroundAssumptionCallback, this);
-  space_monitor_sub_ = nl_.subscribe(
-      "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
+
+  if (b_sub_to_lsm_) {
+    space_monitor_sub_ = nl_.subscribe(
+        "SPACE_MONITOR_TOPIC", 1, &LoFrontend::SpaceMonitorCallback, this);
+  }
+
   voxel_leaf_size_changer_srv_ =
       nl_.serviceClient<dynamic_reconfigure::Reconfigure>(
           ros::this_node::getNamespace() + "/voxel_grid/set_parameters");
@@ -322,8 +327,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
   approx_nearest_neighbors_duration_pub_ = nl.advertise<std_msgs::Float64>(
       "approx_nearest_neighbors_duration", 10, false);
-  xy_cross_section_pub_ =
-      nl.advertise<std_msgs::Float64>("xy_cross_section", 10, false);
   dchange_voxel_pub_ =
       nl.advertise<std_msgs::Float64>("dchange_voxel", 10, false);
   odom_pub_timer_ =
@@ -410,8 +413,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     lidar_callback_start_ = ros::Time::now();
   }
 
-  if (b_use_osd_) {
-    CalculateCrossSection(msg);
+  if (b_adaptive_input_voxelization_) {
+    ApplyAdaptiveInputVoxelization(msg);
   }
 
   CheckMsgDropRate(msg);
@@ -567,20 +570,11 @@ void LoFrontend::FlatGroundAssumptionCallback(const std_msgs::Bool& bool_msg) {
   localization_.SetFlatGroundAssumptionValue(bool_msg.data);
 }
 
-void LoFrontend::SpaceMonitorCallback(const std_msgs::String& msg) {
-  if (b_use_osd_) {
-    ROS_INFO("LoFrontend::SpaceMonitorCallback");
-    std::cout << "Received " << msg.data << std::endl;
-    if (msg.data == "closed") {
-      b_is_open_space_ = false;
-      translation_threshold_kf_ = translation_threshold_closed_space_kf_;
-      rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
-    } else if (msg.data == "open") {
-      b_is_open_space_ = true;
-      translation_threshold_kf_ = translation_threshold_open_space_kf_;
-      rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
-    }
-  }
+void LoFrontend::SpaceMonitorCallback(const std_msgs::Float64& msg) {
+  auto xy_cross_section = msg.data;
+  ROS_INFO("LoFrontend::SpaceMonitorCallback");
+  ROS_INFO_STREAM("xy_cross_section: " << xy_cross_section << " m^2");
+  // TODO: add back keyframe addition policy updates
 }
 
 // Publish odometry at fixed rate ------------------------------------------------
@@ -779,69 +773,51 @@ LoFrontend::GetOdometryDelta(const tf::Transform& odometry_pose) const {
   return odometry_pose_previous_.inverseTimes(odometry_pose);
 }
 
-void LoFrontend::CalculateCrossSection(const PointCloudF::ConstPtr& msg) {
-  pcl::getMinMax3D(*msg, minPoint_, maxPoint_);
-  auto size_x = maxPoint_.x - minPoint_.x;
-  auto size_y = maxPoint_.y - minPoint_.y;
-  if (size_x > osd_size_threshold_ && size_y > osd_size_threshold_) {
-    b_is_open_space_ = true;
-    translation_threshold_kf_ = translation_threshold_open_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_open_space_kf_;
+void LoFrontend::ApplyAdaptiveInputVoxelization(
+    const PointCloudF::ConstPtr& msg) {
+  bool change = false;
+  double dchange_voxel = double_param.value *
+      (static_cast<double>(msg->points.size()) /
+       static_cast<double>(points_to_process_in_callback_));
+  if (dchange_voxel < 0.01)
+    dchange_voxel = 0.01;
+  if (dchange_voxel > 5.0)
+    dchange_voxel = 5.0;
+  // ROS_INFO_STREAM("DCHANGE VALUE: " << dchange_voxel);
+
+  if (std::abs(double_param.value - dchange_voxel) > 0.01 or
+      counter_voxel_ % 20 == 0) {
+    voxel_param.request.config.doubles.clear();
+    double_param.name = "leaf_size";
+    double_param.value = dchange_voxel;
+    //      ROS_INFO_STREAM("Changing voxel size to : " << dchange_voxel);
+    // ROS_INFO_STREAM(points_to_process_in_callback_
+    //                 << " leaf size current : " << double_param.value
+    //                 << " No of points: " << msg->points.size() << "
+    //                 division"
+    //                 << static_cast<double>(msg->points.size()) /
+    //                 static_cast<double>(points_to_process_in_callback_));
+    voxel_param.request.config.doubles.push_back(double_param);
+    change = true;
+    counter_voxel_ = 0;
   } else {
-    b_is_open_space_ = false;
-    translation_threshold_kf_ = translation_threshold_closed_space_kf_;
-    rotation_threshold_kf_ = rotation_threshold_closed_space_kf_;
+    // ROS_INFO_STREAM("Doesn't pay off to change! Old voxel: "
+    //                 << double_param.value << " Counter: " <<
+    //                 counter_voxel_);
   }
-  if (b_publish_xy_cross_section_) {
-    auto xy_cross_section_msg = std_msgs::Float64();
-    xy_cross_section_msg.data = size_x * size_y;
-    xy_cross_section_pub_.publish(xy_cross_section_msg);
-  }
+  counter_voxel_++;
 
-  if (b_adaptive_input_voxelization_) {
-    bool change = false;
-
-    double dchange_voxel = double_param.value *
-        (static_cast<double>(msg->points.size()) /
-         static_cast<double>(points_to_process_in_callback_));
-    if (dchange_voxel < 0.01)
-      dchange_voxel = 0.01;
-    if (dchange_voxel > 5.0)
-      dchange_voxel = 5.0;
-    //    ROS_INFO_STREAM("DCHANGE VALUE: " << dchange_voxel);
-    if (std::abs(double_param.value - dchange_voxel) > 0.01 or
-        counter_voxel_ % 20 == 0) {
-      voxel_param.request.config.doubles.clear();
-      double_param.name = "leaf_size";
-      double_param.value = dchange_voxel;
-      ROS_INFO_STREAM("Changing voxel size to : " << dchange_voxel);
-      //      ROS_INFO_STREAM(points_to_process_in_callback_
-      //                      << " leaf size current : " << double_param.value
-      //                      << " No of points: " << msg->points.size() << "
-      //                      division"
-      //                      << static_cast<double>(msg->points.size()) /
-      //                          static_cast<double>(points_to_process_in_callback_));
-      voxel_param.request.config.doubles.push_back(double_param);
-      change = true;
-      counter_voxel_ = 0;
+  if (change) {
+    if (voxel_leaf_size_changer_srv_.call(voxel_param)) {
+      // ROS_INFO_STREAM("Calling: ");
     } else {
-      //      ROS_INFO_STREAM("Doesn't pay off to change! Old voxel: "
-      //                      << double_param.value << " Counter: " <<
-      //                      counter_voxel_);
+      ROS_ERROR("Failed to call service voxel_leaf_size_changer_srv!");
     }
-    counter_voxel_++;
-
-    if (change) {
-      if (voxel_leaf_size_changer_srv_.call(voxel_param)) {
-        //        ROS_INFO_STREAM("Calling: ");
-      } else {
-        ROS_ERROR("Failed to call service voxel_leaf_size_changer_srv!");
-      }
-    }
-    std_msgs::Float64 change_voxel_ros;
-    change_voxel_ros.data = dchange_voxel;
-    dchange_voxel_pub_.publish(change_voxel_ros);
   }
+
+  std_msgs::Float64 change_voxel_ros;
+  change_voxel_ros.data = dchange_voxel;
+  dchange_voxel_pub_.publish(change_voxel_ros);
 }
 
 Eigen::Matrix3d LoFrontend::GetImuDelta() {
