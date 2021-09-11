@@ -607,12 +607,12 @@ pcl::MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::
         1.0e-6;
     // TODO(JN) Structured logging? ros topic? add info about the clouds? Remove
     // ROS logs from GICP?
-    ROS_INFO_STREAM("NrThreads: " << k_num_threads_ << " Total: " << total_time
-                                  << " "
-                                  << " Iteration: " << iteration_time
-                                  << " Covariances: " << covariance_time
-                                  << " NrIterations: " << nr_iterations_
-                                  << " Delta " << delta);
+    ROS_DEBUG_STREAM("NrThreads: " << k_num_threads_ << " Total: " << total_time
+                                   << " "
+                                   << " Iteration: " << iteration_time
+                                   << " Covariances: " << covariance_time
+                                   << " NrIterations: " << nr_iterations_
+                                   << " Delta " << delta);
   }
 }
 
