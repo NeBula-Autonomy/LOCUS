@@ -88,4 +88,4 @@ wait_for_odom_transform_timeout: 0.1
 
 # ------------------- Dynamic Switching -----------------------
 
-sensor_health_timeout: 1.0
+sensor_health_timeout: 0.4
