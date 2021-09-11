@@ -301,7 +301,9 @@ bool PointCloudLocalization::MeasurementUpdate(
   }
 
   // Store time stamp
-  stamp_.fromNSec(query->header.stamp * 1e3);
+  ros::Time readed_stamp;
+  readed_stamp.fromNSec(query->header.stamp * 1e3); 
+  stamp_ = readed_stamp;
 
   icp_->setInputSource(query);
   icp_->setInputTarget(reference);

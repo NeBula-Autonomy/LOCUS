@@ -177,7 +177,7 @@ private:
   ros::Publisher observability_vector_pub_;
 
   // Most recent point cloud time stamp for publishers
-  ros::Time stamp_;
+  std::atomic<ros::Time> stamp_ = {{ros::Time()}};
 
   // Coordinate frames.
   std::string fixed_frame_id_;
