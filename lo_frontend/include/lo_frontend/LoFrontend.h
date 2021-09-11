@@ -50,7 +50,6 @@ Authors:
 #include <visualization_msgs/Marker.h>
 
 class LoFrontend {
-  
   friend class LoFrontendTest;
 
 public:
@@ -304,25 +303,26 @@ private:
   double rotation_threshold_open_space_kf_;
 
   /*-------------------------
-  Adaptive Input Voxelization 
+  Adaptive Input Voxelization
   -------------------------*/
 
   int counter_voxel_{0};
   ros::Publisher dchange_voxel_pub_;
+  ros::Publisher change_leaf_size_pub_;
   dynamic_reconfigure::Reconfigure voxel_param;
   dynamic_reconfigure::DoubleParameter double_param;
-  ros::ServiceClient voxel_leaf_size_changer_srv_;
+
   bool b_adaptive_input_voxelization_{false};
   uint points_to_process_in_callback_{3001};
   void ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg);
 
-  /*--------------- 
+  /*---------------
   Dynamic Switching
   ---------------*/
-  
+
   double sensor_health_timeout_;
-  ros::Time last_reception_time_odom_; 
-  ros::Time last_reception_time_imu_; 
+  ros::Time last_reception_time_odom_;
+  ros::Time last_reception_time_imu_;
   bool b_process_pure_lo_;
   bool b_process_pure_lo_prev_;
   bool IsOdomHealthy();
@@ -330,8 +330,7 @@ private:
   bool IntegrateSensors(const ros::Time& stamp);
   bool IntegrateInterpolatedOdom(const ros::Time& stamp);
   bool IntegrateOdom(const ros::Time& stamp);
-  bool IntegrateImu(const ros::Time& stamp); 
-
+  bool IntegrateImu(const ros::Time& stamp);
 };
 
 #endif
