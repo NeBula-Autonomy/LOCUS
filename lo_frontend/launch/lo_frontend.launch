@@ -193,6 +193,10 @@
       
     </group>
 
+    <include file="$(find localizer_space_monitor)/launch/space_monitor.launch">
+        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+    </include>
+
     <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
         <arg name="robot_namespace" value="$(arg robot_namespace)"/>
     </include>
