@@ -641,19 +641,23 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
     }
   }
 
-  geometry_utils::Transform3 pose_to_publish; 
+  geometry_utils::Transform3 pose_to_publish;
   
   {
     std::lock_guard<std::mutex> lock(latest_pose_mutex_);
-    pose_to_publish = latest_pose_; 
+    pose_to_publish = latest_pose_;
   }
 
   if (have_odom_transform) {
     // Convert transform into common format
-    geometry_utils::Transform3 odom_delta = geometry_utils::ros::FromROS(t.transform);
-    pose_to_publish = geometry_utils::PoseUpdate(pose_to_publish, odom_delta);
+    geometry_utils::Transform3 odom_delta = geometry_utils::ros::FromROS(t.transform);    
+    {
+      std::lock_guard<std::mutex> lock(latest_pose_mutex_);
+      latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
+      pose_to_publish = latest_pose_;
+    }
     latest_pose_stamp_ = latest_odom_stamp;
-  }
+  } 
 
   // Publish as an odometry message
   if (!b_have_published_odom_ || have_odom_transform) {
