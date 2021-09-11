@@ -37,6 +37,7 @@
 #ifndef POINT_CLOUD_LOCALIZATION_H
 #define POINT_CLOUD_LOCALIZATION_H
 
+#include <mutex>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <frontend_utils/CommonFunctions.h>
 #include <frontend_utils/CommonStructs.h>
@@ -176,7 +177,7 @@ private:
   ros::Publisher observability_vector_pub_;
 
   // Most recent point cloud time stamp for publishers
-  ros::Time stamp_;
+  std::atomic<ros::Time> stamp_ = {{ros::Time()}};
 
   // Coordinate frames.
   std::string fixed_frame_id_;
@@ -265,6 +266,13 @@ private:
 
   // Reductions
   KdTree::Ptr search_tree_;
+
+  /*--- 
+  Mutex
+  ---*/
+
+  std::mutex icp_covariance_mutex_; 
+
 };
 
 #endif
