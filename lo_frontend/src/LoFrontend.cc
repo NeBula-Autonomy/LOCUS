@@ -386,10 +386,12 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     tf_stamped.transform.translation.y = odometry_msg->pose.pose.position.y;
     tf_stamped.transform.translation.z = odometry_msg->pose.pose.position.z;
     tf_stamped.transform.rotation = odometry_msg->pose.pose.orientation;
+    {
+      std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
+      tf2_ros_odometry_buffer_.setTransform(
+        tf_stamped, tf_buffer_authority_, false);
+    }
     latest_odom_stamp_ = odometry_msg->header.stamp;
-    std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
-    tf2_ros_odometry_buffer_.setTransform(
-        tf_stamped, tf_buffer_authority_, false);    
   }
 }
 
@@ -996,7 +998,7 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
     latest_odom_stamp = latest_odom_stamp_;
     if ((ros::Time::now() - wait_for_transform_start_time).toSec() >
         wait_for_odom_transform_timeout_) {
-      ROS_WARN("Could not retrieve odom transform");
+      ROS_WARN("latest_odom_stamp < stamp");
       break;
     }
   }
