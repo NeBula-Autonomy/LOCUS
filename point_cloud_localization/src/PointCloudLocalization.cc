@@ -301,7 +301,9 @@ bool PointCloudLocalization::MeasurementUpdate(
   }
 
   // Store time stamp
-  stamp_.fromNSec(query->header.stamp * 1e3);
+  ros::Time readed_stamp;
+  readed_stamp.fromNSec(query->header.stamp * 1e3);
+  stamp_ = readed_stamp;
 
   icp_->setInputSource(query);
   icp_->setInputTarget(reference);
@@ -395,26 +397,31 @@ bool PointCloudLocalization::MeasurementUpdate(
                             &observability_matrix_);
   }
 
-  // Compute the covariance matrix for the estimated transform
-  icp_covariance_ = Eigen::Matrix<double, 6, 6>::Zero();
-  if (params_.compute_icp_covariance) {
-    switch (params_.icp_covariance_method) {
-    case (0): {
-      ROS_ERROR_STREAM("Since this method wasn't used but it demanded fitness "
-                       "score computation we removed it. For backup see: "
-                       "110dc0df7e6fa5557b8d373222582bb9047c3254");
-      EXIT_FAILURE;
-      break;
-    }
-    case (1):
-      ComputePoint2PlaneICPCovariance(
-          *query, *reference, correspondences, T, &icp_covariance_);
-      break;
-    default:
-      ROS_ERROR(
-          "Unknown method for ICP covariance calculation. Check config. ");
+  {
+    std::lock_guard<std::mutex> lock(icp_covariance_mutex_);
+    // Compute the covariance matrix for the estimated transform
+    icp_covariance_ = Eigen::Matrix<double, 6, 6>::Zero();
+    if (params_.compute_icp_covariance) {
+      switch (params_.icp_covariance_method) {
+      case (0): {
+        ROS_ERROR_STREAM(
+            "Since this method wasn't used but it demanded fitness "
+            "score computation we removed it. For backup see: "
+            "110dc0df7e6fa5557b8d373222582bb9047c3254");
+        EXIT_FAILURE;
+        break;
+      }
+      case (1):
+        ComputePoint2PlaneICPCovariance(
+            *query, *reference, correspondences, T, &icp_covariance_);
+        break;
+      default:
+        ROS_ERROR(
+            "Unknown method for ICP covariance calculation. Check config. ");
+      }
     }
   }
+
   // TODO: Improve the healthy check.
   is_healthy_ = true;
 
@@ -544,13 +551,8 @@ void PointCloudLocalization::PublishAll() {
 
   PublishPose(
       incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
-  // ROS_INFO_STREAM("Using:\nTranslation:\n" <<
-  // integrated_estimate_.translation << "\nRotation\n" <<
-  // integrated_estimate_.rotation.Roll()*180.0/M_PI << ", " <<
-  // integrated_estimate_.rotation.Pitch()*180.0/M_PI << ", " <<
-  // integrated_estimate_.rotation.Yaw()*180.0/M_PI);
-  PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
 
+  PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
 }
 
 void PointCloudLocalization::PublishPose(
@@ -579,7 +581,10 @@ void PointCloudLocalization::PublishPose(
 
 void PointCloudLocalization::PublishPoseNoUpdate() {
   // Convert pose estimates to ROS format and publish
-  icp_covariance_ = Eigen::MatrixXd::Zero(6, 6);
+  {
+    std::lock_guard<std::mutex> lock(icp_covariance_mutex_);
+    icp_covariance_ = Eigen::MatrixXd::Zero(6, 6);
+  }
   PublishAll();
 }
 
@@ -766,5 +771,6 @@ ros::Time PointCloudLocalization::GetLatestTimestamp() {
 }
 
 Eigen::Matrix<double, 6, 6> PointCloudLocalization::GetLatestDeltaCovariance() {
+  std::lock_guard<std::mutex> lock(icp_covariance_mutex_);
   return icp_covariance_;
 }

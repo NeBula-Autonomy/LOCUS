@@ -48,6 +48,7 @@
 #include <geometry_utils/Transform3.h>
 #include <multithreaded_gicp/gicp.h>
 #include <multithreaded_ndt/ndt_omp.h>
+#include <mutex>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/search/impl/search.hpp>
@@ -156,9 +157,6 @@ private:
                    const Eigen::Matrix<double, 6, 6>& covariance,
                    const ros::Publisher& pub);
 
-  void PublishOdometry(const geometry_utils::Transform3& odometry,
-                       const Eigen::Matrix<double, 6, 6>& covariance);
-
   // Publish condition number of ICP covariance matrix
   void PublishConditionNumber(double& k, const ros::Publisher& pub);
 
@@ -179,7 +177,7 @@ private:
   ros::Publisher observability_vector_pub_;
 
   // Most recent point cloud time stamp for publishers
-  ros::Time stamp_;
+  std::atomic<ros::Time> stamp_ = {{ros::Time()}};
 
   // Coordinate frames.
   std::string fixed_frame_id_;
@@ -268,6 +266,12 @@ private:
 
   // Reductions
   KdTree::Ptr search_tree_;
+
+  /*---
+  Mutex
+  ---*/
+
+  std::mutex icp_covariance_mutex_;
 };
 
 #endif

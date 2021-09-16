@@ -7,6 +7,7 @@ Authors:
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
+#include <atomic>
 #include <chrono>
 #include <core_msgs/PoseAndScan.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
@@ -20,6 +21,7 @@ Authors:
 #include <gtsam/geometry/Rot3.h>
 #include <math.h>
 #include <message_filters/subscriber.h>
+#include <mutex>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/common/common.h>
@@ -50,7 +52,6 @@ Authors:
 #include <visualization_msgs/Marker.h>
 
 class LoFrontend {
-  
   friend class LoFrontendTest;
 
 public:
@@ -124,12 +125,12 @@ private:
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
   geometry_utils::Transform3 latest_pose_;
-  ros::Time latest_pose_stamp_;
-  ros::Time latest_odom_stamp_;
+  std::atomic<ros::Time> latest_pose_stamp_ = {{ros::Time()}};
+  std::atomic<ros::Time> latest_odom_stamp_ = {{ros::Time()}};
   ros::Time stamp_transform_to_;
   bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
-  bool b_have_published_odom_ = false;
+  std::atomic<bool> b_have_published_odom_ = {{bool(false)}};
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
@@ -141,7 +142,7 @@ private:
   int CheckBufferSize(const T& buffer) const;
 
   template <typename T1, typename T2>
-  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, T2& buffer) const;
+  bool GetMsgAtTime(const ros::Time& stamp, T1& msg, const T2& buffer) const;
 
   double translation_threshold_kf_;
   double rotation_threshold_kf_;
@@ -304,25 +305,26 @@ private:
   double rotation_threshold_open_space_kf_;
 
   /*-------------------------
-  Adaptive Input Voxelization 
+  Adaptive Input Voxelization
   -------------------------*/
 
   int counter_voxel_{0};
   ros::Publisher dchange_voxel_pub_;
+  ros::Publisher change_leaf_size_pub_;
   dynamic_reconfigure::Reconfigure voxel_param;
   dynamic_reconfigure::DoubleParameter double_param;
-  ros::ServiceClient voxel_leaf_size_changer_srv_;
+
   bool b_adaptive_input_voxelization_{false};
   uint points_to_process_in_callback_{3001};
   void ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg);
 
-  /*--------------- 
+  /*---------------
   Dynamic Switching
   ---------------*/
-  
+
   double sensor_health_timeout_;
-  ros::Time last_reception_time_odom_; 
-  ros::Time last_reception_time_imu_; 
+  std::atomic<ros::Time> last_reception_time_odom_ = {{ros::Time()}};
+  std::atomic<ros::Time> last_reception_time_imu_ = {{ros::Time()}};
   bool b_process_pure_lo_;
   bool b_process_pure_lo_prev_;
   bool IsOdomHealthy();
@@ -330,8 +332,16 @@ private:
   bool IntegrateSensors(const ros::Time& stamp);
   bool IntegrateInterpolatedOdom(const ros::Time& stamp);
   bool IntegrateOdom(const ros::Time& stamp);
-  bool IntegrateImu(const ros::Time& stamp); 
+  bool IntegrateImu(const ros::Time& stamp);
 
+  /*---
+  Mutex
+  ---*/
+
+  std::mutex imu_buffer_mutex_;
+  std::mutex odometry_buffer_mutex_;
+  std::mutex tf2_ros_odometry_buffer_mutex_;
+  std::mutex latest_pose_mutex_;
 };
 
 #endif
