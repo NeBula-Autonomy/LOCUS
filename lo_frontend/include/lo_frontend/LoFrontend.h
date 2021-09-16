@@ -7,7 +7,6 @@ Authors:
 #ifndef LO_FRONTEND_LO_FRONTEND_H
 #define LO_FRONTEND_LO_FRONTEND_H
 
-#include <mutex>
 #include <atomic>
 #include <chrono>
 #include <core_msgs/PoseAndScan.h>
@@ -22,6 +21,7 @@ Authors:
 #include <gtsam/geometry/Rot3.h>
 #include <math.h>
 #include <message_filters/subscriber.h>
+#include <mutex>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/common/common.h>
@@ -55,7 +55,6 @@ class LoFrontend {
   friend class LoFrontendTest;
 
 public:
-
   typedef sensor_msgs::Imu Imu;
   typedef nav_msgs::Odometry Odometry;
   typedef std::map<double, Imu> ImuBuffer;
@@ -71,7 +70,6 @@ public:
   std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
 
 private:
-
   int mapper_threads_{1};
   std::string robot_type_;
 
@@ -334,14 +332,14 @@ private:
   bool IntegrateSensors(const ros::Time& stamp);
   bool IntegrateInterpolatedOdom(const ros::Time& stamp);
   bool IntegrateOdom(const ros::Time& stamp);
-  bool IntegrateImu(const ros::Time& stamp); 
+  bool IntegrateImu(const ros::Time& stamp);
 
-  /*--- 
+  /*---
   Mutex
   ---*/
 
-  std::mutex imu_buffer_mutex_; 
-  std::mutex odometry_buffer_mutex_; 
+  std::mutex imu_buffer_mutex_;
+  std::mutex odometry_buffer_mutex_;
   std::mutex tf2_ros_odometry_buffer_mutex_;
   std::mutex latest_pose_mutex_;
 

@@ -302,7 +302,7 @@ bool PointCloudLocalization::MeasurementUpdate(
 
   // Store time stamp
   ros::Time readed_stamp;
-  readed_stamp.fromNSec(query->header.stamp * 1e3); 
+  readed_stamp.fromNSec(query->header.stamp * 1e3);
   stamp_ = readed_stamp;
 
   icp_->setInputSource(query);
@@ -397,16 +397,17 @@ bool PointCloudLocalization::MeasurementUpdate(
                             &observability_matrix_);
   }
 
-  {    
+  {
     std::lock_guard<std::mutex> lock(icp_covariance_mutex_);
     // Compute the covariance matrix for the estimated transform
     icp_covariance_ = Eigen::Matrix<double, 6, 6>::Zero();
     if (params_.compute_icp_covariance) {
       switch (params_.icp_covariance_method) {
       case (0): {
-        ROS_ERROR_STREAM("Since this method wasn't used but it demanded fitness "
-                        "score computation we removed it. For backup see: "
-                        "110dc0df7e6fa5557b8d373222582bb9047c3254");
+        ROS_ERROR_STREAM(
+            "Since this method wasn't used but it demanded fitness "
+            "score computation we removed it. For backup see: "
+            "110dc0df7e6fa5557b8d373222582bb9047c3254");
         EXIT_FAILURE;
         break;
       }
@@ -542,7 +543,6 @@ bool PointCloudLocalization::ComputePoint2PlaneICPCovariance(
 }
 
 void PointCloudLocalization::PublishAll() {
-  
   if (params_.compute_icp_observability)
     PublishObservableDirections(observability_matrix_);
 
@@ -550,11 +550,9 @@ void PointCloudLocalization::PublishAll() {
     PublishConditionNumber(condition_number_, condition_number_pub_);
 
   PublishPose(
-    incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
+      incremental_estimate_, icp_covariance_, incremental_estimate_pub_);
 
-  PublishPose(
-    integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
-
+  PublishPose(integrated_estimate_, icp_covariance_, integrated_estimate_pub_);
 }
 
 void PointCloudLocalization::PublishPose(

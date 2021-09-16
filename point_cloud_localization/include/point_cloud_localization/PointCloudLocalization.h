@@ -37,7 +37,6 @@
 #ifndef POINT_CLOUD_LOCALIZATION_H
 #define POINT_CLOUD_LOCALIZATION_H
 
-#include <mutex>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <frontend_utils/CommonFunctions.h>
 #include <frontend_utils/CommonStructs.h>
@@ -49,6 +48,7 @@
 #include <geometry_utils/Transform3.h>
 #include <multithreaded_gicp/gicp.h>
 #include <multithreaded_ndt/ndt_omp.h>
+#include <mutex>
 #include <nav_msgs/Odometry.h>
 #include <parameter_utils/ParameterUtils.h>
 #include <pcl/search/impl/search.hpp>
@@ -267,12 +267,11 @@ private:
   // Reductions
   KdTree::Ptr search_tree_;
 
-  /*--- 
+  /*---
   Mutex
   ---*/
 
-  std::mutex icp_covariance_mutex_; 
-
+  std::mutex icp_covariance_mutex_;
 };
 
 #endif
