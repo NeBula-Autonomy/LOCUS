@@ -343,7 +343,13 @@ private:
   std::mutex imu_buffer_mutex_; 
   std::mutex odometry_buffer_mutex_; 
   std::mutex tf2_ros_odometry_buffer_mutex_;
-  std::mutex latest_pose_mutex_; 
+  std::mutex latest_pose_mutex_;
+
+  /*--------
+  Timer Flag  
+  --------*/
+
+  bool b_pub_odom_on_timer_; 
 
 };
 
