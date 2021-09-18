@@ -24,6 +24,7 @@ LoFrontend::LoFrontend()
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
     b_integrate_interpolated_odom_(false),
+    b_pub_odom_on_timer_(false),
     b_process_pure_lo_(false),
     b_process_pure_lo_prev_(false),
     b_imu_has_been_received_(false),
@@ -225,6 +226,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_integrate_interpolated_odom", b_integrate_interpolated_odom_))
     return false;
+  if (!pu::Get("b_pub_odom_on_timer", b_pub_odom_on_timer_))
+    return false;
   if (!pu::Get("b_sub_to_lsm", b_sub_to_lsm_))
     return false;
   if (!pu::Get("xy_cross_section_threshold", xy_cross_section_threshold_))
@@ -337,8 +340,13 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       ros::this_node::getNamespace() + "/voxel_grid/change_leaf_size",
       10,
       false);
-  odom_pub_timer_ =
+
+  if (b_pub_odom_on_timer_) {
+    ROS_INFO("Enabling odom_pub_timer_");
+    odom_pub_timer_ =
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);
+  }
+  
   odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
@@ -527,14 +535,22 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   geometry_utils::Transform3 current_pose =
       localization_.GetIntegratedEstimate();
 
-  // Update current pose for publishing
-  {
-    std::lock_guard<std::mutex> lock(latest_pose_mutex_);
-    latest_pose_ = current_pose;
-  }
   previous_stamp_ = stamp;
-  latest_pose_stamp_ = stamp;
-  b_have_published_odom_ = false;
+
+  if (b_pub_odom_on_timer_) {
+    // Update current pose for publishing
+    {
+      std::lock_guard<std::mutex> lock(latest_pose_mutex_);
+      latest_pose_ = current_pose; 
+    }
+    latest_pose_stamp_ = stamp;
+    b_have_published_odom_ = false;  
+  } 
+  else {
+    PublishOdometry(current_pose,
+                    localization_.GetLatestDeltaCovariance(), 
+                    stamp);
+  }
 
   gtsam::Pose3 delta =
       ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
