@@ -60,7 +60,10 @@
 
             <rosparam file="$(find lo_frontend)/config/lo_settings.yaml" unless="$(eval robot_type == 'spot')"/>
             <rosparam file="$(find lo_frontend)/config/lo_settings_spot.yaml" if="$(eval robot_type == 'spot')"/>
-            
+
+            <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('spot'))"/>
+            <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+
             <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>          

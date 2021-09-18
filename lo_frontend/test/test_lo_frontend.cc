@@ -29,6 +29,7 @@ public:
     system("rosparam set icp/num_threads 1");
     system("rosparam set localization/num_threads 1");
     system("rosparam set b_integrate_interpolated_odom false");
+    system("rosparam set b_pub_odom_on_timer false");
     ros::param::set("mapper/num_threads", 2);
   }
 

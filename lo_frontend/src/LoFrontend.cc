@@ -24,6 +24,7 @@ LoFrontend::LoFrontend()
     mapper_unused_fixed_(new PointCloud()),
     mapper_unused_out_(new PointCloud()),
     b_integrate_interpolated_odom_(false),
+    b_pub_odom_on_timer_(false),
     b_process_pure_lo_(false),
     b_process_pure_lo_prev_(false),
     b_imu_has_been_received_(false),
@@ -225,6 +226,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!pu::Get("b_integrate_interpolated_odom", b_integrate_interpolated_odom_))
     return false;
+  if (!pu::Get("b_pub_odom_on_timer", b_pub_odom_on_timer_))
+    return false;
   if (!pu::Get("b_sub_to_lsm", b_sub_to_lsm_))
     return false;
   if (!pu::Get("xy_cross_section_threshold", xy_cross_section_threshold_))
@@ -337,8 +340,13 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       ros::this_node::getNamespace() + "/voxel_grid/change_leaf_size",
       10,
       false);
-  odom_pub_timer_ =
+
+  if (b_pub_odom_on_timer_) {
+    ROS_INFO("Enabling odom_pub_timer_");
+    odom_pub_timer_ =
       nl_.createTimer(odom_pub_rate_, &LoFrontend::PublishOdomOnTimer, this);
+  }
+  
   odometry_pub_ = nl.advertise<nav_msgs::Odometry>("odometry", 10, false);
   diagnostics_pub_ =
       nl.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 10, false);
@@ -389,7 +397,7 @@ void LoFrontend::OdometryCallback(const OdometryConstPtr& odometry_msg) {
     {
       std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
       tf2_ros_odometry_buffer_.setTransform(
-        tf_stamped, tf_buffer_authority_, false);
+          tf_stamped, tf_buffer_authority_, false);
     }
     latest_odom_stamp_ = odometry_msg->header.stamp;
   }
@@ -527,14 +535,22 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   geometry_utils::Transform3 current_pose =
       localization_.GetIntegratedEstimate();
 
-  // Update current pose for publishing
-  {
-    std::lock_guard<std::mutex> lock(latest_pose_mutex_);
-    latest_pose_ = current_pose;
-  }  
   previous_stamp_ = stamp;
-  latest_pose_stamp_ = stamp;
-  b_have_published_odom_ = false;
+
+  if (b_pub_odom_on_timer_) {
+    // Update current pose for publishing
+    {
+      std::lock_guard<std::mutex> lock(latest_pose_mutex_);
+      latest_pose_ = current_pose; 
+    }
+    latest_pose_stamp_ = stamp;
+    b_have_published_odom_ = false;  
+  } 
+  else {
+    PublishOdometry(current_pose,
+                    localization_.GetLatestDeltaCovariance(), 
+                    stamp);
+  }
 
   gtsam::Pose3 delta =
       ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_, current_pose));
@@ -615,26 +631,26 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   // Check if we can get additional transforms from the odom source
   bool have_odom_transform = false;
   geometry_msgs::TransformStamped t;
-  
+
   ros::Time latest_odom_stamp = latest_odom_stamp_;
   ros::Time latest_pose_stamp = latest_pose_stamp_;
 
   {
     std::lock_guard<std::mutex> lock(tf2_ros_odometry_buffer_mutex_);
     if (latest_odom_stamp > lidar_stamp && data_integration_mode_ >= 3 &&
-      tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
-                                            latest_pose_stamp,
-                                            base_frame_id_,
-                                            latest_odom_stamp,
-                                            bd_odom_frame_id_)) {
+        tf2_ros_odometry_buffer_.canTransform(base_frame_id_,
+                                              latest_pose_stamp,
+                                              base_frame_id_,
+                                              latest_odom_stamp,
+                                              bd_odom_frame_id_)) {
       have_odom_transform = true;
       publish_stamp = latest_odom_stamp;
       // Get transform between latest lidar timestamp and latest odom timestamp
       t = tf2_ros_odometry_buffer_.lookupTransform(base_frame_id_,
-                                                  latest_pose_stamp,
-                                                  base_frame_id_,
-                                                  latest_odom_stamp,
-                                                  bd_odom_frame_id_);
+                                                   latest_pose_stamp,
+                                                   base_frame_id_,
+                                                   latest_odom_stamp,
+                                                   bd_odom_frame_id_);
     } else {
       publish_stamp = latest_pose_stamp;
       // TODO - don't print this warning if we have not chosen odom as an input
@@ -644,7 +660,7 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
   }
 
   geometry_utils::Transform3 pose_to_publish;
-  
+
   {
     std::lock_guard<std::mutex> lock(latest_pose_mutex_);
     pose_to_publish = latest_pose_;
@@ -652,14 +668,15 @@ void LoFrontend::PublishOdomOnTimer(const ros::TimerEvent& ev) {
 
   if (have_odom_transform) {
     // Convert transform into common format
-    geometry_utils::Transform3 odom_delta = geometry_utils::ros::FromROS(t.transform);    
+    geometry_utils::Transform3 odom_delta =
+        geometry_utils::ros::FromROS(t.transform);
     {
       std::lock_guard<std::mutex> lock(latest_pose_mutex_);
       latest_pose_ = geometry_utils::PoseUpdate(latest_pose_, odom_delta);
       pose_to_publish = latest_pose_;
     }
     latest_pose_stamp_ = latest_odom_stamp;
-  } 
+  }
 
   // Publish as an odometry message
   if (!b_have_published_odom_ || have_odom_transform) {
@@ -993,7 +1010,7 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
   geometry_msgs::TransformStamped t;
 
   auto wait_for_transform_start_time = ros::Time::now();
-  ros::Time latest_odom_stamp = latest_odom_stamp_;  
+  ros::Time latest_odom_stamp = latest_odom_stamp_;
   while (latest_odom_stamp < stamp) {
     latest_odom_stamp = latest_odom_stamp_;
     if ((ros::Time::now() - wait_for_transform_start_time).toSec() >
@@ -1002,7 +1019,7 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp) {
       break;
     }
   }
-  
+
   if (latest_odom_stamp < stamp && latest_odom_stamp > previous_stamp_) {
     stamp_transform_to_ = latest_odom_stamp;
     if (b_debug_transforms_) {
@@ -1055,7 +1072,7 @@ bool LoFrontend::IntegrateImu(const ros::Time& stamp) {
     std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
     if (!GetMsgAtTime(stamp, imu_msg, imu_buffer_)) {
       ROS_WARN("Unable to retrieve imu_msg from imu_buffer_ "
-              "given lidar timestamp");
+               "given lidar timestamp");
       return false;
     }
   }
