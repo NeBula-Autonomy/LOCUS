@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate dynamic_reconfigure
 generate_dynamic_reconfigure_options(
   cfg/BodyFilter.cfg
+  cfg/CustomVoxelGrid.cfg
 )
 
 catkin_package(
@@ -47,7 +48,8 @@ link_directories(
 
 add_library(${PROJECT_NAME} 
   src/PointCloudFilter.cc
-  src/body_filter.cc)
+  src/body_filter.cc
+  src/custom_voxel_grid.cc)
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}

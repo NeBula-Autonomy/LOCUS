@@ -181,7 +181,7 @@
         <node pkg="nodelet"
             type="nodelet"
             name="normal_computation"
-            args="load traversability_filters/NormalComputation $(arg nodelet_manager) $(arg nodelet_args)"
+            args="load point_cloud_filter/NormalComputation $(arg nodelet_manager) $(arg nodelet_args)"
             respawn="$(arg respawn)">
             <remap from="~input" to="voxel_grid/output"/>
             <remap from="~output" to="$(arg pc_input)" />
