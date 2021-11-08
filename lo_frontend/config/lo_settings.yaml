@@ -11,7 +11,7 @@ rotation_threshold_kf: 0.3
 number_of_points_open_space: 9999999 # Disabled - baseline to use is: 11000
 
 map_publishment:
-  b_publish_map: false
+  b_publish_map: true
   meters: 1
 
 queues:
