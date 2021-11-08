@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 generate_dynamic_reconfigure_options(
   cfg/BodyFilter.cfg
   cfg/CustomVoxelGrid.cfg
+  cfg/NormalComputation.cfg
 )
 
 catkin_package(
@@ -49,7 +50,8 @@ link_directories(
 add_library(${PROJECT_NAME} 
   src/PointCloudFilter.cc
   src/body_filter.cc
-  src/custom_voxel_grid.cc)
+  src/custom_voxel_grid.cc
+  src/normal_computation.cc)
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}

@@ -9,9 +9,9 @@
          base_class_type="nodelet::Nodelet">
     <description>Custom Voxel Filter with bigger leaf size</description>
   </class>
-  <!-- <class name="point_cloud_filter/NormalComputation"
+  <class name="point_cloud_filter/NormalComputation"
          type="point_cloud_filter::NormalComputation"
          base_class_type="nodelet::Nodelet">
     <description>Compute normals from input pointcloud</description>
-  </class> -->
+  </class>
 </library>
