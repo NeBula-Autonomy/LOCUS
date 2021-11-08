@@ -1,0 +1,17 @@
+<library path="lib/libtraversability_filters">
+  <class name="traversability_filters/BodyFilter"
+         type="traversability_filters::BodyFilter"
+         base_class_type="nodelet::Nodelet">
+    <description>Filter robot body from input pointcloud</description>
+  </class>
+    <!-- <class name="traversability_filters/CustomVoxelGrid"
+         type="traversability_filters::CustomVoxelGrid"
+         base_class_type="nodelet::Nodelet">
+    <description>Custom Voxel Filter with bigger leaf size</description>
+  </class>
+  <class name="traversability_filters/NormalComputation"
+         type="traversability_filters::NormalComputation"
+         base_class_type="nodelet::Nodelet">
+    <description>Compute normals from input pointcloud</description>
+  </class> -->
+</library>

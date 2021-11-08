@@ -14,6 +14,11 @@ find_package(catkin REQUIRED COMPONENTS
   frontend_utils
 )
 
+## Generate dynamic_reconfigure
+generate_dynamic_reconfigure_options(
+  cfg/BodyFilter.cfg
+)
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -40,7 +45,10 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/PointCloudFilter.cc)
+add_library(${PROJECT_NAME} 
+  src/PointCloudFilter.cc
+  src/body_filter.cc)
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
