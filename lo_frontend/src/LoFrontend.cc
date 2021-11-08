@@ -327,12 +327,6 @@ bool LoFrontend::CreatePublishers(const ros::NodeHandle& n) {
       nl.advertise<PointCloudF>("base_frame_point_cloud", 10, false);
   lidar_callback_duration_pub_ =
       nl.advertise<std_msgs::Float64>("lidar_callback_duration", 10, false);
-  scan_to_scan_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("scan_to_scan_duration", 10, false);
-  scan_to_submap_duration_pub_ =
-      nl.advertise<std_msgs::Float64>("scan_to_submap_duration", 10, false);
-  approx_nearest_neighbors_duration_pub_ = nl.advertise<std_msgs::Float64>(
-      "approx_nearest_neighbors_duration", 10, false);
   dchange_voxel_pub_ =
       nl.advertise<std_msgs::Float64>("dchange_voxel", 10, false);
 
@@ -428,8 +422,6 @@ void LoFrontend::CheckMsgDropRate(const PointCloudF::ConstPtr& msg) {
 }
 
 void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
-  // To test delays
-  // ros::Duration(0.4).sleep();
 
   if (b_enable_computation_time_profiling_) {
     lidar_callback_start_ = ros::Time::now();
@@ -455,12 +447,8 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     b_process_pure_lo_prev_ = b_process_pure_lo_;
   }
 
-  filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove this
+  filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove 
   odometry_.SetLidar(*msg_filtered_);
-
-  if (b_enable_computation_time_profiling_) {
-    scan_to_scan_start_ = ros::Time::now();
-  }
 
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
@@ -469,14 +457,6 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   auto diagnostics_odometry = odometry_.GetDiagnostics();
   if (diagnostics_odometry.level == 0) {
     odometry_.PublishAll();
-  }
-
-  if (b_enable_computation_time_profiling_) {
-    auto scan_to_scan_end = ros::Time::now();
-    auto scan_to_scan_duration = scan_to_scan_end - scan_to_scan_start_;
-    auto scan_to_scan_duration_msg = std_msgs::Float64();
-    scan_to_scan_duration_msg.data = float(scan_to_scan_duration.toSec());
-    scan_to_scan_duration_pub_.publish(scan_to_scan_duration_msg);
   }
 
   if (b_add_first_scan_to_key_ && !b_run_with_gt_point_cloud_) {
@@ -491,49 +471,18 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     return;
   }
 
-  if (b_enable_computation_time_profiling_) {
-    scan_to_submap_start_ = ros::Time::now();
-  }
-
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
-  localization_.TransformPointsToFixedFrame(*msg_filtered_,
-                                            msg_transformed_.get());
-  if (b_enable_computation_time_profiling_) {
-    approx_nearest_neighbors_start_ = ros::Time::now();
-  }
-
+  localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
   mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
-  if (b_enable_computation_time_profiling_) {
-    auto approx_nearest_neighbors_end = ros::Time::now();
-    auto approx_nearest_neighbors_duration =
-        approx_nearest_neighbors_end - approx_nearest_neighbors_start_;
-    auto approx_nearest_neighbors_duration_msg = std_msgs::Float64();
-    approx_nearest_neighbors_duration_msg.data =
-        float(approx_nearest_neighbors_duration.toSec());
-    approx_nearest_neighbors_duration_pub_.publish(
-        approx_nearest_neighbors_duration_msg);
-  }
-
-  localization_.TransformPointsToSensorFrame(*msg_neighbors_,
-                                             msg_neighbors_.get());
-  localization_.MeasurementUpdate(
-      msg_filtered_, msg_neighbors_, msg_base_.get());
+  localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
+  localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
 
   auto diagnostics_localization = localization_.GetDiagnostics();
   if (diagnostics_localization.level == 0) {
     localization_.PublishAll();
   }
 
-  if (b_enable_computation_time_profiling_) {
-    auto scan_to_submap_end = ros::Time::now();
-    auto scan_to_submap_duration = scan_to_submap_end - scan_to_submap_start_;
-    auto scan_to_submap_duration_msg = std_msgs::Float64();
-    scan_to_submap_duration_msg.data = float(scan_to_submap_duration.toSec());
-    scan_to_submap_duration_pub_.publish(scan_to_submap_duration_msg);
-  }
-
-  geometry_utils::Transform3 current_pose =
-      localization_.GetIntegratedEstimate();
+  geometry_utils::Transform3 current_pose = localization_.GetIntegratedEstimate();
 
   previous_stamp_ = stamp;
 

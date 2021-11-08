@@ -229,15 +229,7 @@ private:
 
   bool b_enable_computation_time_profiling_;
   ros::Publisher lidar_callback_duration_pub_;
-
   ros::Time lidar_callback_start_;
-  ros::Time scan_to_scan_start_;
-  ros::Time scan_to_submap_start_;
-  ros::Time approx_nearest_neighbors_start_;
-
-  ros::Publisher scan_to_scan_duration_pub_;
-  ros::Publisher scan_to_submap_duration_pub_;
-  ros::Publisher approx_nearest_neighbors_duration_pub_;
 
   /* -------------------------
   Ground Truth
