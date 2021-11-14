@@ -502,7 +502,11 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
     approx_nearest_neighbors_start_ = ros::Time::now();
   }
 
-  mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
+  if (!mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get())) {
+    ROS_WARN("mapper_->ApproxNearestNeighbors returned false");
+    return;
+  }
+    
   if (b_enable_computation_time_profiling_) {
     auto approx_nearest_neighbors_end = ros::Time::now();
     auto approx_nearest_neighbors_duration =
