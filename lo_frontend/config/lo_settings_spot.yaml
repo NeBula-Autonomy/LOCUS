@@ -52,7 +52,7 @@ b_enable_msw: true
 
 window_local_mapping_type: multi_threaded_mapper
 
-box_filter_size: 10
+box_filter_size: 20
 velocity_buffer_size: 10
 translation_threshold_msw: 5
 rotational_velocity_threshold: 1
