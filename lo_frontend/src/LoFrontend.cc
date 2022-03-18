@@ -472,9 +472,16 @@ void LoFrontend::LidarCallback(const PointCloud::ConstPtr& msg) {
   }
 
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
+
   localization_.TransformPointsToFixedFrame(*msg_filtered_, msg_transformed_.get());
-  mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get());
+
+  if (!mapper_->ApproxNearestNeighbors(*msg_transformed_, msg_neighbors_.get())) {
+    ROS_WARN("mapper_->ApproxNearestNeighbors returned false");
+    return;
+  }
+
   localization_.TransformPointsToSensorFrame(*msg_neighbors_, msg_neighbors_.get());
+  
   localization_.MeasurementUpdate(msg_filtered_, msg_neighbors_, msg_base_.get());
 
   auto diagnostics_localization = localization_.GetDiagnostics();
