@@ -1,28 +1,30 @@
 #pragma once
 
-#include <ros/ros.h>
-
-#include <pcl/octree/octree_search.h>
-#include <pcl_ros/point_cloud.h>
 
 #include <mutex>
+#include <memory>
 #include <thread>
-
-#include <core_msgs/MapInfo.h>
-
-#include <geometry_utils/GeometryUtilsROS.h>
-#include <geometry_utils/Transform3.h>
-#include <pcl/filters/crop_box.h>
-
-#include "IPointCloudMapper.h"
-
-//#include <utils/CommonStructs.h>
-#include <std_msgs/Float64.h>
+#include <atomic>
+#include <ros/ros.h>
 #include <std_msgs/UInt64.h>
+#include <std_msgs/Float64.h>
+#include "IPointCloudMapper.h"
+#include <core_msgs/MapInfo.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/filters/crop_box.h>
 #include <utils/PointCloudTypes.h>
+#include <pcl/octree/octree_search.h>
+#include <geometry_utils/Transform3.h>
+#include <geometry_utils/GeometryUtilsROS.h>
+
+
 
 class PointCloudMultiThreadedMapper : public IPointCloudMapper {
+
+
+
 public:
+
   typedef pcl::octree::OctreePointCloudSearch<Point> Octree;
   typedef std::vector<PointCloud> PointCloudBuffer;
 
@@ -58,17 +60,16 @@ public:
   // Publish map info for analysis
   void PublishMapInfo();
 
-  // Map Sliding Window 2 ---------------------------------------------------
   void SetBoxFilterSize(const int box_filter_size) override;
   void Refresh(const geometry_utils::Transform3& current_pose) override;
 
+
+
 private:
+
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
-
-  // For multi-threaded map sliding window
-  void RefreshThread();
 
   // Threaded version to avoid blocking SLAM when the map gets big.
   void PublishMapThread();
@@ -123,17 +124,25 @@ private:
   std::thread publish_thread_;
   std::thread publish_frozen_thread_;
   std::thread refresh_thread_;
-  mutable std::mutex map_mutex_;
-  mutable std::mutex map_mutex_b_;
-  mutable std::mutex map_frozen_mutex_;
 
   pcl::CropBox<Point> box_filter_;
   int box_filter_size_;
 
-  std::string refresh_id_;
+  // Multithreaded octree
 
+  std::string refresh_id_; 
   PointCloud::Ptr history_;
-  bool b_keep_history_;
-  bool b_add_history_to_a_;
-  bool b_add_history_to_b_;
+
+  std::mutex refresh_id_mutex_;    
+  std::mutex box_filter_mutex_;  
+  std::mutex map_data_mutex_;
+  std::mutex map_data_b_mutex_; 
+  std::mutex history_mutex_; 
+  std::atomic<bool> b_keep_history_ = {{bool(false)}};
+  std::atomic<bool> b_refresh_ = {{bool(false)}};
+ 
+  bool b_inserted_points_; 
+  ros::Timer refresh_timer_;
+  void RefreshTimerCallback(const ros::TimerEvent& ev);
+  
 };
