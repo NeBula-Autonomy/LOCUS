@@ -4,6 +4,16 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 ![alt text](readme.png)
 
+# TODOS
+
+- [ ] Rename all lo_frontend instances to locus
+- [ ] Cleanup comments, the less the better, just keep the very relevant ones
+- [ ] Cleanup unused parameters, class variables, publishers and subscribers 
+- [ ] Bring in MDC in launch
+- [ ] Remove filter_.Filter call in LidarCallback as nothing is being filtered internally anymore and remove point_cloud_filter package accordingly
+- [ ] Simplify our robot-specific files for a generic robot (e.g. no husky/spot anymore) and define how you want to let the user load sensor extrinsic, either hardcoded or by TF
+- [ ] Suggest parameters for open/closed space in yaml where relevant (e.g. PointCloudOdometry, PointCloudLocalization)
+- [ ] Update README.md with instructions on how to setup/run the package
 
 
 
