@@ -2,8 +2,10 @@
 
 #include "IPointCloudMapper.h"
 //#include <utils/CommonStructs.h>
-#include <utils/PointCloudTypes.h>
-class SimplePointCloudMapper : public IPointCloudMapper {
+//#include <utils/PointCloudTypes.h>
+#include <frontend_utils/CommonStructs.h>
+class SimplePointCloudMapper : public IPointCloudMapper
+{
 public:
   SimplePointCloudMapper();
   ~SimplePointCloudMapper();
@@ -16,15 +18,13 @@ public:
   void Reset() override;
 
   // Adds a set of points.
-  bool InsertPoints(const PointCloud::ConstPtr& points,
-                    PointCloud* incremental_points) override;
+  bool InsertPoints(const PointCloudF::ConstPtr& points, PointCloudF* incremental_points) override;
 
   // Returns the approximate nearest neighbor for every point in the input point
   // cloud. Localization to the map can be performed by doing ICP between the
   // input and output. Returns true if at least one of the inputs points had a
   // nearest neighbor.
-  bool ApproxNearestNeighbors(const PointCloud& points,
-                              PointCloud* neighbors) override;
+  bool ApproxNearestNeighbors(const PointCloudF& points, PointCloudF* neighbors) override;
 
   // Publish map for visualization. This can be expensive so it is not called
   // from inside, as opposed to PublishMapUpdate().
@@ -46,7 +46,7 @@ private:
   void PublishMapFrozenThread();
 
   // Publish map updates for visualization.
-  void PublishMapUpdate(const PointCloud& incremental_points);
+  void PublishMapUpdate(const PointCloudF& incremental_points);
 
   // The node's name.
   std::string name_;

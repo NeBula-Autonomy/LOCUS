@@ -22,8 +22,10 @@
 //#include <utils/CommonStructs.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/UInt64.h>
-#include <utils/PointCloudTypes.h>
-class PointCloudIkdTreeMapper : public IPointCloudMapper {
+//#include <utils/PointCloudTypes.h>
+#include <frontend_utils/CommonStructs.h>
+class PointCloudIkdTreeMapper : public IPointCloudMapper
+{
 public:
   // typedef pcl::PointCloud<pcl::PointXYZI> PointCloud;
 
@@ -41,15 +43,13 @@ public:
   // already exist in the corresponding voxel. Output the points from the input
   // that ended up being inserted into the octree.
   // Effective C++ item 37
-  bool InsertPoints(const PointCloud::ConstPtr& points,
-                    PointCloud* incremental_points) override;
+  bool InsertPoints(const PointCloudF::ConstPtr& points, PointCloudF* incremental_points) override;
 
   // Returns the approximate nearest neighbor for every point in the input point
   // cloud. Localization to the map can be performed by doing ICP between the
   // input and output. Returns true if at least one of the inputs points had a
   // nearest neighbor.
-  virtual bool ApproxNearestNeighbors(const PointCloud& points,
-                                      PointCloud* neighbors) override;
+  virtual bool ApproxNearestNeighbors(const PointCloudF& points, PointCloudF* neighbors) override;
 
   // Publish map for visualization. This can be expensive so it is not called
   // from inside, as opposed to PublishMapUpdate().
@@ -73,11 +73,9 @@ private:
   void PublishMapFrozenThread();
 
   // Publish map updates for visualization.
-  void PublishMapUpdate(const PointCloud& incremental_points);
-  void UpdateBoxesLocationWithRespectToTheRobot(
-      const geometry_utils::Transform3& current_pose);
-  visualization_msgs::Marker
-  CreateBoxToVisualize(const Eigen::Vector3f& current_position, int id) const;
+  void PublishMapUpdate(const PointCloudF& incremental_points);
+  void UpdateBoxesLocationWithRespectToTheRobot(const geometry_utils::Transform3& current_pose);
+  visualization_msgs::Marker CreateBoxToVisualize(const Eigen::Vector3f& current_position, int id) const;
 
   // The node's name.
   std::string name_;
@@ -118,7 +116,7 @@ private:
 
   std::vector<Eigen::Vector3f> box_filter_centers_;
   std::vector<BoxPointType> box_filters_;
-  float box_filter_size_{25.0f};
+  float box_filter_size_{ 25.0f };
   KD_TREE ikdtree;
-  double filter_size_map_min{0.001};
+  double filter_size_map_min{ 0.001 };
 };

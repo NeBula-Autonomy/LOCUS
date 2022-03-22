@@ -6,6 +6,7 @@ project(lo_frontend)
 #ENDIF()
 
 SET(CMAKE_BUILD_TYPE Release)
+add_compile_options(-std=c++14)
 
 find_package(GTSAM REQUIRED)
 if (NOT GTSAM_FOUND)
@@ -29,7 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   point_cloud_odometry
   point_cloud_localization
   point_cloud_mapper
-  lidar_slip_detection
+ # lidar_slip_detection
   geometry_utils
   parameter_utils
   pcl_ros
@@ -58,7 +59,7 @@ catkin_package(
     point_cloud_odometry
     point_cloud_localization
     point_cloud_mapper
-    lidar_slip_detection
+    #lidar_slip_detection
     geometry_utils
     parameter_utils
     pcl_ros
@@ -71,16 +72,16 @@ catkin_package(
     Boost
 )
 
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
-check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if (COMPILER_SUPPORTS_CXX11)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-elseif(COMPILER_SUPPORTS_CXX0X)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-else()
-  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
-endif()
+#include(CheckCXXCompilerFlag)
+#check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_CXX11)
+#check_cxx_compiler_flag("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+#if (COMPILER_SUPPORTS_CXX11)
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+#elseif(COMPILER_SUPPORTS_CXX0X)
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+#else()
+#  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
+#endif()
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})

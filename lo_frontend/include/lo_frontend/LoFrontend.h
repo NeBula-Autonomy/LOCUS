@@ -9,7 +9,7 @@ Authors:
 
 #include <atomic>
 #include <chrono>
-#include <core_msgs/PoseAndScan.h>
+
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <dynamic_reconfigure/Reconfigure.h>
@@ -17,8 +17,8 @@ Authors:
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
-#include <gtsam/geometry/Pose3.h>
-#include <gtsam/geometry/Rot3.h>
+//#include <gtsam/geometry/Pose3.h>
+//#include <gtsam/geometry/Rot3.h>
 #include <math.h>
 #include <message_filters/subscriber.h>
 #include <mutex>
@@ -51,7 +51,8 @@ Authors:
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <visualization_msgs/Marker.h>
 
-class LoFrontend {
+class LoFrontend
+{
   friend class LoFrontendTest;
 
 public:
@@ -70,7 +71,7 @@ public:
   std::vector<ros::AsyncSpinner> setAsynchSpinners(ros::NodeHandle& _nh);
 
 private:
-  int mapper_threads_{1};
+  int mapper_threads_{ 1 };
   std::string robot_type_;
 
   const std::string tf_buffer_authority_;
@@ -98,8 +99,7 @@ private:
   double odom_pub_rate_;
   ros::Timer odom_pub_timer_;
   void PublishOdomOnTimer(const ros::TimerEvent& ev);
-  void PublishOdometry(const geometry_utils::Transform3& odometry,
-                       const Eigen::Matrix<double, 6, 6>& covariance,
+  void PublishOdometry(const geometry_utils::Transform3& odometry, const Eigen::Matrix<double, 6, 6>& covariance,
                        const ros::Time stamp);
   ros::Publisher odometry_pub_;
 
@@ -125,12 +125,12 @@ private:
   tf2_ros::Buffer tf2_ros_odometry_buffer_;
 
   geometry_utils::Transform3 latest_pose_;
-  std::atomic<ros::Time> latest_pose_stamp_ = {{ros::Time()}};
-  std::atomic<ros::Time> latest_odom_stamp_ = {{ros::Time()}};
+  std::atomic<ros::Time> latest_pose_stamp_ = { { ros::Time() } };
+  std::atomic<ros::Time> latest_odom_stamp_ = { { ros::Time() } };
   ros::Time stamp_transform_to_;
   bool b_first_odom_timer_ = true;
   double transform_wait_duration_;
-  std::atomic<bool> b_have_published_odom_ = {{bool(false)}};
+  std::atomic<bool> b_have_published_odom_ = { { bool(false) } };
 
   int imu_buffer_size_limit_;
   int odometry_buffer_size_limit_;
@@ -148,7 +148,7 @@ private:
   double rotation_threshold_kf_;
   bool b_add_first_scan_to_key_;
 
-  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
+  //  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
   geometry_utils::Transform3 last_keyframe_pose_;
 
   std::string fixed_frame_id_;
@@ -300,14 +300,14 @@ private:
   Adaptive Input Voxelization
   -------------------------*/
 
-  int counter_voxel_{0};
+  int counter_voxel_{ 0 };
   ros::Publisher dchange_voxel_pub_;
   ros::Publisher change_leaf_size_pub_;
   dynamic_reconfigure::Reconfigure voxel_param;
   dynamic_reconfigure::DoubleParameter double_param;
 
-  bool b_adaptive_input_voxelization_{false};
-  uint points_to_process_in_callback_{3001};
+  bool b_adaptive_input_voxelization_{ false };
+  uint points_to_process_in_callback_{ 3001 };
   void ApplyAdaptiveInputVoxelization(const PointCloudF::ConstPtr& msg);
 
   /*---------------
@@ -315,8 +315,8 @@ private:
   ---------------*/
 
   double sensor_health_timeout_;
-  std::atomic<ros::Time> last_reception_time_odom_ = {{ros::Time()}};
-  std::atomic<ros::Time> last_reception_time_imu_ = {{ros::Time()}};
+  std::atomic<ros::Time> last_reception_time_odom_ = { { ros::Time() } };
+  std::atomic<ros::Time> last_reception_time_imu_ = { { ros::Time() } };
   bool b_process_pure_lo_;
   bool b_process_pure_lo_prev_;
   bool IsOdomHealthy();
@@ -336,11 +336,10 @@ private:
   std::mutex latest_pose_mutex_;
 
   /*--------
-  Timer Flag  
+  Timer Flag
   --------*/
 
-  bool b_pub_odom_on_timer_; 
-
+  bool b_pub_odom_on_timer_;
 };
 
 #endif

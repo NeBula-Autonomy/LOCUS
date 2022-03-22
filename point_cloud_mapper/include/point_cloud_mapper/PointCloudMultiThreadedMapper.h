@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <mutex>
 #include <memory>
 #include <thread>
@@ -12,21 +11,17 @@
 #include <core_msgs/MapInfo.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/filters/crop_box.h>
-#include <utils/PointCloudTypes.h>
+//#include <utils/PointCloudTypes.h>
+#include <frontend_utils/CommonStructs.h>
 #include <pcl/octree/octree_search.h>
 #include <geometry_utils/Transform3.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 
-
-
-class PointCloudMultiThreadedMapper : public IPointCloudMapper {
-
-
-
+class PointCloudMultiThreadedMapper : public IPointCloudMapper
+{
 public:
-
-  typedef pcl::octree::OctreePointCloudSearch<Point> Octree;
-  typedef std::vector<PointCloud> PointCloudBuffer;
+  typedef pcl::octree::OctreePointCloudSearch<PointF> Octree;
+  typedef std::vector<PointCloudF> PointCloudBuffer;
 
   PointCloudMultiThreadedMapper();
   ~PointCloudMultiThreadedMapper();
@@ -42,15 +37,13 @@ public:
   // already exist in the corresponding voxel. Output the points from the input
   // that ended up being inserted into the octree.
   // Effective C++ item 37
-  bool InsertPoints(const PointCloud::ConstPtr& points,
-                    PointCloud* incremental_points) override;
+  bool InsertPoints(const PointCloudF::ConstPtr& points, PointCloudF* incremental_points) override;
 
   // Returns the approximate nearest neighbor for every point in the input point
   // cloud. Localization to the map can be performed by doing ICP between the
   // input and output. Returns true if at least one of the inputs points had a
   // nearest neighbor.
-  virtual bool ApproxNearestNeighbors(const PointCloud& points,
-                                      PointCloud* neighbors) override;
+  virtual bool ApproxNearestNeighbors(const PointCloudF& points, PointCloudF* neighbors) override;
 
   // Publish map for visualization. This can be expensive so it is not called
   // from inside, as opposed to PublishMapUpdate().
@@ -63,10 +56,7 @@ public:
   void SetBoxFilterSize(const int box_filter_size) override;
   void Refresh(const geometry_utils::Transform3& current_pose) override;
 
-
-
 private:
-
   // Node initialization.
   bool LoadParameters(const ros::NodeHandle& n);
   bool RegisterCallbacks(const ros::NodeHandle& n);
@@ -76,7 +66,7 @@ private:
   void PublishMapFrozenThread();
 
   // Publish map updates for visualization.
-  void PublishMapUpdate(const PointCloud& incremental_points);
+  void PublishMapUpdate(const PointCloudF& incremental_points);
 
   // The node's name.
   std::string name_;
@@ -97,8 +87,8 @@ private:
   bool incremental_unsubscribed_;
 
   // Containers storing the map and its structure.
-  PointCloud::Ptr map_data_;
-  PointCloud::Ptr map_data_b_;
+  PointCloudF::Ptr map_data_;
+  PointCloudF::Ptr map_data_b_;
   Octree::Ptr map_octree_;
   Octree::Ptr map_octree_b_;
 
@@ -125,24 +115,23 @@ private:
   std::thread publish_frozen_thread_;
   std::thread refresh_thread_;
 
-  pcl::CropBox<Point> box_filter_;
+  pcl::CropBox<PointF> box_filter_;
   int box_filter_size_;
 
   // Multithreaded octree
 
-  std::string refresh_id_; 
-  PointCloud::Ptr history_;
+  std::string refresh_id_;
+  PointCloudF::Ptr history_;
 
-  std::mutex refresh_id_mutex_;    
-  std::mutex box_filter_mutex_;  
+  std::mutex refresh_id_mutex_;
+  std::mutex box_filter_mutex_;
   std::mutex map_data_mutex_;
-  std::mutex map_data_b_mutex_; 
-  std::mutex history_mutex_; 
-  std::atomic<bool> b_keep_history_ = {{bool(false)}};
-  std::atomic<bool> b_refresh_ = {{bool(false)}};
- 
-  bool b_inserted_points_; 
+  std::mutex map_data_b_mutex_;
+  std::mutex history_mutex_;
+  std::atomic<bool> b_keep_history_ = { { bool(false) } };
+  std::atomic<bool> b_refresh_ = { { bool(false) } };
+
+  bool b_inserted_points_;
   ros::Timer refresh_timer_;
   void RefreshTimerCallback(const ros::TimerEvent& ev);
-  
 };

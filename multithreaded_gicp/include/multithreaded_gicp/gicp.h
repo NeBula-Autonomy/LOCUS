@@ -50,7 +50,8 @@
 #include <pcl/registration/icp.h>
 #include <ros/ros.h>
 
-namespace pcl {
+namespace pcl
+{
 /** \brief GeneralizedIterativeClosestPoint is an ICP variant that implements
  * the generalized iterative closest point algorithm as described by Alex Segal
  * et al. in
@@ -61,8 +62,8 @@ namespace pcl {
  * Nizar Sallem \ingroup registration
  */
 template <typename PointSource, typename PointTarget>
-class MultithreadedGeneralizedIterativeClosestPoint
-  : public GeneralizedIterativeClosestPoint<PointSource, PointTarget> {
+class MultithreadedGeneralizedIterativeClosestPoint : public GeneralizedIterativeClosestPoint<PointSource, PointTarget>
+{
 public:
   using IterativeClosestPoint<PointSource, PointTarget>::reg_name_;
   using IterativeClosestPoint<PointSource, PointTarget>::getClassName;
@@ -73,17 +74,14 @@ public:
   using IterativeClosestPoint<PointSource, PointTarget>::tree_reciprocal_;
   using IterativeClosestPoint<PointSource, PointTarget>::nr_iterations_;
   using IterativeClosestPoint<PointSource, PointTarget>::max_iterations_;
-  using IterativeClosestPoint<PointSource,
-                              PointTarget>::previous_transformation_;
+  using IterativeClosestPoint<PointSource, PointTarget>::previous_transformation_;
   using IterativeClosestPoint<PointSource, PointTarget>::final_transformation_;
   using IterativeClosestPoint<PointSource, PointTarget>::transformation_;
-  using IterativeClosestPoint<PointSource,
-                              PointTarget>::transformation_epsilon_;
+  using IterativeClosestPoint<PointSource, PointTarget>::transformation_epsilon_;
   using IterativeClosestPoint<PointSource, PointTarget>::converged_;
   using IterativeClosestPoint<PointSource, PointTarget>::corr_dist_threshold_;
   using IterativeClosestPoint<PointSource, PointTarget>::inlier_threshold_;
-  using IterativeClosestPoint<PointSource,
-                              PointTarget>::min_number_correspondences_;
+  using IterativeClosestPoint<PointSource, PointTarget>::min_number_correspondences_;
   using IterativeClosestPoint<PointSource, PointTarget>::update_visualizer_;
 
   typedef pcl::PointCloud<PointSource> PointCloudSource;
@@ -97,63 +95,51 @@ public:
   typedef PointIndices::Ptr PointIndicesPtr;
   typedef PointIndices::ConstPtr PointIndicesConstPtr;
 
-  typedef std::vector<Eigen::Matrix3d,
-                      Eigen::aligned_allocator<Eigen::Matrix3d>>
-      MatricesVector;
+  typedef std::vector<Eigen::Matrix3d, Eigen::aligned_allocator<Eigen::Matrix3d>> MatricesVector;
   typedef boost::shared_ptr<MatricesVector> MatricesVectorPtr;
   typedef boost::shared_ptr<const MatricesVector> MatricesVectorConstPtr;
 
   typedef typename Registration<PointSource, PointTarget>::KdTree InputKdTree;
-  typedef
-      typename Registration<PointSource, PointTarget>::KdTreePtr InputKdTreePtr;
+  typedef typename Registration<PointSource, PointTarget>::KdTreePtr InputKdTreePtr;
 
-  typedef boost::shared_ptr<
-      MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>>
-      Ptr;
-  typedef boost::shared_ptr<
-      const MultithreadedGeneralizedIterativeClosestPoint<PointSource,
-                                                          PointTarget>>
-      ConstPtr;
+  typedef boost::shared_ptr<MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>> Ptr;
+  typedef boost::shared_ptr<const MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>> ConstPtr;
 
   typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
   /** \brief Empty constructor. */
   MultithreadedGeneralizedIterativeClosestPoint()
-    : k_correspondences_(20),
-      k_enable_timing_output_(false),
-      reclculate_cov_normal_point_clouds_(false),
-      recompute_target_cov_(false),
-      recompute_source_cov(false),
-      k_num_threads_(1),
-      gicp_epsilon_(0.001),
-      rotation_epsilon_(2e-3),
-      mahalanobis_(0),
-      max_inner_iterations_(20) {
+    : k_correspondences_(20)
+    , k_enable_timing_output_(false)
+    , reclculate_cov_normal_point_clouds_(false)
+    , recompute_target_cov_(false)
+    , recompute_source_cov(false)
+    , k_num_threads_(1)
+    , gicp_epsilon_(0.001)
+    , rotation_epsilon_(2e-3)
+    , mahalanobis_(0)
+    , max_inner_iterations_(20)
+  {
     min_number_correspondences_ = 4;
     reg_name_ = "MultithreadedGeneralizedIterativeClosestPoint";
     max_iterations_ = 200;
     transformation_epsilon_ = 5e-4;
     corr_dist_threshold_ = 5.;
-    rigid_transformation_estimation_ =
-        boost::bind(&MultithreadedGeneralizedIterativeClosestPoint<
-                        PointSource,
-                        PointTarget>::estimateRigidTransformationBFGS,
-                    this,
-                    _1,
-                    _2,
-                    _3,
-                    _4,
-                    _5);
+    rigid_transformation_estimation_ = boost::bind(
+        &MultithreadedGeneralizedIterativeClosestPoint<PointSource, PointTarget>::estimateRigidTransformationBFGS, this,
+        _1, _2, _3, _4, _5);
     setNumThreads(k_num_threads_);
   }
 
-  void setNumThreads(int num_threads) {
+  void setNumThreads(int num_threads)
+  {
     assert(num_threads > 0);
     k_num_threads_ = num_threads;
     omp_set_num_threads(k_num_threads_);
   }
 
-  void enableTimingOutput(bool enable) {
+  void enableTimingOutput(bool enable)
+  {
     k_enable_timing_output_ = enable;
   }
 
@@ -164,20 +150,23 @@ public:
   /** \brief Provide a pointer to the input dataset
    * \param cloud the const boost shared pointer to a PointCloud message
    */
-  PCL_DEPRECATED(
-      "[pcl::registration::MultithreadedGeneralizedIterativeClosestPoint::"
-      "setInputCloud] setInputCloud is deprecated. Please use setInputSource "
-      "instead.")
+  //  PCL_DEPRECATED(
+  //      "[pcl::registration::MultithreadedGeneralizedIterativeClosestPoint::"
+  //      "setInputCloud] setInputCloud is deprecated. Please use setInputSource "
+  //      "instead.")
   void setInputCloud(const PointCloudSourceConstPtr& cloud);
 
   /** \brief Provide a pointer to the input dataset
    * \param cloud the const boost shared pointer to a PointCloud message
    */
-  inline void setInputSource(const PointCloudSourceConstPtr& cloud) {
-    if (cloud->points.empty()) {
-      PCL_ERROR("[pcl::%s::setInputSource] Invalid or empty point cloud "
-                "dataset given!\n",
-                getClassName().c_str());
+  inline void setInputSource(const PointCloudSourceConstPtr& cloud)
+  {
+    if (cloud->points.empty())
+    {
+      PCL_ERROR(
+          "[pcl::%s::setInputSource] Invalid or empty point cloud "
+          "dataset given!\n",
+          getClassName().c_str());
       return;
     }
     PointCloudSource input = *cloud;
@@ -195,7 +184,8 @@ public:
    * setting the input source point cloud (setting the input source point cloud
    * will reset the covariances). \param[in] target the input point cloud target
    */
-  inline void setSourceCovariances(const MatricesVectorPtr& covariances) {
+  inline void setSourceCovariances(const MatricesVectorPtr& covariances)
+  {
     input_covariances_ = covariances;
   }
 
@@ -203,9 +193,9 @@ public:
    * we want to align the input source to) \param[in] target the input point
    * cloud target
    */
-  inline void setInputTarget(const PointCloudTargetConstPtr& target) {
-    pcl::IterativeClosestPoint<PointSource, PointTarget>::setInputTarget(
-        target);
+  inline void setInputTarget(const PointCloudTargetConstPtr& target)
+  {
+    pcl::IterativeClosestPoint<PointSource, PointTarget>::setInputTarget(target);
     target_covariances_.reset();
   }
 
@@ -215,7 +205,8 @@ public:
    * setting the input source point cloud (setting the input source point cloud
    * will reset the covariances). \param[in] target the input point cloud target
    */
-  inline void setTargetCovariances(const MatricesVectorPtr& covariances) {
+  inline void setTargetCovariances(const MatricesVectorPtr& covariances)
+  {
     target_covariances_ = covariances;
   }
 
@@ -228,14 +219,13 @@ public:
    * interst points from \a indices_src \param[out] transformation_matrix the
    * resultant transformation matrix
    */
-  void estimateRigidTransformationBFGS(const PointCloudSource& cloud_src,
-                                       const std::vector<int>& indices_src,
-                                       const PointCloudTarget& cloud_tgt,
-                                       const std::vector<int>& indices_tgt,
+  void estimateRigidTransformationBFGS(const PointCloudSource& cloud_src, const std::vector<int>& indices_src,
+                                       const PointCloudTarget& cloud_tgt, const std::vector<int>& indices_tgt,
                                        Eigen::Matrix4f& transformation_matrix);
 
   /** \brief \return Mahalanobis distance matrix for the given point index */
-  inline const Eigen::Matrix3d& mahalanobis(size_t index) const {
+  inline const Eigen::Matrix3d& mahalanobis(size_t index) const
+  {
     assert(index < mahalanobis_.size());
     return mahalanobis_[index];
   }
@@ -247,22 +237,22 @@ public:
    * param R rotation matrix
    * param g gradient vector
    */
-  void computeRDerivative(const Vector6d& x,
-                          const Eigen::Matrix3d& R,
-                          Vector6d& g) const;
+  void computeRDerivative(const Vector6d& x, const Eigen::Matrix3d& R, Vector6d& g) const;
 
   /** \brief Set the rotation epsilon (maximum allowable difference between two
    * consecutive rotations) in order for an optimization to be considered as
    * having converged to the final solution. \param epsilon the rotation epsilon
    */
-  inline void setRotationEpsilon(double epsilon) {
+  inline void setRotationEpsilon(double epsilon)
+  {
     rotation_epsilon_ = epsilon;
   }
 
   /** \brief Get the rotation epsilon (maximum allowable difference between two
    * consecutive rotations) as set by the user.
    */
-  inline double getRotationEpsilon() {
+  inline double getRotationEpsilon()
+  {
     return (rotation_epsilon_);
   }
 
@@ -271,33 +261,39 @@ public:
    * accurate covariance matrix but will make covariances computation slower.
    * \param k the number of neighbors to use when computing covariances
    */
-  void setCorrespondenceRandomness(int k) {
+  void setCorrespondenceRandomness(int k)
+  {
     k_correspondences_ = k;
   }
 
   /** \brief Get the number of neighbors used when computing covariances as set
    * by the user
    */
-  int getCorrespondenceRandomness() {
+  int getCorrespondenceRandomness()
+  {
     return (k_correspondences_);
   }
 
   /** set maximum number of iterations at the optimization step
    * \param[in] max maximum number of iterations for the optimizer
    */
-  void setMaximumOptimizerIterations(int max) {
+  void setMaximumOptimizerIterations(int max)
+  {
     max_inner_iterations_ = max;
   }
 
   ///\return maximum number of iterations at the optimization step
-  int getMaximumOptimizerIterations() {
+  int getMaximumOptimizerIterations()
+  {
     return (max_inner_iterations_);
   }
 
-  void RecomputeTargetCovariance(bool recalculate) {
+  void RecomputeTargetCovariance(bool recalculate)
+  {
     recompute_target_cov_ = recalculate;
   }
-  void RecomputeSourceCovariance(bool recalculate) {
+  void RecomputeSourceCovariance(bool recalculate)
+  {
     recompute_source_cov = recalculate;
   }
 
@@ -355,16 +351,15 @@ protected:
    */
   template <typename PointT>
   void computeCovariances(typename pcl::PointCloud<PointT>::ConstPtr cloud,
-                          const typename pcl::search::KdTree<PointT>::Ptr tree,
-                          MatricesVector& cloud_covariances,
+                          const typename pcl::search::KdTree<PointT>::Ptr tree, MatricesVector& cloud_covariances,
                           bool recompute = false);
 
   /** \return trace of mat1^t . mat2
    * \param mat1 matrix of dimension nxm
    * \param mat2 matrix of dimension nxp
    */
-  inline double matricesInnerProd(const Eigen::MatrixXd& mat1,
-                                  const Eigen::MatrixXd& mat2) const {
+  inline double matricesInnerProd(const Eigen::MatrixXd& mat1, const Eigen::MatrixXd& mat2) const
+  {
     double r = 0.;
     size_t n = mat1.rows();
     // tr(mat1^t.mat2)
@@ -379,8 +374,7 @@ protected:
    * transformation found \param guess the initial guess of the transformation
    * to compute
    */
-  void computeTransformation(PointCloudSource& output,
-                             const Eigen::Matrix4f& guess);
+  void computeTransformation(PointCloudSource& output, const Eigen::Matrix4f& guess);
 
   /** \brief Search for the closest nearest neighbor of a given point.
    * \param query the point to search a nearest neighbour for
@@ -388,9 +382,8 @@ protected:
    * found \param distance vector of size 1 to store the distance to nearest
    * neighbour found
    */
-  inline bool searchForNeighbors(const PointSource& query,
-                                 std::vector<int>& index,
-                                 std::vector<float>& distance) {
+  inline bool searchForNeighbors(const PointSource& query, std::vector<int>& index, std::vector<float>& distance)
+  {
     int k = tree_->nearestKSearch(query, 1, index, distance);
     if (k == 0)
       return (false);
@@ -401,10 +394,12 @@ protected:
   void applyState(Eigen::Matrix4f& t, const Vector6d& x) const;
 
   /// \brief optimization functor structure
-  struct OptimizationFunctorWithIndices : public BFGSDummyFunctor<double, 6> {
-    OptimizationFunctorWithIndices(
-        const MultithreadedGeneralizedIterativeClosestPoint* gicp)
-      : BFGSDummyFunctor<double, 6>(), gicp_(gicp) {}
+  struct OptimizationFunctorWithIndices : public BFGSDummyFunctor<double, 6>
+  {
+    OptimizationFunctorWithIndices(const MultithreadedGeneralizedIterativeClosestPoint* gicp)
+      : BFGSDummyFunctor<double, 6>(), gicp_(gicp)
+    {
+    }
     double operator()(const Vector6d& x);
     void df(const Vector6d& x, Vector6d& df);
     void fdf(const Vector6d& x, double& f, Vector6d& df);
@@ -412,10 +407,8 @@ protected:
     const MultithreadedGeneralizedIterativeClosestPoint* gicp_;
   };
 
-  boost::function<void(const pcl::PointCloud<PointSource>& cloud_src,
-                       const std::vector<int>& src_indices,
-                       const pcl::PointCloud<PointTarget>& cloud_tgt,
-                       const std::vector<int>& tgt_indices,
+  boost::function<void(const pcl::PointCloud<PointSource>& cloud_src, const std::vector<int>& src_indices,
+                       const pcl::PointCloud<PointTarget>& cloud_tgt, const std::vector<int>& tgt_indices,
                        Eigen::Matrix4f& transformation_matrix)>
       rigid_transformation_estimation_;
 
@@ -431,8 +424,8 @@ private:
   bool recompute_target_cov_;
   bool recompute_source_cov;
 };
-} // namespace pcl
+}  // namespace pcl
 
 #include <multithreaded_gicp/gicp.hpp>
 
-#endif //#ifndef MULTITHREADED_GICP_H_
+#endif  //#ifndef MULTITHREADED_GICP_H_

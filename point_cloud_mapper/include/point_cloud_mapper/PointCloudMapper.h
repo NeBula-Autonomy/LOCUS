@@ -57,10 +57,12 @@
 #include "IPointCloudMapper.h"
 
 //#include <utils/CommonStructs.h>
-#include <utils/PointCloudTypes.h>
-class PointCloudMapper : public IPointCloudMapper {
+//#include <utils/PointCloudTypes.h>
+#include <frontend_utils/CommonStructs.h>
+class PointCloudMapper : public IPointCloudMapper
+{
 public:
-  typedef pcl::octree::OctreePointCloudSearch<Point> Octree;
+  typedef pcl::octree::OctreePointCloudSearch<PointF> Octree;
 
   PointCloudMapper();
   ~PointCloudMapper();
@@ -75,15 +77,13 @@ public:
   // Adds a set of points to the octree. Only inserts points if one does not
   // already exist in the corresponding voxel. Output the points from the input
   // that ended up being inserted into the octree.
-  bool InsertPoints(const PointCloud::ConstPtr& points,
-                    PointCloud* incremental_points) override;
+  bool InsertPoints(const PointCloudF::ConstPtr& points, PointCloudF* incremental_points) override;
 
   // Returns the approximate nearest neighbor for every point in the input point
   // cloud. Localization to the map can be performed by doing ICP between the
   // input and output. Returns true if at least one of the inputs points had a
   // nearest neighbor.
-  bool ApproxNearestNeighbors(const PointCloud& points,
-                              PointCloud* neighbors) override;
+  bool ApproxNearestNeighbors(const PointCloudF& points, PointCloudF* neighbors) override;
 
   // Publish map for visualization. This can be expensive so it is not called
   // from inside, as opposed to PublishMapUpdate().
@@ -107,7 +107,7 @@ private:
   void PublishMapFrozenThread();
 
   // Publish map updates for visualization.
-  void PublishMapUpdate(const PointCloud& incremental_points);
+  void PublishMapUpdate(const PointCloudF& incremental_points);
 
   // The node's name.
   std::string name_;
@@ -156,7 +156,7 @@ private:
   mutable std::mutex map_frozen_mutex_;
 
   // Map Sliding Window 2 -----------------
-  pcl::CropBox<Point> box_filter_;
+  pcl::CropBox<PointF> box_filter_;
   int box_filter_size_;
 };
 

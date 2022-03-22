@@ -200,8 +200,8 @@
         <arg name="robot_namespace" value="$(arg robot_namespace)"/>
     </include> -->
 
-    <include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
+    <!--include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
         <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-    </include>
+    </include-->
  
 </launch>
