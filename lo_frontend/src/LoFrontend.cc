@@ -700,7 +700,7 @@ void LoFrontend::CheckImuFrame(const ImuConstPtr& imu_msg)
 {
   if (b_convert_imu_to_base_link_frame_)
   {
-    if (imu_msg->header.frame_id.find("vn100") != std::string::npos)
+    if (imu_msg->header.frame_id == imu_frame_id_)
     {
       ROS_INFO("Received imu_msg is correctly expressed in imu frame");
       b_imu_frame_is_correct_ = true;
