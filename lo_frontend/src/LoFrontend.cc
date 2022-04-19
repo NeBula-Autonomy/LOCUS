@@ -795,6 +795,7 @@ void LoFrontend::InitWithGTPointCloud(const std::string filename)
   PointCloudF::Ptr unused(new PointCloudF);
   mapper_->InsertPoints(gt_pc_ptr, unused.get());
   ROS_INFO("Completed addition of GT point cloud to map");
+  mapper_->PublishMap();
 }
 
 // Getters
