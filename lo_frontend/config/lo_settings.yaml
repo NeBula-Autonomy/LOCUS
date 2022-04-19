@@ -5,6 +5,7 @@ odom_pub_rate: 10
 # How long to wait for transform between timestamps
 transform_wait_duration: 0.01
 
+b_add_keyframes_enabled: true
 translation_threshold_kf: 1.0
 rotation_threshold_kf: 0.3
 

@@ -144,6 +144,7 @@ private:
   template <typename T1, typename T2>
   bool GetMsgAtTime(const ros::Time& stamp, T1& msg, const T2& buffer) const;
 
+  bool b_add_keyframes_enabled_;
   double translation_threshold_kf_;
   double rotation_threshold_kf_;
   bool b_add_first_scan_to_key_;
