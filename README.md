@@ -4,6 +4,13 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 ![alt text](readme.png)
 
+# Prerequisites
+
+`tf2_sensor_msgs` may not be installed by default, so install with:
+```
+sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
+```
+
 # TODOS
 
 - [ ] Rename all lo_frontend instances to locus

@@ -36,10 +36,19 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   core_msgs
+  diagnostic_msgs
   geometry_msgs
   nav_msgs
+  sensor_msgs
+  std_msgs
+  visualization_msgs
   message_generation
   frontend_utils
+  tf
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_sensor_msgs
+  dynamic_reconfigure
 )
 
 find_package(OpenMP)
@@ -65,9 +74,20 @@ catkin_package(
     pcl_ros
     pcl_conversions
     core_msgs
+    diagnostic_msgs
     geometry_msgs
     nav_msgs
+    sensor_msgs
+    std_msgs
+    visualization_msgs
     frontend_utils
+    tf
+    tf2
+    tf2_ros
+    tf2_geometry_msgs
+    tf2_sensor_msgs
+    dynamic_reconfigure
+    message_filters
   DEPENDS
     Boost
 )
