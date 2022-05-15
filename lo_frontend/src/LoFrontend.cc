@@ -1038,6 +1038,7 @@ bool LoFrontend::IntegrateInterpolatedOdom(const ros::Time& stamp)
       ROS_WARN("latest_odom_stamp < stamp");
       break;
     }
+    ros::Duration(0.01).sleep();
   }
 
   if (latest_odom_stamp < stamp && latest_odom_stamp > previous_stamp_)
