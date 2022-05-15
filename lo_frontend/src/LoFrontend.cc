@@ -682,6 +682,7 @@ void LoFrontend::PublishOdometry(const geometry_utils::Transform3& odometry,
   nav_msgs::Odometry odometry_msg;
   odometry_msg.header.stamp = stamp;
   odometry_msg.header.frame_id = fixed_frame_id_;
+  odometry_msg.child_frame_id = base_frame_id_;
   odometry_msg.pose.pose.position = geometry_utils::ros::ToRosPoint(odometry.translation);
   odometry_msg.pose.pose.orientation = geometry_utils::ros::ToRosQuat(geometry_utils::RToQuat(odometry.rotation));
   for (size_t i = 0; i < 36; i++)
