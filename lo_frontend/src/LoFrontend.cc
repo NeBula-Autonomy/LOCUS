@@ -180,6 +180,8 @@ bool LoFrontend::LoadParameters(const ros::NodeHandle& n)
     return false;
   if (!pu::Get("transform_wait_duration", transform_wait_duration_))
     return false;
+  if (!pu::Get("b_add_keyframes_enabled", b_add_keyframes_enabled_))
+    return false;
   if (!pu::Get("translation_threshold_kf", translation_threshold_kf_))
     return false;
   if (!pu::Get("rotation_threshold_kf", rotation_threshold_kf_))
@@ -544,7 +546,7 @@ void LoFrontend::LidarCallback(const PointCloudF::ConstPtr& msg)
       delta.rotation(1, 2), delta.rotation(2, 0), delta.rotation(2, 1), delta.rotation(2, 2);
   Eigen::Quaterniond q(mat);
 
-  if (delta.translation.Norm() > translation_threshold_kf_ || fabs(2 * acos(q.w())) > rotation_threshold_kf_)
+  if (b_add_keyframes_enabled_ && (delta.translation.Norm() > translation_threshold_kf_ || fabs(2 * acos(q.w())) > rotation_threshold_kf_))
   {
     if (b_verbose_)
       ROS_INFO_STREAM("Adding to map with translation " << delta.translation.Norm() << " and rotation "
@@ -796,6 +798,7 @@ void LoFrontend::InitWithGTPointCloud(const std::string filename)
   PointCloudF::Ptr unused(new PointCloudF);
   mapper_->InsertPoints(gt_pc_ptr, unused.get());
   ROS_INFO("Completed addition of GT point cloud to map");
+  mapper_->PublishMap();
 }
 
 // Getters
