@@ -28,7 +28,7 @@ buffers:
   # 1   ---> imu integration 
   # 2   ---> imu yaw integration
   # 3   ---> odometry integration 
-
+# Recommended to use 1 for NeBula Spot datasets
 data_integration:
   mode: 3
 
