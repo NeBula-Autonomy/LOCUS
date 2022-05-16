@@ -66,7 +66,7 @@
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>          
             <rosparam file="$(find point_cloud_localization)/config/parameters.yaml" if="$(eval robot_type == 'husky')"/>
-            <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot' or robot_type == 'xmaxx')"/>
+            <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot')"/>
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
             <param name="localization/num_threads"       value="4" if="$(eval robot_namespace.startswith('husky'))" />
@@ -75,16 +75,7 @@
 
             <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('spot'))" />
             <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
-             <param name="mapper/num_threads"            value="1" if="$(eval robot_namespace.startswith('spot'))" />
-
-            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-
-            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-
+            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('spot'))" />
 
         </node>
 
@@ -195,13 +186,5 @@
         </node>
       
     </group>
-
-    <!-- <include file="$(find localizer_space_monitor)/launch/space_monitor.launch">
-        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-    </include> -->
-
-    <!--include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
-        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-    </include-->
  
 </launch>

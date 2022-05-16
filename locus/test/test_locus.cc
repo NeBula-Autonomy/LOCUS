@@ -15,8 +15,6 @@ public:
     system("rosparam load $(rospack find "
            "locus)/config/lo_settings.yaml");
     system("rosparam load $(rospack find "
-           "lidar_slip_detection)/config/parameters.yaml");
-    system("rosparam load $(rospack find "
            "point_cloud_merger)/config/parameters.yaml");
     system("rosparam load $(rospack find "
            "point_cloud_filter)/config/parameters.yaml");

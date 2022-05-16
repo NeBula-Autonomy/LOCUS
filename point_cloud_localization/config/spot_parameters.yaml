@@ -13,7 +13,7 @@ localization:
   compute_icp_observability: false
 
   # Stop ICP if the transformation from the last iteration was this small.
-  tf_epsilon:  0.00001
+  tf_epsilon: 0.00001
 
   # During ICP, two points won't be considered a correspondence if they are
   # at least this far from one another.
