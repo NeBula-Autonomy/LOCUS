@@ -25,13 +25,13 @@
     <group ns="$(arg robot_namespace)">
 
       <!-- Load parameters -->
-      <rosparam file="$(find lo_frontend)/config/lo_filtering_$(arg robot_type).yaml"
+      <rosparam file="$(find locus)/config/lo_filtering_$(arg robot_type).yaml"
                 subst_value="true"/>
    
         <node
-            pkg="lo_frontend"
-            name="lo_frontend"
-            type="lo_frontend_node"
+            pkg="locus"
+            name="locus"
+            type="locus_node"
             output="screen">
 
            
@@ -56,13 +56,13 @@
             <param name="b_integrate_interpolated_odom" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
             <param name="b_integrate_interpolated_odom" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
 
-            <rosparam file="$(find lo_frontend)/config/lo_settings.yaml" unless="$(eval robot_type == 'spot')"/>
-            <rosparam file="$(find lo_frontend)/config/lo_settings_spot.yaml" if="$(eval robot_type == 'spot')"/>
+            <rosparam file="$(find locus)/config/lo_settings.yaml" unless="$(eval robot_type == 'spot')"/>
+            <rosparam file="$(find locus)/config/lo_settings_spot.yaml" if="$(eval robot_type == 'spot')"/>
 
             <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('spot'))"/>
             <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
 
-            <rosparam file="$(find lo_frontend)/config/lo_frames.yaml" subst_value="true"/>
+            <rosparam file="$(find locus)/config/lo_frames.yaml" subst_value="true"/>
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>          
             <rosparam file="$(find point_cloud_localization)/config/parameters.yaml" if="$(eval robot_type == 'husky')"/>
@@ -88,7 +88,7 @@
 
         </node>
 
-        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen" if="$(eval number_of_velodynes > 1)"> 
+        <node pkg="locus" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen" if="$(eval number_of_velodynes > 1)"> 
             <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
             <remap from="resurrection_detection" to="point_cloud_merger_lo/resurrection_detection"/>
         </node>

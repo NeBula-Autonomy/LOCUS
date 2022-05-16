@@ -14,7 +14,7 @@
 
     <group ns="$(arg robot_namespace)">
 
-        <node pkg="lo_frontend" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
+        <node pkg="locus" name="sensors_health_monitor" type="sensors_health_monitor.py" output="screen">
             <remap from="failure_detection" to="point_cloud_merger_lo/failure_detection"/>
             <remap from="resurrection_detection" to="point_cloud_merger_lo/resurrection_detection"/>
         </node>

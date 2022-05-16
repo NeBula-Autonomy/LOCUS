@@ -6,9 +6,9 @@
 
   <group ns="$(arg robot_namespace)">
     <!-- Laser-Odometry -->
-    <node pkg="lo_frontend"
-          name="lo_frontend"
-          type="lo_frontend_node"
+    <node pkg="locus"
+          name="locus"
+          type="locus_node"
           output="screen">
 
 
@@ -33,10 +33,10 @@
       </rosparam>      
 
       <!-- Rates -->
-      <rosparam file="$(find lo_frontend)/config/blam_rates.yaml"/>
+      <rosparam file="$(find locus)/config/blam_rates.yaml"/>
 
       <!-- Frames -->
-      <rosparam file="$(find lo_frontend)/config/blam_frames.yaml" subst_value="true"/>
+      <rosparam file="$(find locus)/config/blam_frames.yaml" subst_value="true"/>
 
       <!-- Point cloud filter -->
       <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>

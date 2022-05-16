@@ -13,7 +13,7 @@ sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
 
 # TODOS
 
-- [ ] Rename all lo_frontend instances to locus
+- [x] Rename all lo_frontend instances to locus
 - [ ] Cleanup comments, the less the better, just keep the very relevant ones
 - [ ] Cleanup unused parameters, class variables, publishers and subscribers 
 - [ ] Bring in MDC in launch

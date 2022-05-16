@@ -1,6 +1,0 @@
-<launch>
-  <test test-name="test_lo_frontend"
-        pkg="lo_frontend"
-        type="test_lo_frontend"
-        time-limit="300.0"/>
-</launch>
