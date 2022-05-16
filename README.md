@@ -4,12 +4,31 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 ![alt text](readme.png)
 
+
+## Build Instructions
+
+Install [ROS](http://wiki.ros.org/ROS/Installation)
+
+Build this package in a catkin workspace 
+```bash
+mkdir -p catkin_ws/src
+cd catkin_ws
+catkin init
+catkin config -DCMAKE_BUILD_TYPE=Release 
+cd src
+wstool init
+wstool merge localizer_lamp/install/lamp_ssh.rosinstall
+wstool up
+catkin build lamp
+```
+
 # Prerequisites
 
 `tf2_sensor_msgs` may not be installed by default, so install with:
 ```
 sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
 ```
+
 
 # TODOS
 
