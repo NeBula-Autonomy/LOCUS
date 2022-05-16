@@ -11,7 +11,6 @@
     <arg name="respawn" value="true" unless="$(arg use_gdb)"/>
     <arg name="robot_type" value="husky" if="$(eval robot_namespace.startswith('husky'))"/>
     <arg name="robot_type" value="spot"  if="$(eval robot_namespace.startswith('spot'))"/> 
-    <arg name="robot_type" value="xmaxx"  if="$(eval robot_namespace.startswith('xmaxx'))"/> 
 
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
@@ -179,9 +178,6 @@
 
            <param name="num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
            <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
-           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-
 
         </node>
       
