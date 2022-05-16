@@ -146,7 +146,6 @@ public:
                 "point_cloud_odometry)/config/parameters.yaml");
     // TODO: maybe is there a way to load this from config file?
     ros::param::set("frame_id/fixed", "test_fixed_frame");
-    ros::param::set("frame_id/odometry", "test_odometry_frame");
     ros::param::set("fiducial_calibration/position/x", 0.5);
     ros::param::set("fiducial_calibration/position/y", 0.5);
     ros::param::set("fiducial_calibration/position/z", 0.5);

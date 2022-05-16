@@ -25,7 +25,7 @@
     <group ns="$(arg robot_namespace)">
 
       <!-- Load parameters -->
-      <rosparam file="$(find locus)/config/lo_filtering_$(arg robot_type).yaml"
+      <rosparam file="$(find locus)/config/body_filter_params_$(arg robot_type).yaml"
                 subst_value="true"/>
    
         <node

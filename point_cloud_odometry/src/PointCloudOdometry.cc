@@ -53,8 +53,6 @@ bool PointCloudOdometry::LoadParameters(const ros::NodeHandle& n) {
 
   if (!pu::Get("frame_id/fixed", fixed_frame_id_))
     return false;
-  if (!pu::Get("frame_id/odometry", odometry_frame_id_))
-    return false;
 
   if (!pu::Get("fiducial_calibration/position/x", init_x))
     b_have_fiducial = false;
