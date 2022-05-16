@@ -1,0 +1,173 @@
+realsense:
+  name: camera_front
+  parent: arch
+  position:
+    x: 0.439
+    y: -0.015
+    z: 0.030
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 0
+realsense_left:
+  name: camera_left
+  parent: arch
+  position:
+    x: -0.13
+    y: 0.260
+    z: 0.035
+  orientation:
+    r: 0
+    p: 0
+    y: ${pi/2}
+  rate: 0
+realsense_right:
+  name: camera_right
+  parent: arch
+  position:
+    x: -0.105
+    y: -0.305
+    z: 0.035
+  orientation:
+    r: 0
+    p: 0
+    y: ${-pi/2}
+  rate: 0
+realsense_rear:
+  name: camera_rear
+  parent: arch
+  position:
+    x: -0.045
+    y: -0.185
+    z: 0.415
+  orientation:
+    r: 0
+    p: 0
+    y: ${pi}
+  rate: 0
+realsense_up:
+  name: camera_up
+  parent: arch
+  position:
+    x: -0.055
+    y: 0.0
+    z: 0.406
+  orientation:
+    r: 0
+    p: -0.523599
+    y: 0
+  rate: 0
+realsense_t265_front:
+  name: camera_t265_front
+  parent: base_link
+  position:
+    x: 0.53
+    y: 0
+    z: 0.24
+  orientation:
+    r: 0.03
+    p: 0.66
+    y: 0
+  rate: 0
+realsense_t265_right:
+  name: camera_t265_right
+  parent: base_link
+  position:
+    x: 0.23
+    y: -0.3175
+    z: 0.24
+  orientation:
+    r: 0.01
+    p: 0.55
+    y: -1.57079633
+  rate: 0
+realsense_t265_left:
+  name: camera_t265_left
+  parent: base_link
+  position:
+    x: 0.23
+    y: 0.3175
+    z: 0.24
+  orientation:
+    r: -0.01
+    p: 0.55
+    y: 1.57079633
+  rate: 0
+boson:
+  name: boson
+  parent: arch
+  position:
+    x: 0.095
+    y: 0.19
+    z: 0.269
+  orientation:
+    r: 0
+    p: -0.52359877559
+    y: 0
+  rate: 0
+velodyne:
+  name: velodyne
+  parent: arch
+  position:
+    x: 0.038
+    y: 0
+    z: 0.405
+  orientation:
+    r: 0.0
+    p: 0.0
+    y: 0.0
+  rate: 10
+  topic_name: velodyne_points
+velodyne_front:
+  name: velodyne_front
+  parent: arch
+  position:
+    x: 0.138
+    y: -0.01
+    z: 0.285
+  orientation:
+    r: 0.009
+    p: 0.436
+    y: 0.019
+  rate: 10
+  topic_name: velodyne_front/velodyne_points
+velodyne_rear:
+  name: velodyne_rear
+  parent: arch
+  position:
+    x: -0.47
+    y: 0
+    z: 0.248
+  orientation:
+    r: 0.009
+    p: 0.459
+    y: -3.091
+  rate: 10
+  topic_name: velodyne_rear/velodyne_points
+vn100: # relative to velodyne:  x-0.09275, z-0.00635
+  name: vn100
+  parent: arch
+  topic_name: vn100/imu
+  position:
+    x: -0.0547
+    y: 0
+    z: 0.39865
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 50
+respeaker:
+  name: respeaker
+  parent: base_link
+  topic_name: audio
+  position:
+    x: 0
+    y: 0
+    z: 0.2
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 1

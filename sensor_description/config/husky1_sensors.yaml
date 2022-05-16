@@ -1,0 +1,52 @@
+velodyne:
+  name: velodyne
+  parent: arch
+  position:
+    x: 0.038
+    y: 0
+    z: 0.41
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 10
+  topic_name: velodyne_points
+velodyne_front:
+  name: velodyne_front
+  parent: arch
+  position:
+    x: 0.123
+    y: 0
+    z: 0.28
+  orientation:
+    r: -0.009
+    p: 0.471
+    y: -0.009
+  rate: 10
+  topic_name: velodyne_front/velodyne_points
+velodyne_rear:
+  name: velodyne_rear
+  parent: arch
+  position:
+    x: -0.48
+    y: 0.02
+    z: 0.248
+  orientation:
+    r: 0.017
+    p: 0.411
+    y: 3.119
+  rate: 10
+  topic_name: velodyne_rear/velodyne_points
+vn100: # relative to velodyne: x-0.09275, z-0.00635
+  name: vn100
+  parent: arch
+  topic_name: vn100/imu
+  position:
+    x: -0.05475
+    y: 0
+    z: 0.38365
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 50

@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<robot name="imu_vn100" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="vn100" params="name parent topic_name robot_namespace hz *origin">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.000001" />
+        <inertia
+          ixx="0.001"
+          ixy="0.0" iyy="0.001"
+          ixz="0.0" iyz="0.0" izz="0.001"
+        />
+      </inertial>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <!-- Virtual links representing the sensor positons and orientations-->
+    <link name="${name}_frame">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.000001" />
+        <inertia
+          ixx="0.001"
+          ixy="0.0" iyy="0.001"
+          ixz="0.0" iyz="0.0" izz="0.001"
+        />
+      </inertial>
+    </link>
+
+    <!-- Joints positioning the virtual links with respect to the sensor main link-->
+    <joint name="${name}_virtual_joint" type="fixed">
+        <parent link="${name}" />
+        <child link="${name}_frame" />
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo>
+      <plugin name="${name}_imu" filename="libhector_gazebo_ros_imu.so">
+        <robotNamespace>${robot_namespace}</robotNamespace>
+        <updateRate>${hz}</updateRate>
+        <alwaysOn>true</alwaysOn>
+        <topicName>${topic_name}_sim</topicName>
+        <frameId>${robot_namespace}/base_link</frameId>
+        <bodyName>${name}</bodyName>
+        <accelDrift>0.005 0.005 0.005</accelDrift>
+        <accelGaussianNoise>0.005 0.005 0.005</accelGaussianNoise>
+        <rateDrift>0.005 0.005 0.005 </rateDrift>
+        <rateGaussianNoise>0.005 0.005 0.005 </rateGaussianNoise>
+        <headingDrift>0.005</headingDrift>
+        <headingGaussianNoise>0.005</headingGaussianNoise>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>

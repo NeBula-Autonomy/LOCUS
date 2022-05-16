@@ -23,9 +23,14 @@
 
     <group ns="$(arg robot_namespace)">
 
-      <!-- Load parameters -->
-      <rosparam file="$(find locus)/config/body_filter_params_$(arg robot_type).yaml"
-                subst_value="true"/>
+        <!-- Load parameters -->
+        <rosparam file="$(find locus)/config/body_filter_params_$(arg robot_type).yaml"
+                    subst_value="true"/>
+
+        <!-- Load robot description -->
+        <include file="$(find locus)/launch/robot_description.launch">
+            <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+        </include>
    
         <node
             pkg="locus"
@@ -155,7 +160,7 @@
 <!-- old way. TODO: removing after locus testing-->
 <!--node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true"-->
 
-            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load point_cloud_filter/CustomVoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
+        <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load point_cloud_filter/CustomVoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
             <remap from="~input" to="body_filter/output" />
 
             <rosparam subst_value="true">

@@ -42,7 +42,8 @@ windows:
     ################################### RUN ###################################
 
     # Launch basic components needed for running localization algorithms
-    - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+    # - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+    - ;
 
     # Bags and topics of interest (switching if the log versions is older)
     - if [ $LOG_VERSION -eq 2 ]; then
@@ -60,8 +61,9 @@ windows:
 
     # Launch Hero to remap topics
     # - if [ $LOG_VERSION -eq 1 ]; then
-    - roslaunch capability_ugv localizer_hero.launch robot_namespace:=$ROBOT_NAME;
+    # - roslaunch capability_ugv localizer_hero.launch robot_namespace:=$ROBOT_NAME;
     # fi;
+    - ;
 
     # Front-end
     - if [ $ROBOT_TYPE = 'husky' ]; then sleep 10;

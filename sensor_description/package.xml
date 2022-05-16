@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>sensor_description</name>
+  <version>0.0.0</version>
+  <description>Common models</description>
+
+  <maintainer email="otsu@jpl.nasa.gov">Kyon Otsu</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>

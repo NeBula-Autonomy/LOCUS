@@ -1,0 +1,173 @@
+realsense:
+  name: camera_front
+  parent: base_link
+  position:
+    x: 0.394
+    y: 0
+    z: 0.215
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 10
+realsense_left:
+  name: camera_left
+  parent: base_link
+  position:
+    x: 0.2904
+    y: 0.104
+    z: 0.215
+  orientation:
+    r: 0
+    p: 0
+    y: ${pi/2}
+  rate: 10
+realsense_right:
+  name: camera_right
+  parent: base_link
+  position:
+    x: 0.2904
+    y: -0.104
+    z: 0.215
+  orientation:
+    r: 0
+    p: 0
+    y: ${-pi/2}
+  rate: 10
+realsense_rear:
+  name: camera_rear
+  parent: base_link
+  position:
+    x: -0.353
+    y: 0
+    z: 0.145
+  orientation:
+    r: 0
+    p: 0
+    y: ${pi}
+  rate: 10
+realsense_up:
+  name: camera_up
+  parent: base_link
+  position:
+    x: -0.325
+    y: 0
+    z: 0.165
+  orientation:
+    r: 0
+    p: ${-pi/2}
+    y: 0
+  rate: 10
+boson:
+  name: boson
+  parent: base_link
+  position:
+    x: 0.381
+    y: 0.0
+    z: 0.261
+  orientation:
+    r: 0
+    p: -0.52359877559
+    y: 0
+  rate: 20
+velodyne:
+  name: velodyne
+  parent: base_link
+  position:
+    x: 0.290
+    y: 0
+    z: 0.330
+  orientation:
+    r: -0.005
+    p: 0.020
+    y: 0
+  rate: 10
+  topic_name: velodyne_points
+vn100:
+  name: vn100
+  parent: velodyne_base_link
+  topic_name: vn100/imu
+  position:
+    x: -0.064254
+    y: 0
+    z: -0.00635
+  orientation:
+    r: 0
+    p: 0
+    y: 0
+  rate: 50
+respeaker:
+  name: respeaker
+  parent: velodyne_base_link
+  topic_name: audio
+  position:
+    x: 0
+    y: 0
+    z: 0.08
+  orientation:
+    r: 0
+    p: 0
+    y: 0.78
+  rate: 1
+
+# TODO: The realsense calibration values are copied form spot1. Need to change
+realsense_builtin_frontleft:
+  name: builtin_camera_frontleft
+  parent: base_link
+  position:
+    x: 0.4155101152290043
+    y: 0.03572137042531032
+    z: 0.023269464720831745
+  orientation:
+    r: -2.6055561109581777
+    p: 1.1367738158364729
+    y: -3.1412534440092443
+  rate: 1
+realsense_builtin_frontright:
+  name: builtin_camera_frontright
+  parent: base_link
+  position:
+    x: 0.4164732783472058
+    y: -0.03676745882296961
+    z: 0.023000656162951327
+  orientation:
+    r: 2.6158637200633557
+    p: 1.140058420271735
+    y: -3.1218886647387816
+  rate: 1
+realsense_builtin_left:
+  name: builtin_camera_left
+  parent: base_link
+  position:
+    x: -0.1642881105302067
+    y: 0.10888367413983234
+    z: 0.03639658337721441
+  orientation:
+    r: -1.8425098756161777
+    p: 0.0002906153630942034
+    y: 0.007964959817316092
+  rate: 1
+realsense_builtin_right:
+  name: builtin_camera_right
+  parent: base_link
+  position:
+    x: -0.1690658031284967
+    y: -0.11000513387781083
+    z: 0.03531374953701555
+  orientation:
+    r: 1.832447981945857
+    p: -0.00012209283257565482
+    y: 0.005045270217236556
+  rate: 1
+realsense_builtin_rear:
+  name: builtin_camera_rear
+  parent: base_link
+  position:
+    x: -0.4167447802298064
+    y: -0.03952886887940166
+    z: 0.008863064735028015
+  orientation:
+    r: -1.8365437161801548
+    p: 0.008325343013676725
+    y: 1.5740796315774026
+  rate: 1
