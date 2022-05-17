@@ -1,0 +1,53 @@
+#################### Analyzer Settings ####################
+
+base_station_name: base1
+
+# Analysis Settings 
+# False analyzes locus, lamp
+# True analyzes specific_methods
+specify_non_default_methods: False
+specific_methods: ["put_here_method_names_and_set_up_specify_non_default_methods_True"]
+
+# Overall settings
+# To delete folder (so you don't have prompts to query whether to delete or not)
+b_clear_results_dir: True
+# Override to stop any plots from visalizing (plots can still save)
+all_visualization_off: False
+b_align_origin: False
+
+# Visualization Settings
+b_enable_dark_mode: False
+b_fullscreen: False
+
+# Raw data settings
+b_visualize_raw_data: False
+b_save_raw_data_plots: True
+b_visualize_normal_distributions: False
+b_save_raw_data_distribution_plots: True
+
+# Volume vs size
+b_plot_volume_vs_size: False
+b_save_volume_vs_size_plot: True
+
+# APE Settings
+b_compute_ape: True
+b_plot_combined_ape: True 
+b_show_ape_plots: False
+b_save_individual_ape_plots: True
+b_save_combined_ape_plots: True
+
+# APE over distances Settings
+b_compute_ape_over_distances: False
+checkpoints: [100,200]
+b_plot_ape_over_distances: False
+
+# Distance metrics
+b_compute_distance_based_metrics: True
+b_show_distance_plots: False
+
+# RPE Settings
+b_compute_rpe: False
+b_plot_rpe: False
+
+# Saving Settings
+b_save_results: True 

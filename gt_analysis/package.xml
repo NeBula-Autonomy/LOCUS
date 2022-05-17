@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>gt_analysis</name>
+  <version>0.0.0</version>
+  <description>Collection of scripts to analyze peformance against ground truth</description>
+
+  <maintainer email="bmorrell@jpl.nasa.gov">Benjamin Morrell</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>

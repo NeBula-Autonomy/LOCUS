@@ -1,0 +1,170 @@
+session_name: benchmark_2
+
+environment:
+  DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/2_Spot1_Urban_Beta2 # Start at 1300
+  GT_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/2_Spot1_Urban_Beta2/gt/
+  DATA_FOLDER: rosbag/
+  # version of logging. If unsure, select 2 (the latest). 1 is for tunnel datasets
+  LOG_VERSION: '2'
+  NUM_VLP: '1'
+  ROBOT_NAME: spot1
+  ROBOT_TYPE: spot
+  BASE_NAME: base1
+  DELAY: '1280'
+  RATE: '1'
+  DURATION: '1750'
+  DURATION2: '1700'
+  ODOM: lo_frontend/odometry
+  OUT_PG_FILE: pose_graph.zip
+  #RUN_NUMBER: "xD"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: lo_lamp
+  focus: true
+  layout: tiled
+  shell_command_before:
+  #- export ROS_MASTER_URI=http://localhost:11319
+  - rosparam set /use_sim_time true
+    # Set up the parameter files from the GT products
+  - cp $GT_PATH/fiducial_calibration_$ROBOT_NAME.yaml ~/.ros/
+  - if [ $ROBOT_TYPE = 'husky' ]; then cp $GT_PATH/$ROBOT_NAME*.yaml $(rospack find
+    husky_custom_description)/config/ ; fi;
+
+  panes:
+
+    ################################### RUN ###################################
+
+    # Launch basic components needed for running localization algorithms
+  - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+
+    # Bags and topics of interest (switching if the log versions is older)
+  - if [ $LOG_VERSION -eq 2 ]; then sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag
+    -s$DELAY -r$RATE --clock  --topics clock:=/clock /$ROBOT_NAME/velodyne_points
+    /$ROBOT_NAME/velodyne_front/velodyne_points /$ROBOT_NAME/velodyne_rear/velodyne_points
+    /$ROBOT_NAME/hero/wio_ekf/odom /$ROBOT_NAME/vn100/imu_wori_wcov /$ROBOT_NAME/vn100/imu
+    /$ROBOT_NAME/visual_odom /$ROBOT_NAME/wheel_odom ; fi; if [ $LOG_VERSION -eq 1
+    ]; then sleep 10;rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$DELAY -r$RATE --clock  --prefix
+    $ROBOT_NAME/ --topics clock:=/clock velodyne_points velodyne_front/velodyne_points
+    /velodyne_rear/velodyne_points hero/wio_ekf/odom vn100/imu_wori_wcov vn100/imu
+    visual_odom /tf_static ; fi;
+    # /$ROBOT_NAME/unreconciled_artifact /$ROBOT_NAME/uwb_frontend/range_measurements ;
+
+    # Launch Hero to remap topics
+  - if [ $LOG_VERSION -eq 1 ]; then roslaunch capability_ugv localizer_hero.launch
+    robot_namespace:=$ROBOT_NAME; fi;
+
+    # Front-end
+  - if [ $ROBOT_TYPE = 'husky' ]; then sleep 5; roslaunch lo_frontend lo_frontend.launch
+    robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP; fi; if [ $ROBOT_TYPE
+    = 'spot' ]; then sleep 5; roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME;
+    fi
+
+    # Back-end (NOTE: Make sure Loop Closures are disabled)
+  - '#sleep 4; roslaunch lamp turn_on_lamp.launch robot_namespace:=$ROBOT_NAME b_use_hero:=false'
+  - '#sleep 4; roslaunch lamp turn_on_lamp_base.launch robot_namespace:=$BASE_NAME'
+
+
+#  - rosrun gt_analysis publish_gt.py $GT_PATH/odometry.bag $ROBOT_NAME
+#  - rosrun gt_analysis sub_odom_publish_tf.py $ROBOT_NAME
+- window_name: record_at_end
+  focus: false
+  layout: tiled
+  shell_command_before:
+  #- export ROS_MASTER_URI=http://localhost:11319
+  - rosparam set /use_sim_time true
+
+  panes:
+    # Optionally save the lamp as a zip file
+  - sleep $DURATION2; rostopic pub /$BASE_NAME/lamp/debug std_msgs/String "save $DATA_PATH/lamp_$RUN_NUMBER/$OUT_PG_FILE"
+
+    # Map
+    # Front-End Map
+  - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lo_frontend/octree_map
+    _prefix:=$DATA_PATH/locus_$RUN_NUMBER/map_locus
+
+    # LAMP
+  - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$BASE_NAME/lamp/octree_map
+    _prefix:=$DATA_PATH/lamp_$RUN_NUMBER/map
+  - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lamp/octree_map
+    _prefix:=$DATA_PATH/lamp_$RUN_NUMBER/map_robot
+
+
+- window_name: record
+  focus: false
+  layout: tiled
+  shell_command_before:
+  #- export ROS_MASTER_URI=http://localhost:11319
+  - mkdir $DATA_PATH/locus_$RUN_NUMBER
+  - mkdir $DATA_PATH/lamp_$RUN_NUMBER
+  - rosparam set /use_sim_time true
+
+  panes:
+
+    ################################### RECORD ###################################
+
+    # Front-end Odometry
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/odometry.bag /$ROBOT_NAME/$ODOM
+
+    # Front-end Odometry Rate and Delay
+  - rostopic hz /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/rate.txt
+  - rostopic delay /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/delay.txt
+  - rostopic delay /$ROBOT_NAME/lamp/lamp_pose -w3 >> $DATA_PATH/lamp_$RUN_NUMBER/delay.txt
+  - rostopic delay /$ROBOT_NAME/lamp_pgo/optimized_values -w3 >> $DATA_PATH/lamp_$RUN_NUMBER/opt_delay.txt
+  - rostopic bw /$ROBOT_NAME/lamp/keyed_scans >> $DATA_PATH/lamp_$RUN_NUMBER/bandwidth.txt
+
+    # Front-end Cpu/Mem usage
+  - python $(rospack find core_cpu_monitor)/scripts/monitor.py
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/cpu.bag /cpu_monitor/$ROBOT_NAME/lo_frontend/cpu
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/mem.bag /cpu_monitor/$ROBOT_NAME/lo_frontend/mem
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/cpu.bag /cpu_monitor/$ROBOT_NAME/lamp/cpu
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/mem.bag /cpu_monitor/$ROBOT_NAME/lamp/mem
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/cpu_base.bag /cpu_monitor/$ROBOT_NAME/lamp_base/cpu
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/mem_base.bag /cpu_monitor/$ROBOT_NAME/lamp_base/mem
+
+    # Back-end PoseGraph
+    # LAMP
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/pose_graph.bag /$ROBOT_NAME/lamp/pose_graph
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/loop_closures.bag /$ROBOT_NAME/lamp/laser_loop_closures
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/pose_graph_opt.bag /$ROBOT_NAME/lamp/pose_graph_to_optimize
+    /$ROBOT_NAME/lamp_pgo/optimized_values
+
+    # Topics for base rerun
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_input.bag /$ROBOT_NAME/lamp/pose_graph_incremental
+    /$ROBOT_NAME/lamp/keyed_scans
+
+    # Record map info
+  - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/map_info.bag /$BASE_NAME/lamp/map_info
+
+    # Front-End Computation Time Profiling
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/lidar_callback_duration.bag /$ROBOT_NAME/lo_frontend/lidar_callback_duration
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_scan_duration.bag /$ROBOT_NAME/lo_frontend/scan_to_scan_duration
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_map_duration.bag /$ROBOT_NAME/lo_frontend/scan_to_submap_duration
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/search_in_map.bag /$ROBOT_NAME/lo_frontend/search_in_map
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/delete_from_map.bag /$ROBOT_NAME/lo_frontend/delete_from_map
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/adding_to_map.bag /$ROBOT_NAME/lo_frontend/adding_to_map
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/no_insert_points_pub.bag /$ROBOT_NAME/lo_frontend/no_insert_points_pub
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/no_nearest_points.bag /$ROBOT_NAME/lo_frontend/no_nearest_points
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/combined_point_cloud.bag /$ROBOT_NAME/lo_frontend/combined_point_cloud
+    ################################ END RECORDING ###############################
+  - sleep $DURATION; rosnode kill -a
+
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/xy_cross_section.bag /$ROBOT_NAME/lo_frontend/xy_cross_section
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/no_points.bag /$ROBOT_NAME/lo_frontend/no_points
+- window_name: analyze
+  focus: false
+  layout: tiled
+  shell_command_before:
+  - mkdir $DATA_PATH/ground_truth
+  - cp $GT_PATH/odometry.bag $DATA_PATH/ground_truth/
+
+  panes:
+
+    ################################### RECORD ###################################
+
+    # Front-end Odometry
+  - sleep $DURATION; sleep 150; python $(rospack find gt_analysis)/scripts/analyzer.py
+    $DATA_PATH $ROBOT_NAME /$ROBOT_NAME/$ODOM $RUN_NUMBER; sleep 100; tmux kill-session
+

@@ -1,0 +1,151 @@
+session_name: spot_replay
+
+environment:
+  # DATA_PATH: /home/costar/data/URBAN_READY/h4_b2
+  DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/darpa_final/prelim1/spot1_final_prelim1/
+  GT_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/darpa_final/prelim1/gt/spot1_final/
+
+  DATA_FOLDER: rosbag/
+  ROBOT_NAME: spot1
+  BASE_NAME: base1
+  DELAY: "400"
+  RATE: "5.0"
+  DURATION: "2640"
+  DURATION2: "2700"
+  ODOM: lo_frontend/odometry
+  RUN_NUMBER: "final"
+
+  OUT_PG_FILE: pose_graph.zip
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: lo_lamp
+  focus: true
+  layout: tiled
+  shell_command_before:
+    - rosparam set /use_sim_time true
+    - cp $DATA_PATH/fiducial_calibration_$ROBOT_NAME.yaml ~/.ros/
+
+  panes:
+
+    ################################### RUN ###################################
+
+    # Bags and topics of interest
+    - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+    - rosparam set /use_sim_time true; rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$DELAY -r$RATE --clock --topics clock:=/clock /$ROBOT_NAME/velodyne_points /$ROBOT_NAME/velodyne_front/velodyne_points /$ROBOT_NAME/velodyne_rear/velodyne_points /$ROBOT_NAME/hero/wio_ekf/odom /$ROBOT_NAME/vn100/imu_wori_wcov /$ROBOT_NAME/vn100/imu /$ROBOT_NAME/visual_odom /$ROBOT_NAME/camera_front/color/image_raw_throttle/compressed /spot1/comm_node_manager /spot1/comm/silvus/raw /spot1/comm_node_manager/status_agg #/$ROBOT_NAME/unreconciled_artifact /$ROBOT_NAME/uwb_frontend/range_measurements
+
+    # - sleep 2; rosparam set /use_sim_time true; roslaunch capability_ugv localizer_hero.launch robot_namespace:=$ROBOT_NAME
+
+    # Front-end
+    # Husky
+    # - sleep 7; rosparam set /use_sim_time true; roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME
+    # Spot
+    - sleep 5; rosparam set /use_sim_time true; roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME
+
+    # Back-end (NOTE: Make sure Loop Closures are disabled)
+    - sleep 5; rosparam set /use_sim_time true; roslaunch lamp turn_on_lamp.launch robot_namespace:=$ROBOT_NAME b_use_hero:=false
+    #- sleep 5; rosparam set /use_sim_time true; roslaunch lamp turn_on_robot_viz.launch robot_namespace:=$ROBOT_NAME
+    - sleep 5; rosparam set /use_sim_time true; roslaunch lamp turn_on_lamp_base.launch robot_namespace:=$BASE_NAME
+
+    # Check point clouds are coming through
+    # - rostopic echo /$ROBOT_NAME/combined_point_cloud_filtered --noarr
+
+    # Optionally save the lamp as a zip file
+#    - rostopic pub /$BASE_NAME/lamp/debug std_msgs/String "save $DATA_PATH/$OUT_PG_FILE" \
+#    - rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lo_frontend/octree_map _prefix:=$DATA_PATH/
+- window_name: record_at_end
+  focus: false
+  layout: tiled
+  shell_command_before:
+    - rosparam set /use_sim_time true
+
+  panes:
+    # Optionally save the lamp as a zip file
+    - sleep $DURATION2; rostopic pub /$BASE_NAME/lamp/debug std_msgs/String "save $DATA_PATH/lamp_$RUN_NUMBER/$OUT_PG_FILE"
+
+    # Map
+    # Front-End Map
+   # - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lo_frontend/octree_map _prefix:=$DATA_PATH/locus_$RUN_NUMBER/map_locus
+
+    # LAMP
+    #- sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lamp/octree_map _prefix:=$DATA_PATH/lamp_$RUN_NUMBER/map_robot
+    - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$BASE_NAME/lamp/octree_map _prefix:=$DATA_PATH/lamp_$RUN_NUMBER/map
+
+
+- window_name: record
+  focus: false
+  layout: tiled
+  shell_command_before:
+    - mkdir $DATA_PATH/locus_$RUN_NUMBER
+    - mkdir $DATA_PATH/lamp_$RUN_NUMBER
+    - rosparam set /use_sim_time true
+
+  panes:
+
+    ################################### RECORD ###################################
+
+    # Front-end Odometry
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/odometry.bag /$ROBOT_NAME/$ODOM #/$ROBOT_NAME/hero/lio_lamp_ekf/odom /$ROBOT_NAME/lamp/lamp_pose /$ROBOT_NAME/lo_frontend/localization_integrated_estimate /$ROBOT_NAME/lo_frontend/odometry_integrated_estimate /$ROBOT_NAME/lo_frontend/localization_incremental_estimate /$ROBOT_NAME/lo_frontend/odometry_incremental_estimate /$ROBOT_NAME/lamp/pose_merged
+    #- rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/stationary.bag /$ROBOT_NAME/stationary_accel
+
+    # Front-end Odometry Rate and Delay
+    #- rostopic hz /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/rate.txt
+    #- rostopic delay /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/delay.txt
+    #- rostopic delay /$ROBOT_NAME/lamp/lamp_pose -w3 >> $DATA_PATH/lamp_$RUN_NUMBER/delay.txt
+    #- rostopic delay /$ROBOT_NAME/lamp_pgo/optimized_values -w3 >> $DATA_PATH/lamp_$RUN_NUMBER/opt_delay.txt
+    #- rostopic bw /$ROBOT_NAME/lamp/keyed_scans >> $DATA_PATH/lamp_$RUN_NUMBER/bandwidth.txt
+    - rostopic bw /$BASE_NAME/lamp/keyed_scans >> $DATA_PATH/lamp_$RUN_NUMBER/bandwidth.txt
+
+    # Front-end Cpu/Mem usage
+    - python $(rospack find core_cpu_monitor)/scripts/monitor.py
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/cpu.bag /cpu_monitor/$BASE_NAME/lo_frontend/cpu
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/mem.bag /cpu_monitor/$BASE_NAME/lo_frontend/mem
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/cpu.bag /cpu_monitor/$BASE_NAME/lamp/cpu
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/mem.bag /cpu_monitor/$BASE_NAME/lamp/mem
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/cpu_base.bag /cpu_monitor/$BASE_NAME/lamp_base/cpu
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/mem_base.bag /cpu_monitor/$BASE_NAME/lamp_base/mem
+
+    # Back-end PoseGraph
+    # locus
+    #- rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/pose_graph.bag /$ROBOT_NAME/lamp/pose_graph
+    # LAMP
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_loop_closures.bag /$BASE_NAME/lamp/laser_loop_closures
+   # - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/loop_closures.bag /$ROBOT_NAME/lamp/laser_loop_closures
+   # - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/stationary.bag /$ROBOT_NAME/stationary /$ROBOT_NAME/stationary_accel
+   # - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/pose_graph.bag /$ROBOT_NAME/lamp/pose_graph
+   # - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/keyed_scans.bag /$ROBOT_NAME/lamp/keyed_scans
+   # - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/pose_graph_incremental.bag /$ROBOT_NAME/lamp/pose_graph_incremental
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_pose_graph.bag /$BASE_NAME/lamp/pose_graph
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_keyed_scans.bag /$BASE_NAME/lamp/keyed_scans
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_pose_graph_incremental.bag /$BASE_NAME/lamp/pose_graph_incremental
+    #- rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/pose_graph_opt.bag /$ROBOT_NAME/lamp/pose_graph_to_optimize /$ROBOT_NAME/lamp_pgo/optimized_values
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_pose_graph_opt.bag /$BASE_NAME/lamp/pose_graph_to_optimize /$BASE_NAME/lamp_pgo/optimized_values
+
+    # Topics for base rerun
+    #- rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_input.bag /$ROBOT_NAME/lamp/pose_graph_incremental /$ROBOT_NAME/lamp/keyed_scans
+
+    # Record map info
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/map_info.bag /$BASE_NAME/lamp/map_info
+
+    # Front-End Computation Time Profiling
+    #- rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/lidar_callback_duration.bag /$ROBOT_NAME/lo_frontend/lidar_callback_duration
+    #- rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_scan_duration.bag /$ROBOT_NAME/lo_frontend/scan_to_scan_duration
+    #- rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_map_duration.bag /$ROBOT_NAME/lo_frontend/scan_to_submap_duration
+
+    ################################ END RECORDING ###############################
+    - sleep $DURATION; rosnode kill -a
+    # - rosnode kill -a \
+
+- window_name: analyze
+  focus: false
+  layout: tiled
+  shell_command_before:
+    - mkdir $DATA_PATH/ground_truth
+    - cp $GT_PATH/odometry.bag $DATA_PATH/ground_truth/
+
+  panes:
+    # Front-end Odometry
+    - sleep $DURATION2; sleep 30; python $(rospack find gt_analysis)/scripts/analyzer.py $DATA_PATH $ROBOT_NAME /$ROBOT_NAME/$GT_ODOM $RUN_NUMBER;
+      sleep 10; #tmux kill-session

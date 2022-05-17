@@ -1,0 +1,22 @@
+session_name: test_analyzer
+
+environment:
+# folders: 1_Husky4_Beta2, 3_Husky4_Urban_Alpha1, 4_Husky4_Tunnel_SR2, 6_Husky4_Tunnel_EX2, 13_Husky1_Kentucky, 10_Spot2_LA_Subway, 12_Spot1_Loop_Kentucky
+  DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/3_Husky4_Urban_Alpha1/rosbag/
+  GT_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/3_Husky4_Urban_Alpha1/gt/
+  ROBOT_NAME: husky4
+  ODOM: lo_frontend/odometry
+  RUN_NUMBER: "final_test"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: analyze 
+  focus: false  
+  layout: tiled  
+  shell_command_before:
+    - mkdir $DATA_PATH/ground_truth
+    - cp $GT_PATH/odometry.bag $DATA_PATH/ground_truth/
+  panes:
+    - python $(rospack find gt_analysis)/scripts/analyzer.py $DATA_PATH $ROBOT_NAME /$ROBOT_NAME/$ODOM $RUN_NUMBER;
