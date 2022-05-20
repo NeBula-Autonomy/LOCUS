@@ -4,8 +4,6 @@ environment:
   DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/1_Husky4_Beta2
   GT_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/1_Husky4_Beta2/gt/
   DATA_FOLDER: rosbag/
-  # version of logging. If unsure, select 2 (the latest). 1 is for tunnel datasets
-  LOG_VERSION: '2'
   NUM_VLP: '3'
   ROBOT_NAME: husky4
   ROBOT_TYPE: husky
@@ -16,7 +14,7 @@ environment:
   DURATION2: '2400'
   ODOM: lo_frontend/odometry
   OUT_PG_FILE: pose_graph.zip
-  RUN_NUMBER: "final_run_test"
+  RUN_NUMBER: "test_run2"
 options:
   default-command: /bin/bash
 
@@ -38,30 +36,19 @@ windows:
   - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
 
     # Bags and topics of interest (switching if the log versions is older)
-  - if [ $LOG_VERSION -eq 2 ]; then sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag
-    -s$DELAY -r$RATE --clock  --topics clock:=/clock /$ROBOT_NAME/velodyne_points
+  -  sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$DELAY -r$RATE --clock  --topics clock:=/clock /$ROBOT_NAME/velodyne_points
     /$ROBOT_NAME/velodyne_front/velodyne_points /$ROBOT_NAME/velodyne_rear/velodyne_points
     /$ROBOT_NAME/hero/wio_ekf/odom /$ROBOT_NAME/vn100/imu_wori_wcov /$ROBOT_NAME/vn100/imu
-    /$ROBOT_NAME/visual_odom /$ROBOT_NAME/wheel_odom ; fi; if [ $LOG_VERSION -eq 1
-    ]; then sleep 10;rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$DELAY -r$RATE --clock  --prefix
-    $ROBOT_NAME/ --topics clock:=/clock velodyne_points velodyne_front/velodyne_points
-    /velodyne_rear/velodyne_points hero/wio_ekf/odom vn100/imu_wori_wcov vn100/imu
-    visual_odom /tf_static ; fi;
-    # /$ROBOT_NAME/unreconciled_artifact /$ROBOT_NAME/uwb_frontend/range_measurements ;
+    /$ROBOT_NAME/visual_odom /$ROBOT_NAME/wheel_odom
 
-    # Launch Hero to remap topics
-  - if [ $LOG_VERSION -eq 1 ]; then roslaunch capability_ugv localizer_hero.launch
-    robot_namespace:=$ROBOT_NAME; fi;
-
-    # Front-end
-  - if [ $ROBOT_TYPE = 'husky' ]; then sleep 5; roslaunch lo_frontend lo_frontend.launch
-    robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP; fi; if [ $ROBOT_TYPE
-    = 'spot' ]; then sleep 5; roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME;
+    # run locus
+  - roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP
 
 - window_name: record_at_end
   focus: false
   layout: tiled
   shell_command_before:
+  #- export ROS_MASTER_URI=http://localhost:11319
   - rosparam set /use_sim_time true
 
   panes:
@@ -73,10 +60,18 @@ windows:
   - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lo_frontend/octree_map
     _prefix:=$DATA_PATH/locus_$RUN_NUMBER/map_locus
 
+    # LAMP
+  - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$BASE_NAME/lamp/octree_map
+    _prefix:=$DATA_PATH/lamp_$RUN_NUMBER/map
+  - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lamp/octree_map
+    _prefix:=$DATA_PATH/lamp_$RUN_NUMBER/map_robot
+
+
 - window_name: record
   focus: false
   layout: tiled
   shell_command_before:
+  #- export ROS_MASTER_URI=http://localhost:11319
   - mkdir $DATA_PATH/locus_$RUN_NUMBER
   - mkdir $DATA_PATH/lamp_$RUN_NUMBER
   - rosparam set /use_sim_time true
@@ -147,4 +142,3 @@ windows:
     # Front-end Odometry
   - sleep $DURATION; sleep 150; python $(rospack find gt_analysis)/scripts/analyzer.py
     $DATA_PATH $ROBOT_NAME /$ROBOT_NAME/$ODOM $RUN_NUMBER; sleep 100; tmux kill-session
-
