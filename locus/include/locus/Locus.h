@@ -17,8 +17,6 @@ Authors:
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
-//#include <gtsam/geometry/Pose3.h>
-//#include <gtsam/geometry/Rot3.h>
 #include <math.h>
 #include <message_filters/subscriber.h>
 #include <mutex>
