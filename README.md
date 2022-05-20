@@ -22,6 +22,20 @@ sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
 - [ ] Suggest parameters for open/closed space in yaml where relevant (e.g. PointCloudOdometry, PointCloudLocalization)
 - [ ] Update README.md with instructions on how to setup/run the package
 
+# How to build
+
+
+## Dockerfile
+Go to the docker folder, and
+```
+./cmd locus build
+./cmd locus run
+./cmd locus bash
+cd ~/locus_ws/
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+catkin build
+source devel/setup.bash
+```
 
 
 # Cite
