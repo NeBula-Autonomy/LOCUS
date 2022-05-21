@@ -1,0 +1,6 @@
+<launch>
+  <test test-name="test_locus"
+        pkg="locus"
+        type="test_locus"
+        time-limit="300.0"/>
+</launch>

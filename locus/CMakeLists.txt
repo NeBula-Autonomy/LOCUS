@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(lo_frontend)
+project(locus)
 
 #IF(NOT CMAKE_BUILD_TYPE)
 #  SET(CMAKE_BUILD_TYPE Release)
@@ -105,7 +105,7 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
-add_library(${PROJECT_NAME} src/LoFrontend.cc)
+add_library(${PROJECT_NAME} src/Locus.cc)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
@@ -126,6 +126,6 @@ if (CATKIN_ENABLE_TESTING)
 find_package(rostest REQUIRED)
   # add_subdirectory(test)
   ## Add gtest based cpp test target and link libraries
-  add_rostest_gtest(test_lo_frontend test/test_lo_frontend.test test/test_lo_frontend.cc)
-  target_link_libraries(test_lo_frontend ${PROJECT_NAME} ${catkin_LIBRARIES})
+  add_rostest_gtest(test_locus test/test_locus.test test/test_locus.cc)
+  target_link_libraries(test_locus ${PROJECT_NAME} ${catkin_LIBRARIES})
 endif()
