@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>lo_frontend</name>
+  <name>locus</name>
   <version>0.0.0</version>
   <description>Front end odometry package</description>
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(lo_frontend)
+project(locus)
 
 #IF(NOT CMAKE_BUILD_TYPE)
 #  SET(CMAKE_BUILD_TYPE Release)
@@ -8,10 +8,7 @@ project(lo_frontend)
 SET(CMAKE_BUILD_TYPE Release)
 add_compile_options(-std=c++14)
 
-find_package(GTSAM REQUIRED)
-if (NOT GTSAM_FOUND)
-  message(FATAL_ERROR "This program requires the GTSAM library.")
-endif(NOT GTSAM_FOUND)
+
 
 FIND_PACKAGE(Boost REQUIRED
   date_time
@@ -103,20 +100,21 @@ catkin_package(
 #  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
 #endif()
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
-add_library(${PROJECT_NAME} src/LoFrontend.cc)
+include_directories(include ${catkin_INCLUDE_DIRS}  ${Boost_INCLUDE_DIRS})
+link_directories(${catkin_LIBRARY_DIRS}  ${Boost_LIBRARY_DIRS})
+add_library(${PROJECT_NAME} src/Locus.cc)
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
-  gtsam
+
 )
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}_node.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
-  gtsam
+
 )
 
 #############
@@ -126,6 +124,6 @@ if (CATKIN_ENABLE_TESTING)
 find_package(rostest REQUIRED)
   # add_subdirectory(test)
   ## Add gtest based cpp test target and link libraries
-  add_rostest_gtest(test_lo_frontend test/test_lo_frontend.test test/test_lo_frontend.cc)
-  target_link_libraries(test_lo_frontend ${PROJECT_NAME} ${catkin_LIBRARIES})
+  add_rostest_gtest(test_locus test/test_locus.test test/test_locus.cc)
+  target_link_libraries(test_locus ${PROJECT_NAME} ${catkin_LIBRARIES})
 endif()

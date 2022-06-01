@@ -30,7 +30,7 @@ buffers:
   # 3   ---> odometry integration 
 
 data_integration:
-  mode: 3
+  mode: 1
 
 b_is_flat_ground_assumption: false
 
@@ -38,6 +38,9 @@ b_enable_computation_time_profiling: true
 
 b_run_with_gt_point_cloud: false
 gt_point_cloud_filename: /home/costar/data/loeval/beta_both_floors.pcd
+# Option to turn off keyframes for ground truth odom generation
+# Leave at true for normal lidar odometry 
+b_add_keyframes_enabled: true
 
 publish_diagnostics: false
 

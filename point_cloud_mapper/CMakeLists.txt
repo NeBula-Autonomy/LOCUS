@@ -77,7 +77,6 @@ add_library(${PROJECT_NAME} src/PointCloudMapper.cc
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-  gtsam
   OpenMP::OpenMP_CXX
 )
 

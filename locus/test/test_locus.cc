@@ -5,15 +5,15 @@ Authors:
 */
 
 #include <gtest/gtest.h>
-#include <lo_frontend/LoFrontend.h>
+#include <locus/Locus.h>
 
-class LoFrontendTest : public ::testing::Test {
+class LocusTest : public ::testing::Test {
 public:
-  LoFrontendTest() {
+  LocusTest() {
     system("rosparam load $(rospack find "
-           "lo_frontend)/config/lo_frames.yaml");
+           "locus)/config/lo_frames.yaml");
     system("rosparam load $(rospack find "
-           "lo_frontend)/config/lo_settings.yaml");
+           "locus)/config/lo_settings.yaml");
     system("rosparam load $(rospack find "
            "lidar_slip_detection)/config/parameters.yaml");
     system("rosparam load $(rospack find "
@@ -33,12 +33,11 @@ public:
     ros::param::set("mapper/num_threads", 2);
   }
 
-  ~LoFrontendTest() {}
+  ~LocusTest() {}
 
-  LoFrontend lf;
+  Locus lf;
 
 protected:
-
   void ImuCallback(const sensor_msgs::Imu::ConstPtr& imu_msg) {
     lf.ImuCallback(imu_msg);
   }
@@ -60,11 +59,10 @@ protected:
   }
 
 private:
-
 };
 
 /* TEST Initialize */
-TEST_F(LoFrontendTest, TestInitialize) {
+TEST_F(LocusTest, TestInitialize) {
   ros::NodeHandle nh;
   bool result = lf.Initialize(nh, false);
   ASSERT_TRUE(result);
@@ -72,6 +70,6 @@ TEST_F(LoFrontendTest, TestInitialize) {
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "test_lo_frontend");
+  ros::init(argc, argv, "test_locus");
   return RUN_ALL_TESTS();
 }

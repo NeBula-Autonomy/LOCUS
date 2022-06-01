@@ -4,16 +4,51 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 ![alt text](readme.png)
 
-# Prerequisites
+# Build Instructions
 
-`tf2_sensor_msgs` may not be installed by default, so install with:
+Install [ROS](http://wiki.ros.org/ROS/Installation)
+
+Install catkin tools
 ```
-sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
+sudo apt-get install ros-kinetic-catkin python-catkin-tools python3-catkin-tools
 ```
+
+Install PCL 
+```
+sudo apt-get install ros-melodic-pcl-ros # for the melodic distro - Ubuntu 18.04
+sudo apt-get install ros-noetic-pcl-ros # for the noetc distro - Ubuntu 20.04
+```
+
+Install `tf2_sensor_msgs`  and `tf2_geometry_msgs`
+```
+# for the melodic distro - Ubuntu 18.04
+sudo apt install ros-melodic-tf2-sensor-msgs 
+sudo apt install ros-melodic-tf2-geometry-msgs 
+# for the noetic distro - Ubuntu 20.04
+sudo apt install ros-noetic-tf2-sensor-msgs 
+sudo apt install ros-noetic-tf2-geometry-msgs 
+```
+
+Build this package in a catkin workspace, e.g. 
+
+```bash
+mkdir -p catkin_ws/src
+cd catkin_ws
+catkin init
+catkin config -DCMAKE_BUILD_TYPE=Release 
+cd src
+git clone git@github.com:NeBula-Autonomy/LOCUS.git
+catkin build locus
+```
+
+# Running Instructions
+
+To do 
+
 
 # TODOS
 
-- [ ] Rename all lo_frontend instances to locus
+- [x] Rename all lo_frontend instances to locus
 - [ ] Cleanup comments, the less the better, just keep the very relevant ones
 - [ ] Cleanup unused parameters, class variables, publishers and subscribers 
 - [ ] Bring in MDC in launch
@@ -47,4 +82,41 @@ source devel/setup.bash
   year={2022},
   publisher={TODO}
 }
+```
+
+# Old 
+
+
+# Prerequisites
+
+`tf2_sensor_msgs` may not be installed by default, so install with:
+```
+sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
+```
+
+# Testing in Ubuntu 20.04 on Dell Precision 
+
+
+
+### ROS Install summary
+http://wiki.ros.org/noetic/Installation/Ubuntu
+```
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt install curl # if you haven't already installed curl
+curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+sudo apt update
+sudo apt install ros-noetic-desktop
+```
+
+Source ros to bashrc
+```
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+```
+
+Ros build tools 
+```
+sudo apt install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+sudo apt install python3-rosdep
+sudo rosdep init
+rosdep update
 ```
