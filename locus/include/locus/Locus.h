@@ -17,8 +17,6 @@ Authors:
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <geometry_utils/Transform3.h>
-//#include <gtsam/geometry/Pose3.h>
-//#include <gtsam/geometry/Rot3.h>
 #include <math.h>
 #include <message_filters/subscriber.h>
 #include <mutex>
@@ -149,7 +147,6 @@ private:
   double rotation_threshold_kf_;
   bool b_add_first_scan_to_key_;
 
-  //  gtsam::Pose3 ToGtsam(const geometry_utils::Transform3& pose) const;
   geometry_utils::Transform3 last_keyframe_pose_;
 
   std::string fixed_frame_id_;
