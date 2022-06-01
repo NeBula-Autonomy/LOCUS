@@ -730,7 +730,7 @@ bool Locus::LoadCalibrationFromTfTree() {
   }
 }
 
-bool LoFrontend::CheckNans(const Imu& imu_msg)
+bool Locus::CheckNans(const Imu& imu_msg)
 {
   return (std::isnan(imu_msg.orientation.x) || std::isnan(imu_msg.orientation.y) || std::isnan(imu_msg.orientation.z) ||
           std::isnan(imu_msg.orientation.w) || std::isnan(imu_msg.angular_velocity.x) ||
