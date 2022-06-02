@@ -6,6 +6,8 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 # Build Instructions
 
+## Native Build
+
 Install [ROS](http://wiki.ros.org/ROS/Installation)
 
 Install catkin tools
@@ -41,6 +43,22 @@ git clone git@github.com:NeBula-Autonomy/LOCUS.git
 catkin build locus
 ```
 
+## Dockerfile
+The docker provides an alternative, contained method for installation
+
+Go to the docker folder, and
+```
+./cmd locus build
+./cmd locus run
+./cmd locus bash
+cd ~/locus_ws/
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+catkin build
+source devel/setup.bash
+```
+
+
+
 # Running Instructions
 
 To do 
@@ -56,21 +74,6 @@ To do
 - [ ] Simplify our robot-specific files for a generic robot (e.g. no husky/spot anymore) and define how you want to let the user load sensor extrinsic, either hardcoded or by TF
 - [ ] Suggest parameters for open/closed space in yaml where relevant (e.g. PointCloudOdometry, PointCloudLocalization)
 - [ ] Update README.md with instructions on how to setup/run the package
-
-# How to build
-
-
-## Dockerfile
-Go to the docker folder, and
-```
-./cmd locus build
-./cmd locus run
-./cmd locus bash
-cd ~/locus_ws/
-catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
-catkin build
-source devel/setup.bash
-```
 
 
 # Cite
