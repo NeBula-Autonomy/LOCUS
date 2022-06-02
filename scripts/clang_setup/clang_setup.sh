@@ -8,8 +8,7 @@ repo_root="$( ( builtin cd "$script_dir" && git rev-parse --show-toplevel) )"
 cat <<EOF
 Setup script.
   This script will:
-    - add package repositories for several dependencies
-    - install several packages
+    - install clang and clang-format
     - setup the clang-format pre-commit hook
   \`sudo\` will be invoked by several of these stages.
 EOF

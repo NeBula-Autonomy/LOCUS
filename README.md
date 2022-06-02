@@ -41,6 +41,23 @@ git clone git@github.com:NeBula-Autonomy/LOCUS.git
 catkin build locus
 ```
 
+## Install Clang formatting
+For development, setup clang formatting for the repo
+
+```
+cd locus
+./scripts/clang_setup/clang_setup.sh
+```
+
+This will install clang and put a pre-commit hook to maintain clang formatting. To force clang formatting on edited files, use:
+
+```
+git clang-format -f
+```
+
+
+
+
 # Running Instructions
 
 To do 
