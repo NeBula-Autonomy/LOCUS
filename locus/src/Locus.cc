@@ -34,7 +34,7 @@ Locus::Locus()
     b_run_with_gt_point_cloud_(false),
     publish_diagnostics_(false),
     tf_buffer_authority_("transform_odometry"),
-    scans_dropped_(0),
+       scans_dropped_(0),
     previous_stamp_(0) {
   double_param.value = 0.25;
 }
