@@ -8,10 +8,7 @@ project(locus)
 SET(CMAKE_BUILD_TYPE Release)
 add_compile_options(-std=c++14)
 
-find_package(GTSAM REQUIRED)
-if (NOT GTSAM_FOUND)
-  message(FATAL_ERROR "This program requires the GTSAM library.")
-endif(NOT GTSAM_FOUND)
+
 
 FIND_PACKAGE(Boost REQUIRED
   date_time
@@ -101,20 +98,21 @@ catkin_package(
 #  message(FATAL_ERROR "${CMAKE_CXX_COMPILER} doesn't provide c++11 support.")
 #endif()
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS} ${GTSAM_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS}  ${Boost_INCLUDE_DIRS})
+link_directories(${catkin_LIBRARY_DIRS}  ${Boost_LIBRARY_DIRS})
 add_library(${PROJECT_NAME} src/Locus.cc)
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
-  gtsam
+
 )
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}_node.cc)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
-  gtsam
+
 )
 
 #############
