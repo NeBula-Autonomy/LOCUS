@@ -4,30 +4,63 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 ![alt text](readme.png)
 
-
-## Build Instructions
+# Build Instructions
 
 Install [ROS](http://wiki.ros.org/ROS/Installation)
 
-Build this package in a catkin workspace 
+Install catkin tools
+```
+sudo apt-get install ros-kinetic-catkin python-catkin-tools python3-catkin-tools
+```
+
+Install PCL 
+```
+sudo apt-get install ros-melodic-pcl-ros # for the melodic distro - Ubuntu 18.04
+sudo apt-get install ros-noetic-pcl-ros # for the noetc distro - Ubuntu 20.04
+```
+
+Install `tf2_sensor_msgs`  and `tf2_geometry_msgs`
+```
+# for the melodic distro - Ubuntu 18.04
+sudo apt install ros-melodic-tf2-sensor-msgs 
+sudo apt install ros-melodic-tf2-geometry-msgs 
+# for the noetic distro - Ubuntu 20.04
+sudo apt install ros-noetic-tf2-sensor-msgs 
+sudo apt install ros-noetic-tf2-geometry-msgs 
+```
+
+Build this package in a catkin workspace, e.g. 
+
 ```bash
 mkdir -p catkin_ws/src
 cd catkin_ws
 catkin init
 catkin config -DCMAKE_BUILD_TYPE=Release 
 cd src
-wstool init
-wstool merge localizer_lamp/install/lamp_ssh.rosinstall
-wstool up
-catkin build lamp
+git clone git@github.com:NeBula-Autonomy/LOCUS.git
+catkin build locus
 ```
 
-# Prerequisites
+## Install Clang formatting
+For development, setup clang formatting for the repo
 
-`tf2_sensor_msgs` may not be installed by default, so install with:
 ```
-sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
+cd locus
+./scripts/clang_setup/clang_setup.sh
 ```
+
+This will install clang and put a pre-commit hook to maintain clang formatting. To force clang formatting on edited files, use:
+
+```
+git clang-format -f
+```
+
+
+
+
+# Running Instructions
+
+To do 
 
 
 # TODOS
@@ -52,4 +85,41 @@ sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
   year={2022},
   publisher={TODO}
 }
+```
+
+# Old 
+
+
+# Prerequisites
+
+`tf2_sensor_msgs` may not be installed by default, so install with:
+```
+sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
+```
+
+# Testing in Ubuntu 20.04 on Dell Precision 
+
+
+
+### ROS Install summary
+http://wiki.ros.org/noetic/Installation/Ubuntu
+```
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt install curl # if you haven't already installed curl
+curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+sudo apt update
+sudo apt install ros-noetic-desktop
+```
+
+Source ros to bashrc
+```
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+```
+
+Ros build tools 
+```
+sudo apt install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+sudo apt install python3-rosdep
+sudo rosdep init
+rosdep update
 ```

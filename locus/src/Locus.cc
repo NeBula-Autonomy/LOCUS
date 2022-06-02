@@ -511,8 +511,6 @@ void Locus::LidarCallback(const PointCloudF::ConstPtr& msg) {
         current_pose, localization_.GetLatestDeltaCovariance(), stamp);
   }
 
-  // gtsam::Pose3 delta = ToGtsam(geometry_utils::PoseDelta(last_keyframe_pose_,
-  // current_pose));
   auto delta = geometry_utils::PoseDelta(last_keyframe_pose_, current_pose);
 
   Eigen::Matrix3d mat;
@@ -731,19 +729,6 @@ bool Locus::LoadCalibrationFromTfTree() {
     return false;
   }
 }
-
-// gtsam::Pose3 Locus::ToGtsam(const geometry_utils::Transform3& pose) const
-//{
-//  gtsam::Vector3 t;
-//  t(0) = pose.translation(0);
-//  t(1) = pose.translation(1);
-//  t(2) = pose.translation(2);
-//  gtsam::Rot3 r(pose.rotation(0, 0), pose.rotation(0, 1), pose.rotation(0, 2),
-//  pose.rotation(1, 0), pose.rotation(1, 1),
-//                pose.rotation(1, 2), pose.rotation(2, 0), pose.rotation(2, 1),
-//                pose.rotation(2, 2));
-// return gtsam::Pose3(r, t);
-//}
 
 bool Locus::CheckNans(const Imu& imu_msg) {
   return (

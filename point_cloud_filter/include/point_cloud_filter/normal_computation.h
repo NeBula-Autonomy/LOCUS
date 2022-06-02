@@ -11,7 +11,6 @@
 #include <pcl/search/kdtree.h>
 #include <pcl_ros/filters/filter.h>
 #include <ros/ros.h>
-
 namespace point_cloud_filter {
 
 enum SearchNormalsMethod { RADIUS, KNN };

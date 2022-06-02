@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+
+import sys
+import subprocess
+output = subprocess.check_output(["git", "clang-format", "--diff"])
+
+if output not in ['no modified files to format\n', 'clang-format did not modify any files\n']:
+  sys.exit("""Error: clang format check failed. Run git clang-format -f to fix it, then commit again.
+NOTE: if (and *only* if) this is a merge commit, you may skip this check with 'git commit -n'""")
