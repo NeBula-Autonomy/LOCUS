@@ -34,30 +34,6 @@ realsense_right:
     p: 0
     y: ${-pi/2}
   rate: 10
-realsense_rear:
-  name: camera_rear
-  parent: base_link
-  position:
-    x: -0.475
-    y: 0.015
-    z: 0.080
-  orientation:
-    r: 0
-    p: 0
-    y: ${pi}
-  rate: 10
-realsense_up:
-  name: camera_up
-  parent: base_link
-  position:
-    x: 0
-    y: 0.361805
-    z: 0.359793
-  orientation:
-    r: 0
-    p: ${-pi/6}
-    y: 0
-  rate: 10
 boson:
   name: boson
   parent: base_link
@@ -74,41 +50,28 @@ velodyne:
   name: velodyne
   parent: base_link
   position:
-    x: 0.265
-    y: 0.003
-    z: 0.26
+    x: 0.290
+    y: 0
+    z: 0.343
   orientation:
-    r: 0.008
-    p: -0.023
-    y: -0.007
+    r: 0
+    p: 0
+    y: -0.037
   rate: 10
   topic_name: velodyne_points
 vn100:
   name: vn100
-  parent: velodyne_base_link
+  parent: base_link
   topic_name: vn100/imu
-  position:
-    x: -0.064254
-    y: 0
-    z: -0.00635
-  orientation:
-    r: 0
-    p: 0
-    y: 0
-  rate: 50
-respeaker:
-  name: respeaker
-  parent: velodyne_base_link
-  topic_name: audio
   position:
     x: 0
     y: 0
-    z: 0.08
+    z: 0.2
   orientation:
     r: 0
     p: 0
     y: ${pi/2}
-  rate: 1
+  rate: 50
 realsense_builtin_frontleft:
   name: builtin_camera_frontleft
   parent: base_link

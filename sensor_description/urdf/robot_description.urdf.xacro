@@ -32,37 +32,39 @@
                  ${sensor_props['velodyne']['orientation']['y']}" />
   </xacro:VLP-16>
   
-  <xacro:VLP-16
-      parent="${sensor_props['velodyne_rear']['parent']}"
-      name="${sensor_props['velodyne_rear']['name']}"
-      topic="${sensor_props['velodyne_rear']['topic_name']}"
-      hz="${sensor_props['velodyne_rear']['rate']}"
-      samples="440"
-      noise="0.016"
-      gpu="true">
-    <origin xyz="${sensor_props['velodyne_rear']['position']['x']}
-                 ${sensor_props['velodyne_rear']['position']['y']}
-                 ${sensor_props['velodyne_rear']['position']['z']}"
-            rpy="${sensor_props['velodyne_rear']['orientation']['r']}
-                 ${sensor_props['velodyne_rear']['orientation']['p']}
-                 ${sensor_props['velodyne_rear']['orientation']['y']}" />
-  </xacro:VLP-16>
+  <xacro:if value="$(eval 'husky' in robot_namespace)">
+    <xacro:VLP-16
+        parent="${sensor_props['velodyne_rear']['parent']}"
+        name="${sensor_props['velodyne_rear']['name']}"
+        topic="${sensor_props['velodyne_rear']['topic_name']}"
+        hz="${sensor_props['velodyne_rear']['rate']}"
+        samples="440"
+        noise="0.016"
+        gpu="true">
+      <origin xyz="${sensor_props['velodyne_rear']['position']['x']}
+                  ${sensor_props['velodyne_rear']['position']['y']}
+                  ${sensor_props['velodyne_rear']['position']['z']}"
+              rpy="${sensor_props['velodyne_rear']['orientation']['r']}
+                  ${sensor_props['velodyne_rear']['orientation']['p']}
+                  ${sensor_props['velodyne_rear']['orientation']['y']}" />
+    </xacro:VLP-16>
 
-  <xacro:VLP-16
-      parent="${sensor_props['velodyne_front']['parent']}"
-      name="${sensor_props['velodyne_front']['name']}"
-      topic="${sensor_props['velodyne_front']['topic_name']}"
-      hz="${sensor_props['velodyne_front']['rate']}"
-      samples="440"
-      noise="0.016"
-      gpu="true">
-    <origin xyz="${sensor_props['velodyne_front']['position']['x']}
-                 ${sensor_props['velodyne_front']['position']['y']}
-                 ${sensor_props['velodyne_front']['position']['z']}"
-            rpy="${sensor_props['velodyne_front']['orientation']['r']}
-                 ${sensor_props['velodyne_front']['orientation']['p']}
-                 ${sensor_props['velodyne_front']['orientation']['y']}" />
-  </xacro:VLP-16>
+    <xacro:VLP-16
+        parent="${sensor_props['velodyne_front']['parent']}"
+        name="${sensor_props['velodyne_front']['name']}"
+        topic="${sensor_props['velodyne_front']['topic_name']}"
+        hz="${sensor_props['velodyne_front']['rate']}"
+        samples="440"
+        noise="0.016"
+        gpu="true">
+      <origin xyz="${sensor_props['velodyne_front']['position']['x']}
+                  ${sensor_props['velodyne_front']['position']['y']}
+                  ${sensor_props['velodyne_front']['position']['z']}"
+              rpy="${sensor_props['velodyne_front']['orientation']['r']}
+                  ${sensor_props['velodyne_front']['orientation']['p']}
+                  ${sensor_props['velodyne_front']['orientation']['y']}" />
+    </xacro:VLP-16>
+  </xacro:if>
 
   <!-- VN100 -->
   <link name="imu_link"/>
