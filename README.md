@@ -52,6 +52,14 @@ Add the workspace sourcing to your bashrc (changing the filepath to match where 
 echo "source ~/catkin_ws/devel/setup.bash --extend" >> ~/.bashrc
 ```
 
+## Run Unit tests
+rostest/gtest style unit tests are set up in numerous packages (not all) - run them all to check your install with:
+
+```
+cd catkin_ws/src
+catkin run_tests
+```
+
 ## Setup Clang formatting
 For development, setup clang formatting for the repo
 
