@@ -1,0 +1,103 @@
+session_name: K_Spot1_Mix_run
+
+environment:
+  # DATA_PATH: /home/costar/data/URBAN_READY/h4_b2
+  DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/darpa_final/prelim2/spot1_final_prelim2/
+  GT_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/darpa_final/prelim2/gt/spot1_final/
+
+  DATA_FOLDER: rosbag/
+  ROBOT_NAME: spot1
+  BASE_NAME: base1
+  DELAY: "600"
+  RATE: "1"
+  DURATION: "1800"
+  DURATION2: "1900"
+  ODOM: lo_frontend/odometry
+  RUN_NUMBER: "rssi_loop_closures_all_loops"
+
+  OUT_PG_FILE: pose_graph.zip
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: lo_lamp
+  focus: true
+  layout: tiled
+  shell_command_before:
+  - rosparam set /use_sim_time true
+  - cp $GT_PATH/fiducial_calibration_$ROBOT_NAME.yaml ~/.ros/
+  - if [ $ROBOT_TYPE = 'husky' ]; then cp $GT_PATH/$ROBOT_NAME*.yaml $(rospack find
+    husky_custom_description)/config/ ; fi;
+
+  panes:
+    ################################### RUN ###################################
+    # Launch basic components needed for running localization algorithms
+  - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+    # Bags and topics of interest (switching if the log versions is older)
+  - sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag
+    -s$DELAY -r$RATE --clock  --topics clock:=/clock /$ROBOT_NAME/velodyne_points
+    /$ROBOT_NAME/velodyne_front/velodyne_points /$ROBOT_NAME/velodyne_rear/velodyne_points
+    /$ROBOT_NAME/hero/wio_ekf/odom /$ROBOT_NAME/vn100/imu_wori_wcov /$ROBOT_NAME/vn100/imu
+    /$ROBOT_NAME/visual_odom /$ROBOT_NAME/wheel_odom 
+    # Front-end
+  - roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP
+
+- window_name: record_at_end
+  focus: false
+  layout: tiled
+  shell_command_before:
+  - rosparam set /use_sim_time true
+
+  panes:
+  - sleep $DURATION2; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/lo_frontend/octree_map
+    _prefix:=$DATA_PATH/locus_$RUN_NUMBER/map_locus
+
+- window_name: record
+  focus: false
+  layout: tiled
+  shell_command_before:
+  - mkdir $DATA_PATH/locus_$RUN_NUMBER
+  - rosparam set /use_sim_time true
+
+  panes:
+
+    ################################### RECORD ###################################
+    # Front-end Odometry
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/odometry.bag /$ROBOT_NAME/$ODOM
+
+    # Front-end Odometry Rate and Delay
+  - rostopic hz /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/rate.txt
+  - rostopic delay /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/delay.txt
+
+    # Front-end Cpu/Mem usage
+  - python $(rospack find core_cpu_monitor)/scripts/monitor.py
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/cpu.bag /cpu_monitor/$ROBOT_NAME/lo_frontend/cpu
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/mem.bag /cpu_monitor/$ROBOT_NAME/lo_frontend/mem
+
+    # Front-End Computation Time Profiling
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/lidar_callback_duration.bag /$ROBOT_NAME/lo_frontend/lidar_callback_duration
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_scan_duration.bag /$ROBOT_NAME/lo_frontend/scan_to_scan_duration
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_map_duration.bag /$ROBOT_NAME/lo_frontend/scan_to_submap_duration
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/search_in_map.bag /$ROBOT_NAME/lo_frontend/search_in_map
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/delete_from_map.bag /$ROBOT_NAME/lo_frontend/delete_from_map
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/adding_to_map.bag /$ROBOT_NAME/lo_frontend/adding_to_map
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/no_insert_points_pub.bag /$ROBOT_NAME/lo_frontend/no_insert_points_pub
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/no_nearest_points.bag /$ROBOT_NAME/lo_frontend/no_nearest_points
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/combined_point_cloud.bag /$ROBOT_NAME/lo_frontend/combined_point_cloud
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/xy_cross_section.bag /$ROBOT_NAME/lo_frontend/xy_cross_section
+  - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/no_points.bag /$ROBOT_NAME/lo_frontend/no_points
+    ################################ END RECORDING ###############################
+  - sleep $DURATION; rosnode kill -a
+
+- window_name: analyze
+  focus: false
+  layout: tiled
+  shell_command_before:
+  - mkdir $DATA_PATH/ground_truth
+  - cp $GT_PATH/odometry.bag $DATA_PATH/ground_truth/
+
+  panes:
+  - sleep $DURATION; sleep 150; python $(rospack find gt_analysis)/scripts/analyzer.py
+    $DATA_PATH $ROBOT_NAME /$ROBOT_NAME/$ODOM $RUN_NUMBER; sleep 100; tmux kill-session
+
