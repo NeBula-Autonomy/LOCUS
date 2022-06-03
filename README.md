@@ -139,14 +139,6 @@ Run the tumxp script in another terminal
 tmuxp load {path_to_locus}/LOCUS/tmuxp_config/run_locus.yaml
 ```
 
-You should see a tmux paned terminal that looks something like:
-
-![tmux screen with panes for rosbag play, rviz and locus](media/tmux_screen_launch.png)
-
-And RViz should open, eventually giving you something looking like:
-
-![rviz showing the map from dataset C Husky4 Urban Alpha1](media/rviz_locus_dataset_C.png)
-
 The whole process should run something like:
 
 ![video of locus runnig](media/locus_running.gif)
