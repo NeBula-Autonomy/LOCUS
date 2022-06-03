@@ -127,8 +127,6 @@ For other datasets, you will need to modify other parameters, such as:
 Other parameters are explaing in the yaml file. 
 
 
-**TODO**
-
 ## Run the test 
 
 Start a roscore in one terminal
@@ -143,13 +141,12 @@ tmuxp load {path_to_locus}/LOCUS/tmuxp_config/run_locus.yaml
 
 You should see a tmux paned terminal that looks something like:
 
-**ADD IMAGE**
+![tmux screen with panes for rosbag play, rviz and locus](images/tmux_screen_launch.png)
 
 And RViz should open, eventually giving you something looking like:
 
-**ADD IMAGE**
+![rviz showing the map from dataset C Husky4 Urban Alpha1](images/rviz_locus_dataset_C.png)
 
-**MAYBE add video?**
 
 ## Output data
 At the end of the run, go to the third tmux window (`ctrl + b`, then `n` to cycle windows) and hit enter on the last pane (`ctrl + b` then arrow keys to navigate panes) to execute `rosnode kill -a` to stop all the bag recordings (will also kill RViz and locus).
@@ -211,6 +208,8 @@ To do
 
 
 # Cite
+If you use this code, or compare to it in your work, please cite the following:
+
 ```
 @article{reinke2022iros,
   title={LOCUS 2.0: Robust and Computationally Efficient LiDAR Odometry for Real-Time Underground 3D Mapping},
@@ -220,6 +219,20 @@ To do
   publisher={TODO}
 }
 ```
+
+```
+@article{LOCUS,
+  title={{LOCUS} - {A} {M}ulti-{S}ensor {L}idar-{C}entric {S}olution for {H}igh-{P}recision {O}dometry and 3{D} {M}apping in {R}eal-{T}ime},
+  author={Palieri, Matteo and Morrell, Benjamin and Thakur, Abhishek and Ebadi, Kamak and Nash, Jeremy and Chatterjee, Arghya and Kanellakis, Christoforos and Carlone, Luca and Guaragnella, Cataldo and Agha-mohammadi, A.},
+  journal={IEEE Robotics and Automation Letters},
+  volume={6},
+  number={2},
+  pages={421--428},
+  year={2020},
+  publisher={IEEE}
+}
+```
+
 
 # Old 
 
