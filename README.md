@@ -41,6 +41,13 @@ git clone git@github.com:NeBula-Autonomy/LOCUS.git
 catkin build locus
 ```
 
+Add the workspace sourcing to your bashrc (changing the filepath to match where your catkin workspace is)
+```
+echo "source ~/catkin_ws/devel/setup.bash --extend" >> ~/.bashrc
+```
+
+
+
 ## Install tmuxp (for our running scripts)
 tmuxp is a python wrapper for tmux allowing easy launching of multi-window, multi-tile tmux sessions.
 ```
@@ -147,10 +154,28 @@ And RViz should open, eventually giving you something looking like:
 ## Output data
 At the end of the run, go to the third tmux window (`ctrl + b`, then `n` to cycle windows) and hit enter on the last pane (`ctrl + b` then arrow keys to navigate panes) to execute `rosnode kill -a` to stop all the bag recordings (will also kill RViz and locus).
 
-The tmux script will store output odometry, map and stats in a new folder `locus_$RUN_NUMBER` in the root folder of the dataset. e.g.:
+To kill the tmux session, enter `tmux kill-session`.
+
+The tmux script will store output odometry, map and stats in a new folder `locus_$RUN_NUMBER` in the root folder of the dataset. For example, the resulting folder should look like:
 
 ```
-TO DO 
+└── C_Husky4_Urban_Alpha1
+    ├── fiducial_calibration_husky4.yaml
+    ├── h4_a1_gt_map.pcd
+    ├── h4_a1_gt_map.ply
+    ├── husky4_sensors.yaml
+    ├── locus_test_01
+    ├── odometry.bag
+    │   ├── delay.txt
+    │   ├── lidar_callback_duration.bag
+    │   ├── odometry.bag
+    │   ├── rate.txt
+    │   ├── scan_to_map_duration.bag
+    │   ├── scan_to_scan_duration.bag
+    │   └── stationary.bag
+    └── rosbag
+        ├── husky4_lidar_2020-02-21-15-04-16_0.bag
+        ├── ...
 ```
 
 

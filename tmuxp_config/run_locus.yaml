@@ -54,10 +54,6 @@ windows:
 
     ################################### RUN ###################################
 
-    # Launch basic components needed for running localization algorithms
-    # - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
-    - ;
-
     # Bags and topics of interest (switching if the log versions is older)
     - if [ $LOG_VERSION -eq 2 ]; then
       sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$START -r$RATE --clock  --topics clock:=/clock 
@@ -72,12 +68,14 @@ windows:
       hero/wio_ekf/odom vn100/imu_wori_wcov vn100/imu visual_odom /tf_static ;
       fi;
 
+    # launch rviz
+    - rviz -d $(rospack find locus)/rviz/locus.rviz
 
     # Front-end
-    - if [ $ROBOT_TYPE = 'husky' ]; then sleep 10;
+    - if [ $ROBOT_TYPE = 'husky' ]; then
       roslaunch locus locus.launch robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP;
       fi;
-      if [ $ROBOT_TYPE = 'spot' ]; then sleep 5;
+      if [ $ROBOT_TYPE = 'spot' ]; then
       roslaunch locus locus.launch robot_namespace:=$ROBOT_NAME;
       fi
 
