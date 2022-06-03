@@ -244,16 +244,22 @@ bool PointCloudLocalization::SetupICP() {
                                      // recompute
     gicp->setEuclideanFitnessEpsilon(0.01);
     ROS_INFO_STREAM("GICP activated.");
-    ROS_INFO_STREAM("MaxCorrespondenceDistance: " << gicp->getMaxCorrespondenceDistance());
+    ROS_INFO_STREAM(
+        "MaxCorrespondenceDistance: " << gicp->getMaxCorrespondenceDistance());
     ROS_INFO_STREAM("MaximumIterations: " << gicp->getMaximumIterations());
-    ROS_INFO_STREAM("TransformationEpsilon: " << gicp->getTransformationEpsilon());
-    ROS_INFO_STREAM("EuclideanFitnessEpsilon: " << gicp->getEuclideanFitnessEpsilon());
+    ROS_INFO_STREAM(
+        "TransformationEpsilon: " << gicp->getTransformationEpsilon());
+    ROS_INFO_STREAM(
+        "EuclideanFitnessEpsilon: " << gicp->getEuclideanFitnessEpsilon());
     ROS_INFO_STREAM("RANSACIterations: " << gicp->getRANSACIterations());
     ROS_INFO_STREAM("RotationEpsilon " << gicp->getRotationEpsilon());
-    ROS_INFO_STREAM("CorrespondenceRandomness:" << gicp->getCorrespondenceRandomness());
-    ROS_INFO_STREAM("MaximumOptimizerIterations:" << gicp->getMaximumOptimizerIterations());
+    ROS_INFO_STREAM(
+        "CorrespondenceRandomness:" << gicp->getCorrespondenceRandomness());
+    ROS_INFO_STREAM(
+        "MaximumOptimizerIterations:" << gicp->getMaximumOptimizerIterations());
     ROS_INFO_STREAM("ConvergeCriteria:" << gicp->getConvergeCriteria());
-    ROS_INFO_STREAM("RANSACOutlierRejectionThreshold: " << gicp->getRANSACOutlierRejectionThreshold());
+    ROS_INFO_STREAM("RANSACOutlierRejectionThreshold: "
+                    << gicp->getRANSACOutlierRejectionThreshold());
     icp_ = gicp;
 
     break;

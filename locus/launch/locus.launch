@@ -11,7 +11,6 @@
     <arg name="respawn" value="true" unless="$(arg use_gdb)"/>
     <arg name="robot_type" value="husky" if="$(eval robot_namespace.startswith('husky'))"/>
     <arg name="robot_type" value="spot"  if="$(eval robot_namespace.startswith('spot'))"/> 
-    <arg name="robot_type" value="xmaxx"  if="$(eval robot_namespace.startswith('xmaxx'))"/> 
 
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
@@ -24,9 +23,14 @@
 
     <group ns="$(arg robot_namespace)">
 
-      <!-- Load parameters -->
-      <rosparam file="$(find locus)/config/lo_filtering_$(arg robot_type).yaml"
-                subst_value="true"/>
+        <!-- Load parameters -->
+        <rosparam file="$(find locus)/config/body_filter_params_$(arg robot_type).yaml"
+                    subst_value="true"/>
+
+        <!-- Load robot description -->
+        <include file="$(find locus)/launch/robot_description.launch">
+            <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+        </include>
    
         <node
             pkg="locus"
@@ -66,7 +70,7 @@
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>          
             <rosparam file="$(find point_cloud_localization)/config/parameters.yaml" if="$(eval robot_type == 'husky')"/>
-            <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot' or robot_type == 'xmaxx')"/>
+            <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot')"/>
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
             <param name="localization/num_threads"       value="4" if="$(eval robot_namespace.startswith('husky'))" />
@@ -75,16 +79,7 @@
 
             <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('spot'))" />
             <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
-             <param name="mapper/num_threads"            value="1" if="$(eval robot_namespace.startswith('spot'))" />
-
-            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-
-            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-
+            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('spot'))" />
 
         </node>
 
@@ -165,7 +160,7 @@
 <!-- old way. TODO: removing after locus testing-->
 <!--node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid $(arg nodelet_manager)" output="screen" respawn="true"-->
 
-            <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load point_cloud_filter/CustomVoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
+        <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load point_cloud_filter/CustomVoxelGrid $(arg nodelet_manager)" output="screen" respawn="true">
             <remap from="~input" to="body_filter/output" />
 
             <rosparam subst_value="true">
@@ -188,20 +183,9 @@
 
            <param name="num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
            <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
-           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('aquila'))" />
-           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('xmaxx'))" />
-
 
         </node>
       
     </group>
-
-    <!-- <include file="$(find localizer_space_monitor)/launch/space_monitor.launch">
-        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-    </include> -->
-
-    <!--include file="$(find lidar_slip_detection)/launch/lidar_slip_detection.launch">
-        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-    </include-->
  
 </launch>

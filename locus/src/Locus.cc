@@ -730,13 +730,16 @@ bool Locus::LoadCalibrationFromTfTree() {
   }
 }
 
-bool Locus::CheckNans(const Imu& imu_msg)
-{
-  return (std::isnan(imu_msg.orientation.x) || std::isnan(imu_msg.orientation.y) || std::isnan(imu_msg.orientation.z) ||
-          std::isnan(imu_msg.orientation.w) || std::isnan(imu_msg.angular_velocity.x) ||
-          std::isnan(imu_msg.angular_velocity.y) || std::isnan(imu_msg.angular_velocity.z) ||
-          std::isnan(imu_msg.linear_acceleration.x) || std::isnan(imu_msg.linear_acceleration.y) ||
-          std::isnan(imu_msg.linear_acceleration.z));
+bool Locus::CheckNans(const Imu& imu_msg) {
+  return (
+      std::isnan(imu_msg.orientation.x) || std::isnan(imu_msg.orientation.y) ||
+      std::isnan(imu_msg.orientation.z) || std::isnan(imu_msg.orientation.w) ||
+      std::isnan(imu_msg.angular_velocity.x) ||
+      std::isnan(imu_msg.angular_velocity.y) ||
+      std::isnan(imu_msg.angular_velocity.z) ||
+      std::isnan(imu_msg.linear_acceleration.x) ||
+      std::isnan(imu_msg.linear_acceleration.y) ||
+      std::isnan(imu_msg.linear_acceleration.z));
 }
 
 void Locus::InitWithGTPointCloud(const std::string filename) {

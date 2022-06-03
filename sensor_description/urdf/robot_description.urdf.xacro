@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<robot name="husky_sensors" xmlns:xacro="http://ros.org/wiki/xacro">
+  <property name="sensor_props" value="${load_yaml('$(find sensor_description)/config/$(arg robot_namespace)_sensors.yaml')}" />
+
+  <!-- Base Link -->
+  <link name="base_link"/>
+
+  <!-- Arch -->
+  <link name="arch"/>
+  <joint name="top_plate_link_to_arch" type="fixed">
+    <parent link="base_link" />
+    <child link="arch" />
+    <origin xyz="0.114 0 0.225" rpy="0 0 0" />
+  </joint>
+
+  <!-- VLP-16 -->
+  <include filename="$(find sensor_description)/urdf/sensors/VLP-16.urdf.xacro" />
+
+  <xacro:VLP-16
+      parent="${sensor_props['velodyne']['parent']}"
+      name="${sensor_props['velodyne']['name']}"
+      topic="${sensor_props['velodyne']['topic_name']}"
+      hz="${sensor_props['velodyne']['rate']}"
+      samples="440"
+      noise="0.016"
+      gpu="true">
+    <origin xyz="${sensor_props['velodyne']['position']['x']}
+                 ${sensor_props['velodyne']['position']['y']}
+                 ${sensor_props['velodyne']['position']['z']}"
+            rpy="${sensor_props['velodyne']['orientation']['r']}
+                 ${sensor_props['velodyne']['orientation']['p']}
+                 ${sensor_props['velodyne']['orientation']['y']}" />
+  </xacro:VLP-16>
+  
+  <xacro:VLP-16
+      parent="${sensor_props['velodyne_rear']['parent']}"
+      name="${sensor_props['velodyne_rear']['name']}"
+      topic="${sensor_props['velodyne_rear']['topic_name']}"
+      hz="${sensor_props['velodyne_rear']['rate']}"
+      samples="440"
+      noise="0.016"
+      gpu="true">
+    <origin xyz="${sensor_props['velodyne_rear']['position']['x']}
+                 ${sensor_props['velodyne_rear']['position']['y']}
+                 ${sensor_props['velodyne_rear']['position']['z']}"
+            rpy="${sensor_props['velodyne_rear']['orientation']['r']}
+                 ${sensor_props['velodyne_rear']['orientation']['p']}
+                 ${sensor_props['velodyne_rear']['orientation']['y']}" />
+  </xacro:VLP-16>
+
+  <xacro:VLP-16
+      parent="${sensor_props['velodyne_front']['parent']}"
+      name="${sensor_props['velodyne_front']['name']}"
+      topic="${sensor_props['velodyne_front']['topic_name']}"
+      hz="${sensor_props['velodyne_front']['rate']}"
+      samples="440"
+      noise="0.016"
+      gpu="true">
+    <origin xyz="${sensor_props['velodyne_front']['position']['x']}
+                 ${sensor_props['velodyne_front']['position']['y']}
+                 ${sensor_props['velodyne_front']['position']['z']}"
+            rpy="${sensor_props['velodyne_front']['orientation']['r']}
+                 ${sensor_props['velodyne_front']['orientation']['p']}
+                 ${sensor_props['velodyne_front']['orientation']['y']}" />
+  </xacro:VLP-16>
+
+  <!-- VN100 -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <origin xyz="$(optenv HUSKY_IMU_XYZ 0.19 0 0.149)" rpy="$(optenv HUSKY_IMU_RPY 0 -1.5708 3.1416)" />
+    <parent link="base_link" />
+    <child link="imu_link" />
+  </joint>
+  <xacro:include filename="$(find sensor_description)/urdf/sensors/imu_vn100.urdf.xacro"/>
+  <xacro:vn100
+      robot_namespace="$(arg robot_namespace)"
+      name="${sensor_props['vn100']['name']}"
+      topic_name="${sensor_props['vn100']['topic_name']}"
+      hz="${sensor_props['vn100']['rate']}"
+      parent="imu_link">
+    <origin xyz="${sensor_props['vn100']['position']['x']}
+                 ${sensor_props['vn100']['position']['y']}
+                 ${sensor_props['vn100']['position']['z']}"
+            rpy="${sensor_props['vn100']['orientation']['r']}
+                 ${sensor_props['vn100']['orientation']['p']}
+                 ${sensor_props['vn100']['orientation']['y']}" />
+  </xacro:vn100>
+
+</robot>

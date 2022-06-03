@@ -5,13 +5,12 @@
 
 #pragma once
 
-
+#include "point_cloud_filter/NormalComputationConfig.h"
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/filters/filter.h>
 #include <pcl/search/kdtree.h>
 #include <pcl_ros/filters/filter.h>
 #include <ros/ros.h>
-#include "point_cloud_filter/NormalComputationConfig.h"
 namespace point_cloud_filter {
 
 enum SearchNormalsMethod { RADIUS, KNN };
