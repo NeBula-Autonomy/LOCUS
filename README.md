@@ -82,7 +82,7 @@ https://github.com/NeBula-Autonomy/nebula-odometry-dataset
 
 There are many datsets there to test on, across a range of environments and with data from different robotic platforms. 
 
-Here, we give an example from dataset C, from a Husky Robot in the Statsop Power Plant, but the same steps apply for any other dataset we have released. 
+Here, we give an example from dataset C, from a Husky Robot in the Statsop Power Plant, but the same steps apply for any other dataset we have released. The datset is large (45.8 GB), but to do a quick test, you can download just the first few lidar bags, and all non-lidar bags. 
 
 Note: the steps for running LOCUS live on the robot is no different from running on a dataset - the datasets are run and processed in real-time.
 
