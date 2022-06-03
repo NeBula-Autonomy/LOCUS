@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot name="husky_sensors" xmlns:xacro="http://ros.org/wiki/xacro">
-  <property name="sensor_props" value="${load_yaml('$(find sensor_description)/config/$(arg robot_namespace)_sensors.yaml')}" />
+  <xacro:property name="sensor_props" value="${load_yaml('$(find sensor_description)/config/$(arg robot_namespace)_sensors.yaml')}" />
 
   <!-- Base Link -->
   <link name="base_link"/>
@@ -14,7 +14,7 @@
   </joint>
 
   <!-- VLP-16 -->
-  <include filename="$(find sensor_description)/urdf/sensors/VLP-16.urdf.xacro" />
+  <xacro:include filename="$(find sensor_description)/urdf/sensors/VLP-16.urdf.xacro" />
 
   <xacro:VLP-16
       parent="${sensor_props['velodyne']['parent']}"
