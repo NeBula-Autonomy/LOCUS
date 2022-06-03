@@ -60,8 +60,7 @@
             <param name="b_integrate_interpolated_odom" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
             <param name="b_integrate_interpolated_odom" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
 
-            <rosparam file="$(find locus)/config/lo_settings.yaml" unless="$(eval robot_type == 'spot')"/>
-            <rosparam file="$(find locus)/config/lo_settings_spot.yaml" if="$(eval robot_type == 'spot')"/>
+            <rosparam file="$(find locus)/config/lo_settings.yaml" />
 
             <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('spot'))"/>
             <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('husky'))"/>

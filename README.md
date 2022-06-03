@@ -10,10 +10,10 @@ Install [ROS](http://wiki.ros.org/ROS/Installation)
 
 Install catkin tools
 ```
-sudo apt-get install ros-kinetic-catkin python-catkin-tools python3-catkin-tools
+sudo apt-get install ros-melodic-catkin python-catkin-tools python3-catkin-tools
 ```
 
-Install PCL 
+Install PCL_ROS
 ```
 sudo apt-get install ros-melodic-pcl-ros # for the melodic distro - Ubuntu 18.04
 sudo apt-get install ros-noetic-pcl-ros # for the noetc distro - Ubuntu 20.04
@@ -27,6 +27,12 @@ sudo apt install ros-melodic-tf2-geometry-msgs
 # for the noetic distro - Ubuntu 20.04
 sudo apt install ros-noetic-tf2-sensor-msgs 
 sudo apt install ros-noetic-tf2-geometry-msgs 
+```
+
+Install tmuxp (for our running scripts)
+tmuxp is a python wrapper for tmux allowing easy launching of multi-window, multi-tile tmux sessions.
+```
+sudo apt install tmuxp
 ```
 
 Build this package in a catkin workspace, e.g. 
@@ -46,16 +52,7 @@ Add the workspace sourcing to your bashrc (changing the filepath to match where 
 echo "source ~/catkin_ws/devel/setup.bash --extend" >> ~/.bashrc
 ```
 
-
-
-## Install tmuxp (for our running scripts)
-tmuxp is a python wrapper for tmux allowing easy launching of multi-window, multi-tile tmux sessions.
-```
-sudo apt install tmuxp
-```
-
-
-## Install Clang formatting
+## Setup Clang formatting
 For development, setup clang formatting for the repo
 
 ```
@@ -68,7 +65,6 @@ This will install clang and put a pre-commit hook to maintain clang formatting. 
 ```
 git clang-format -f
 ```
-
 
 
 
@@ -175,7 +171,7 @@ The tmux script will store output odometry, map and stats in a new folder `locus
 
 
 ## Running on other NeBula datasets
-See other tmuxp configs for each of our datasets in the `LOCUS/tmux_config/nebula_odometry_dataset` folder.
+See other tmuxp configs for each of our datasets in the `LOCUS/tmux_config/nebula_odometry_dataset` folder (**COMING SOON**).
 
 Note that the sensor configurations are not the same for every dataset (they are included in the `extra` folder), even if the robot name is the same. The tmuxp script handles copying the sensor config (e.g. `husky4_sensors.yaml`) into LOCUS. Having the wrong sensor config will lead to poor results. 
 
@@ -184,17 +180,37 @@ The tmuxp script also copies the fiducial calibration file (e.g. `fiducial_calib
 
 # Running LOCUS on your own datasets / Robot
 
+There are XX main parts to change in LOCUS to set up for your own robot
+1. Sensor calibration (mainly lidar to IMU, lidar to base_link calibrations)
+2. Body filter dimensions 
+3. Scan to map parameters
+4. Launch parameters
 
+In general, it is recommended to start with an example of a Spot or Husky, and modify it to suit your needs - i.e. just call your robot `husky1` for the purposes of testing with LOCUS. 
 
+## Sensor Calibration 
 
-To do 
+You can see the sensor calibration files in `LOCUS/sensor_description/config`, e.g. `husky4_sensors.yaml`. There are multiple transfers there, but the main frames we care about for LOCUS are:
+1. `base_link` - this is the frame assumed for all odometry inputs, and is the frame in which we compute odometry (lidar and IMU is transformed to this frame)
+2. `arch` - for husky this is an interim frame from which the sensor poses are described
+3. `velodyne`, `velodyne_front` and `velodyne_rear` - the frames for each of the velodynes
+4. `vn100` - the frame of the IMU
 
+Other frames are defined in the URDF in `LOCUS/sensor_description/urdf` (e.g. `arch` to `base_link`). 
 
-# TODOS
+Change these transforms for your robot to get the correct lidar to IMU transform, and those respective frame transforms to `base_link`. The same frame names are expected (e.g. `{robot_name}/base_link`)
 
-- [x] Rename all lo_frontend instances to locus
-- [ ] Simplify our robot-specific files for a generic robot (e.g. no husky/spot anymore) and define how you want to let the user load sensor extrinsic, either hardcoded or by TF
+## Body filter dimensions 
+The body filter removes points from around the robot (e.g. self-occlusion). These parameters are found in `LOCUS/locus/config`: `body_filter_params_husky.yaml` and `body_filter_params_spot.yaml`. Modify one of these to create a box appropriate for your robot.
 
+## Scan to Map parameters
+It is not essential to change these parameters, but you can see two different versions in `LOCUS/point_cloud_localization/config` for Spot and Husky. The main adjustment to consider is the number of ICP iterations. 
+
+## Launch parameters
+Go to the launch file in `LOCUS/locus/launch/locus.launch`. Modify the following:
+1. `ODOMETRY_TOPIC` - to match your input odometry (optional)
+2. `b_integrate_interpolated_odom` - choose `true` or `false` to match your needs. This will interpolate the prior input odom to compute the transforms and is recommended for low rate odom inputs (e.g. 20 Hz) - for inputs of 50 Hz and above it is recommended to use `false`.
+3. Number of threads - for `localization/num_threads`, `icp/num_threads`, `mapper/num_threads` and the voxel filter `num_threads` - based on your computational capability (e.g. Spot uses 1 core, Husky uses 4)
 
 
 # Cite
@@ -222,36 +238,4 @@ See examples of an earlier verison of LOCUS running here: https://www.youtube.co
   year={2020},
   publisher={IEEE}
 }
-```
-
-
-# Old 
-
-
-
-# Testing in Ubuntu 20.04 on Dell Precision 
-
-
-
-### ROS Install summary
-http://wiki.ros.org/noetic/Installation/Ubuntu
-```
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo apt install curl # if you haven't already installed curl
-curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-sudo apt update
-sudo apt install ros-noetic-desktop
-```
-
-Source ros to bashrc
-```
-echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
-```
-
-Ros build tools 
-```
-sudo apt install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
-sudo apt install python3-rosdep
-sudo rosdep init
-rosdep update
 ```
