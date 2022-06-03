@@ -4,7 +4,7 @@ environment:
   DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/4_Husky4_Tunnel_SR2
   DATA_FOLDER: rosbag/
   RUN_NUMBER: "test"
-  LOG_VERSION: '2'
+  LOG_VERSION: '1'
   NUM_VLP: '2'
   ROBOT_NAME: husky4
   ROBOT_TYPE: husky

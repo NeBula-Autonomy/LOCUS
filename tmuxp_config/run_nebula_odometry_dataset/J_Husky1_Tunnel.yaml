@@ -6,8 +6,8 @@ environment:
   RUN_NUMBER: "test"
   LOG_VERSION: '2'
   NUM_VLP: '3'
-  ROBOT_NAME: spot1
-  ROBOT_TYPE: spot
+  ROBOT_NAME: husky1
+  ROBOT_TYPE: husky
   BASE_NAME: base1
   START: '50'
   RATE: '1'
