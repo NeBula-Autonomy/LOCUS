@@ -149,7 +149,7 @@ And RViz should open, eventually giving you something looking like:
 
 The whole process should run something like:
 
-![video of locus runnig](media/locus_demo_C_husky4_alpha1.mp4)
+![video of locus runnig](media/locus_running.gif)
 
 
 ## Output data
