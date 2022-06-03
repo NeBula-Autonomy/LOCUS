@@ -12,7 +12,7 @@ environment:
   START: "600"
   RATE: "1.0"
   TIME_TO_END: "2400"
-  TIME_TO_MAP_SAVE: "1550"
+  TIME_TO_MAP_SAVE: "2400"
   ODOM: locus/odometry
 
 options:
