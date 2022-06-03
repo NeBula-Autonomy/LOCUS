@@ -19,7 +19,7 @@ environment:
   BASE_NAME: base1
   
   # Rosbag parameters
-  START: "0"
+  START: "20"
   RATE: "1.0"
 
   # See https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md 

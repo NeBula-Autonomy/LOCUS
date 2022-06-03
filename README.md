@@ -2,7 +2,7 @@
 
 LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi-Sensor Lidar-Centric Solution for High-Precision Odometry and 3D Mapping in Real-Time.
 
-![alt text](readme.png)
+![alt text](media/readme.png)
 
 # Build Instructions
 
@@ -141,11 +141,15 @@ tmuxp load {path_to_locus}/LOCUS/tmuxp_config/run_locus.yaml
 
 You should see a tmux paned terminal that looks something like:
 
-![tmux screen with panes for rosbag play, rviz and locus](images/tmux_screen_launch.png)
+![tmux screen with panes for rosbag play, rviz and locus](media/tmux_screen_launch.png)
 
 And RViz should open, eventually giving you something looking like:
 
-![rviz showing the map from dataset C Husky4 Urban Alpha1](images/rviz_locus_dataset_C.png)
+![rviz showing the map from dataset C Husky4 Urban Alpha1](media/rviz_locus_dataset_C.png)
+
+The whole process should run something like:
+
+![video of locus runnig](media/locus_demo_C_husky4_alpha1.mp4)
 
 
 ## Output data
@@ -197,13 +201,7 @@ To do
 # TODOS
 
 - [x] Rename all lo_frontend instances to locus
-- [ ] Cleanup comments, the less the better, just keep the very relevant ones
-- [ ] Cleanup unused parameters, class variables, publishers and subscribers 
-- [ ] Bring in MDC in launch
-- [ ] Remove filter_.Filter call in LidarCallback as nothing is being filtered internally anymore and remove point_cloud_filter package accordingly
 - [ ] Simplify our robot-specific files for a generic robot (e.g. no husky/spot anymore) and define how you want to let the user load sensor extrinsic, either hardcoded or by TF
-- [ ] Suggest parameters for open/closed space in yaml where relevant (e.g. PointCloudOdometry, PointCloudLocalization)
-- [ ] Update README.md with instructions on how to setup/run the package
 
 
 
@@ -220,6 +218,7 @@ If you use this code, or compare to it in your work, please cite the following:
 }
 ```
 
+See examples of an earlier verison of LOCUS running here: https://www.youtube.com/watch?v=b2lBQ-q5rOE
 ```
 @article{LOCUS,
   title={{LOCUS} - {A} {M}ulti-{S}ensor {L}idar-{C}entric {S}olution for {H}igh-{P}recision {O}dometry and 3{D} {M}apping in {R}eal-{T}ime},
@@ -237,12 +236,6 @@ If you use this code, or compare to it in your work, please cite the following:
 # Old 
 
 
-# Prerequisites
-
-`tf2_sensor_msgs` may not be installed by default, so install with:
-```
-sudo apt install ros-$(rosversion -d)-tf2-sensor-msgs
-```
 
 # Testing in Ubuntu 20.04 on Dell Precision 
 
