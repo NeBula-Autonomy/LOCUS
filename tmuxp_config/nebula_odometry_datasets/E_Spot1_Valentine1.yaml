@@ -2,7 +2,7 @@ session_name: locus_dataset
 
 environment:
   # Path for the dataset
-  DATA_PATH: /home/costar/data/C_Husky4_Urban_Alpha1
+  DATA_PATH: /home/costar/data/E_Spot1_Valentine1
   DATA_FOLDER: rosbag/
   # Change the run number to save the output data in a different folder
   RUN_NUMBER: "test_01"
@@ -10,16 +10,16 @@ environment:
   # version of logging. If unsure, select 2 (the latest). 1 is for tunnel datasets
   LOG_VERSION: "2" 
   # Number of lidars to use (if available)
-  NUM_VLP: "3"
+  NUM_VLP: "1"
 
   # Change the robot name and type to match the dataset 
-  ROBOT_NAME: husky4
-  ROBOT_TYPE: husky
+  ROBOT_NAME: spot1
+  ROBOT_TYPE: spot
   # If unsure, leave as base1
   BASE_NAME: base1
   
   # Rosbag parameters
-  START: "20"
+  START: "0"
   RATE: "1.0"
 
   # See https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md 
@@ -69,7 +69,7 @@ windows:
       fi;
 
     # launch rviz
-    - rviz -d $(rospack find locus)/rviz/$ROBOT_NAME_locus.rviz
+    - rviz -d $(rospack find locus)/rviz/$(echo $ROBOT_NAME)_locus.rviz
 
     # Front-end
     - if [ $ROBOT_TYPE = 'husky' ]; then
