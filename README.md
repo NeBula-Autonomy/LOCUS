@@ -88,9 +88,9 @@ Note: the steps for running LOCUS live on the robot is no different from running
 
 ## Download dataset
 
-Download data from here: https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md
-1. Download the rosbag data for dataset C: https://nextcloud.robotics.caltech.edu/index.php/s/6QNKyLN85WqN9Rd - this will be approximately 45.8 GB (out smallest dataset)
-2. Download the Extras: https://nextcloud.robotics.caltech.edu/index.php/s/TyoFS93rRo5rgXa
+Download data from [nebula-odometry-dataset](https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md)
+1. Download the rosbag data for [dataset C](https://nextcloud.robotics.caltech.edu/index.php/s/6QNKyLN85WqN9Rd) - this will be approximately 45.8 GB (out smallest dataset)
+2. Download the [Extras configuration files](https://nextcloud.robotics.caltech.edu/index.php/s/TyoFS93rRo5rgXa) for dataset C.
 
 Place the data in a common folder, e.g. 
 ```
@@ -117,7 +117,7 @@ i.e. have a root folder, with the bagfiles in a rosbag folder, and the other fil
         ├── ...
 ```
 
-See https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md for an explanation of what each file is. 
+See [here](https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md) for an explanation of what each file is. 
 
 ## Edit the tmux script 
 Edit our tmux running script `LOCUS/tmuxp_config/run_locus.yaml` and modify the filepaths for your system. From the `main` branch, you should only need to modify the `DATA_PATH`
