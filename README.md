@@ -228,7 +228,7 @@ If you use this code, or compare to it in your work, please cite the following:
 @article{reinke2022iros,
   title={LOCUS 2.0: Robust and Computationally Efficient LiDAR Odometry for Real-Time Underground 3D Mapping},
   author={Andrzej Reinke, Matteo Palieri, Benjamin Morrell, Yun Chang, Kamak Ebadi, Luca Carlone, Ali-akbar Agha-mohammadi},
-  journal={TODO},
+  journal={IEEE Robotics and Automation Letters},
   year={2022},
   publisher={TODO}
 }
