@@ -231,6 +231,7 @@ If you use this code, or compare to it in your work, please cite the following:
   journal={IEEE Robotics and Automation Letters},
   year={2022},
   publisher={TODO}
+  doi={10.1109/LRA.2022.3181357}
 }
 ```
 
