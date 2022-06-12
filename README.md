@@ -188,7 +188,7 @@ The tmuxp script also copies the fiducial calibration file (e.g. `fiducial_calib
 
 # Running LOCUS on your own datasets / Robot
 
-There are XX main parts to change in LOCUS to set up for your own robot
+There are four main parts to change in LOCUS to set up for your own robot
 1. Sensor calibration (mainly lidar to IMU, lidar to base_link calibrations)
 2. Body filter dimensions 
 3. Scan to map parameters
