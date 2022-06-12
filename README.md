@@ -225,14 +225,15 @@ Go to the launch file in `LOCUS/locus/launch/locus.launch`. Modify the following
 If you use this code, or compare to it in your work, please cite the following:
 
 ```
-@article{reinke2022iros,
-  title={LOCUS 2.0: Robust and Computationally Efficient LiDAR Odometry for Real-Time 3D Mapping},
-  author={Andrzej Reinke, Matteo Palieri, Benjamin Morrell, Yun Chang, Kamak Ebadi, Luca Carlone, Ali-akbar Agha-mohammadi},
-  journal={IEEE Robotics and Automation Letters},
+@ARTICLE{reinke2022iros,
+  author={Reinke, Andrzej and Palieri, Matteo and Morrell, Benjamin and Chang, Yun and Ebadi, Kamak and Carlone, Luca and Agha-Mohammadi, Ali-Akbar},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={LOCUS 2.0: Robust and Computationally Efficient Lidar Odometry for Real-Time 3D Mapping}, 
   year={2022},
-  publisher={TODO}
-  doi={10.1109/LRA.2022.3181357}
-}
+  volume={},
+  number={},
+  pages={1-8},
+  doi={10.1109/LRA.2022.3181357}}
 ```
 
 See examples of an earlier verison of LOCUS running here: https://www.youtube.com/watch?v=b2lBQ-q5rOE
