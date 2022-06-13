@@ -69,7 +69,7 @@ windows:
       fi;
 
     # launch rviz
-    - rviz -d $(rospack find locus)/rviz/$ROBOT_NAME_locus.rviz
+    - rviz -d $(rospack find locus)/rviz/$(echo $ROBOT_NAME)_locus.rviz
 
     # Front-end
     - if [ $ROBOT_TYPE = 'husky' ]; then
