@@ -32,6 +32,7 @@ sudo apt install ros-noetic-tf2-geometry-msgs
 Install tmuxp (for our running scripts)
 tmuxp is a python wrapper for tmux allowing easy launching of multi-window, multi-tile tmux sessions.
 ```
+sudo apt install tmux
 sudo apt install tmuxp
 ```
 
@@ -41,7 +42,10 @@ Build this package in a catkin workspace, e.g.
 mkdir -p catkin_ws/src
 cd catkin_ws
 catkin init
-catkin config -DCMAKE_BUILD_TYPE=Release 
+# For melodic install
+catkin config -DCMAKE_BUILD_TYPE=Release --extend /opt/ros/melodic
+# For noetic install
+catkin config -DCMAKE_BUILD_TYPE=Release --extend /opt/ros/noetic
 cd src
 git clone git@github.com:NeBula-Autonomy/LOCUS.git
 catkin build locus
@@ -49,7 +53,7 @@ catkin build locus
 
 Add the workspace sourcing to your bashrc (changing the filepath to match where your catkin workspace is)
 ```
-echo "source ~/catkin_ws/devel/setup.bash --extend" >> ~/.bashrc
+echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 ```
 
 ## Run Unit tests

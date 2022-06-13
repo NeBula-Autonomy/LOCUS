@@ -45,6 +45,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_sensor_msgs
   dynamic_reconfigure
+  sensor_description
 )
 
 find_package(OpenMP)
@@ -82,6 +83,7 @@ catkin_package(
     tf2_geometry_msgs
     tf2_sensor_msgs
     dynamic_reconfigure
+    sensor_description
     message_filters
   DEPENDS
     Boost
