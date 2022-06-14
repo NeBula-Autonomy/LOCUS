@@ -13,6 +13,7 @@ Authors:
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <dynamic_reconfigure/Reconfigure.h>
+#include <eigen_conversions/eigen_msg.h>
 #include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>

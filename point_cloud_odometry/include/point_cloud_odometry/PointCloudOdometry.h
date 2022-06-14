@@ -38,7 +38,6 @@
 #define POINT_CLOUD_ODOMETRY_H
 
 #include <diagnostic_msgs/DiagnosticStatus.h>
-// #include <eigen_conversions/eigen_msg.h>
 #include <frontend_utils/CommonFunctions.h>
 #include <frontend_utils/CommonStructs.h>
 #include <geometry_msgs/PoseStamped.h>

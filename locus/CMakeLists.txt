@@ -31,6 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
   parameter_utils
   pcl_ros
   pcl_conversions
+  eigen_conversions
   core_msgs
   diagnostic_msgs
   geometry_msgs
@@ -69,6 +70,7 @@ catkin_package(
     parameter_utils
     pcl_ros
     pcl_conversions
+    eigen_conversions
     core_msgs
     diagnostic_msgs
     geometry_msgs
