@@ -21,7 +21,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 find_package(catkin REQUIRED COMPONENTS
     diagnostic_msgs
-    eigen_conversions
     geometry_msgs
     geometry_utils
     multithreaded_gicp
@@ -39,7 +38,6 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     diagnostic_msgs
-    eigen_conversions
     geometry_msgs
     geometry_utils
     multithreaded_gicp

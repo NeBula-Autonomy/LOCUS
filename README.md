@@ -19,14 +19,16 @@ sudo apt-get install ros-melodic-pcl-ros # for the melodic distro - Ubuntu 18.04
 sudo apt-get install ros-noetic-pcl-ros # for the noetc distro - Ubuntu 20.04
 ```
 
-Install `tf2_sensor_msgs`  and `tf2_geometry_msgs`
+Install `tf2_sensor_msgs`, `tf2_geometry_msgs` and `eigen_conversions`
 ```
 # for the melodic distro - Ubuntu 18.04
 sudo apt install ros-melodic-tf2-sensor-msgs 
 sudo apt install ros-melodic-tf2-geometry-msgs 
+sudo apt install ros-melodic-eigen-conversions
 # for the noetic distro - Ubuntu 20.04
 sudo apt install ros-noetic-tf2-sensor-msgs 
 sudo apt install ros-noetic-tf2-geometry-msgs 
+sudo apt install ros-noetic-eigen-conversions
 ```
 
 Install tmuxp (for our running scripts)
@@ -47,7 +49,10 @@ catkin config -DCMAKE_BUILD_TYPE=Release --extend /opt/ros/melodic
 # For noetic install
 catkin config -DCMAKE_BUILD_TYPE=Release --extend /opt/ros/noetic
 cd src
+# With ssh
 git clone git@github.com:NeBula-Autonomy/LOCUS.git
+# With https
+git clone https://github.com/NeBula-Autonomy/LOCUS.git
 catkin build locus
 ```
 

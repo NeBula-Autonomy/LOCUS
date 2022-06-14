@@ -21,6 +21,7 @@
   <build_depend>parameter_utils</build_depend>
   <build_depend>pcl_ros</build_depend>
   <build_depend>pcl_conversions</build_depend>
+  <build_depend>eigen_conversions</build_depend>
   <build_depend>core_msgs</build_depend>
   <build_depend>diagnostic_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
@@ -49,6 +50,7 @@
   <run_depend>parameter_utils</run_depend>
   <run_depend>pcl_ros</run_depend>
   <run_depend>pcl_conversions</run_depend>
+  <run_depend>eigen_conversions</run_depend>
   <run_depend>core_msgs</run_depend>
   <run_depend>diagnostic_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
