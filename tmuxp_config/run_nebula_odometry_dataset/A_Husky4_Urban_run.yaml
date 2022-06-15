@@ -1,7 +1,7 @@
 session_name: A_Husky4_Urban_run
 
 environment:
-  DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/main_datasets/1_Husky4_Beta2/
+  DATA_PATH: /home/costar/data/1_Husky4_Beta2/
   DATA_FOLDER: rosbag/
   RUN_NUMBER: "test"
   LOG_VERSION: "2"
@@ -52,7 +52,7 @@ windows:
       fi;
 
     # launch rviz
-    - rviz -d $(rospack find locus)/rviz/locus.rviz
+    - rviz -d $(rospack find locus)/rviz/$(echo $ROBOT_NAME)_locus.rviz
 
     # Front-end
     - if [ $ROBOT_TYPE = 'husky' ]; then
