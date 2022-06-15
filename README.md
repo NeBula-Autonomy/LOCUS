@@ -6,6 +6,8 @@ LOCUS (Lidar Odometry for Consistent operation in Uncertain Settings) is a Multi
 
 # Build Instructions
 
+See [YouTube video](https://youtu.be/f_S4_6deQuI)
+
 Install [ROS](http://wiki.ros.org/ROS/Installation)
 
 Install catkin tools
