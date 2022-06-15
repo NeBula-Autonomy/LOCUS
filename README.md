@@ -10,7 +10,8 @@ Install [ROS](http://wiki.ros.org/ROS/Installation)
 
 Install catkin tools
 ```
-sudo apt-get install ros-melodic-catkin python-catkin-tools python3-catkin-tools
+sudo apt-get install ros-melodic-catkin python-catkin-tools python3-catkin-tools # for the melodic distro - Ubuntu 18.04
+sudo apt-get install ros-noetic-catkin python-catkin-tools python3-catkin-tools # for the noetc distro - Ubuntu 20.04
 ```
 
 Install PCL_ROS
