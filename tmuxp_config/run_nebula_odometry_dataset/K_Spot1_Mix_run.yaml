@@ -1,0 +1,108 @@
+session_name: K_Spot1_Mix_run
+
+environment:
+  DATA_PATH: /home/costar/data/K_Spot1_Mix
+  DATA_FOLDER: rosbag/
+  RUN_NUMBER: "test"
+  LOG_VERSION: '2'
+  NUM_VLP: '3'
+  ROBOT_NAME: spot1
+  ROBOT_TYPE: spot
+  BASE_NAME: base1
+  START: '600'
+  RATE: '1'
+  TIME_TO_END: '1800'
+  TIME_TO_MAP_SAVE: '1900'
+  ODOM: locus/odometry
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: locus
+  focus: true
+  layout: tiled
+  shell_command_before:
+    - rosparam set /use_sim_time true
+    # Set up the parameter files from the GT products
+    - cp $DATA_PATH/fiducial_calibration_$ROBOT_NAME.yaml ~/.ros/
+    - if [ $ROBOT_TYPE = 'husky' ]; then
+      cp $DATA_PATH/$ROBOT_NAME*.yaml $(rospack find sensor_description)/config/ ;
+      fi;
+    - if [ $ROBOT_TYPE = 'spot' ]; then
+      cp $DATA_PATH/$ROBOT_NAME*.yaml $(rospack find sensor_description)/config/ ;
+      fi;
+
+  panes:
+
+    ################################### RUN ###################################
+
+    # Bags and topics of interest (switching if the log versions is older)
+    - if [ $LOG_VERSION -eq 2 ]; then
+      sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$START -r$RATE --clock  --topics clock:=/clock
+      /$ROBOT_NAME/velodyne_points /$ROBOT_NAME/velodyne_front/velodyne_points /$ROBOT_NAME/velodyne_rear/velodyne_points
+      /$ROBOT_NAME/hero/wio_ekf/odom /$ROBOT_NAME/vn100/imu_wori_wcov /$ROBOT_NAME/visual_odom
+      /$ROBOT_NAME/wheel_odom /$ROBOT_NAME/hvm/lidar/points /$ROBOT_NAME/hvm/odometry
+      /$ROBOT_NAME/unreconciled_artifact /$ROBOT_NAME/uwb_frontend/range_measurements ;
+      fi;
+      if [ $LOG_VERSION -eq 1 ]; then
+      sleep 10;rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$START -r$RATE --clock  --prefix $ROBOT_NAME/
+      --topics clock:=/clock velodyne_points velodyne_front/velodyne_points /velodyne_rear/velodyne_points
+      hero/wio_ekf/odom vn100/imu_wori_wcov vn100/imu visual_odom /tf_static ;
+      fi;
+
+    # launch rviz
+    - rviz -d $(rospack find locus)/rviz/$(echo $ROBOT_NAME)_locus.rviz
+
+    # Front-end
+    - if [ $ROBOT_TYPE = 'husky' ]; then
+      roslaunch locus locus.launch robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP;
+      fi;
+      if [ $ROBOT_TYPE = 'spot' ]; then
+      roslaunch locus locus.launch robot_namespace:=$ROBOT_NAME;
+      fi
+
+
+
+- window_name: record_at_end
+  focus: false
+  layout: tiled
+  shell_command_before:
+    - rosparam set /use_sim_time true
+
+  panes:
+    # Map
+    # Front-End Map
+    - sleep $TIME_TO_MAP_SAVE; rosrun pcl_ros pointcloud_to_pcd input:=/$ROBOT_NAME/locus/octree_map _prefix:=$DATA_PATH/locus_$RUN_NUMBER/map_locus
+
+    # ..
+    -
+
+
+- window_name: record
+  focus: false
+  layout: tiled
+  shell_command_before:
+    - mkdir $DATA_PATH/locus_$RUN_NUMBER
+    - rosparam set /use_sim_time true
+
+  panes:
+
+    ################################### RECORD ###################################
+
+    # Odometry
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/odometry.bag /$ROBOT_NAME/$ODOM /$ROBOT_NAME/locus/localization_integrated_estimate /$ROBOT_NAME/locus/odometry_integrated_estimate /$ROBOT_NAME/locus/localization_incremental_estimate /$ROBOT_NAME/locus/odometry_incremental_estimate
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/stationary.bag /$ROBOT_NAME/stationary_accel
+
+    # Odometry Rate and Delay
+    - rostopic hz /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/rate.txt
+    - rostopic delay /$ROBOT_NAME/$ODOM -w3 >> $DATA_PATH/locus_$RUN_NUMBER/delay.txt
+
+    # Computation Time Profiling
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/lidar_callback_duration.bag /$ROBOT_NAME/locus/lidar_callback_duration
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_scan_duration.bag /$ROBOT_NAME/locus/scan_to_scan_duration
+    - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_map_duration.bag /$ROBOT_NAME/locus/scan_to_submap_duration
+
+
+    ################################ END RECORDING ###############################
+    - sleep $TIME_TO_END; rosnode kill -a
