@@ -144,6 +144,18 @@ For other datasets, you will need to modify other parameters, such as:
 
 Other parameters are explaing in the yaml file. 
 
+## Visualize tf tree
+
+To run locus with tf tree run python script from ```locus/scripts``` 
+```
+rosrun locus odom_to_map_tf.py <robot_ns>
+```
+
+i.e. for Nebula-costar-odometry datasets
+```
+rosrun locus odom_to_map_tf.py husky4
+```
+(it visualizes the path as well)
 
 ## Run the test 
 
