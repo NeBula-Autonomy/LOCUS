@@ -104,4 +104,7 @@ windows:
     - rosbag record -O $DATA_PATH/locus_$RUN_NUMBER/scan_to_map_duration.bag /$ROBOT_NAME/locus/scan_to_submap_duration
 
     ################################ END RECORDING ###############################
-    - sleep $TIME_TO_END; rosnode kill -a
+    # Uncomment the line below to automatically end the run
+    # - sleep $TIME_TO_END; rosnode kill -a 
+    # Use the line below to prepare a kill command when you want to stop
+    - rosnode kill -a \
