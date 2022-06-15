@@ -197,6 +197,8 @@ Note that the sensor configurations are not the same for every dataset (they are
 
 The tmuxp script also copies the fiducial calibration file (e.g. `fiducial_calibration_husky4.yaml`), which gives the correct initial position to match the ground truth odometry. If this is not updated, the initial pose will be wrong. If it does not exist in your `~/.ros` folder, the robot will start at the origin with zero rotation. This only matters if you want to compare to our ground truth. 
 
+**Note**: if you want to have locus end automatically after the dataset is finished, uncomment line 109 of the tmuxp config files.  
+
 
 # Running LOCUS on your own datasets / Robot
 
