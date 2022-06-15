@@ -191,7 +191,7 @@ The tmux script will store output odometry, map and stats in a new folder `locus
 
 
 ## Running on other NeBula datasets
-See other tmuxp configs for each of our datasets in the `LOCUS/tmux_config/nebula_odometry_dataset` folder (**COMING SOON**).
+See other tmuxp configs for each of our datasets in the `LOCUS/tmux_config/run_nebula_odometry_dataset` folder.
 
 Note that the sensor configurations are not the same for every dataset (they are included in the `extra` folder), even if the robot name is the same. The tmuxp script handles copying the sensor config (e.g. `husky4_sensors.yaml`) into LOCUS. Having the wrong sensor config will lead to poor results. 
 
