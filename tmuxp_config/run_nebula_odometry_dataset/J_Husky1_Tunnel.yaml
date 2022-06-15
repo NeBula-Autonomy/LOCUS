@@ -107,4 +107,7 @@ windows:
 
 
     ################################ END RECORDING ###############################
-    - sleep $TIME_TO_END; rosnode kill -a
+    # Uncomment the line below to automatically end the run
+    # - sleep $TIME_TO_END; rosnode kill -a 
+    # Use the line below to prepare a kill command when you want to stop
+    - rosnode kill -a \

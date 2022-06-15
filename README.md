@@ -193,11 +193,13 @@ The tmux script will store output odometry, map and stats in a new folder `locus
 
 
 ## Running on other NeBula datasets
-See other tmuxp configs for each of our datasets in the `LOCUS/tmux_config/nebula_odometry_dataset` folder (**COMING SOON**).
+See other tmuxp configs for each of our datasets in the `LOCUS/tmux_config/run_nebula_odometry_dataset` folder.
 
 Note that the sensor configurations are not the same for every dataset (they are included in the `extra` folder), even if the robot name is the same. The tmuxp script handles copying the sensor config (e.g. `husky4_sensors.yaml`) into LOCUS. Having the wrong sensor config will lead to poor results. 
 
 The tmuxp script also copies the fiducial calibration file (e.g. `fiducial_calibration_husky4.yaml`), which gives the correct initial position to match the ground truth odometry. If this is not updated, the initial pose will be wrong. If it does not exist in your `~/.ros` folder, the robot will start at the origin with zero rotation. This only matters if you want to compare to our ground truth. 
+
+**Note**: if you want to have locus end automatically after the dataset is finished, uncomment line 109 of the tmuxp config files.  
 
 
 # Running LOCUS on your own datasets / Robot
