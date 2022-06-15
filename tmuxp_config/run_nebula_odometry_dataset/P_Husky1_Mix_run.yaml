@@ -1,7 +1,7 @@
 session_name: P_Husky1_Mix_run
 
 environment:
-  DATA_PATH: /media/andrzej/9ccb877e-62aa-45e3-9018-dcae3fc8ea76/subt/darpa_final/prelim1/husky1_final_prelim1/
+  DATA_PATH: /home/costar/data/P_Husky1_Mix
   DATA_FOLDER: rosbag/
   RUN_NUMBER: "test"
   LOG_VERSION: '2'
@@ -52,7 +52,7 @@ windows:
       fi;
 
     # launch rviz
-    - rviz -d $(rospack find locus)/rviz/locus.rviz
+    - rviz -d $(rospack find locus)/rviz/$(echo $ROBOT_NAME)_locus.rviz
 
     # Front-end
     - if [ $ROBOT_TYPE = 'husky' ]; then
