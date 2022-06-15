@@ -54,12 +54,14 @@ cd src
 git clone git@github.com:NeBula-Autonomy/LOCUS.git
 # With https
 git clone https://github.com/NeBula-Autonomy/LOCUS.git
+cd..
 catkin build locus
 ```
 
 Add the workspace sourcing to your bashrc (changing the filepath to match where your catkin workspace is)
 ```
 echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## Run Unit tests
