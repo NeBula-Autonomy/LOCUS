@@ -68,7 +68,7 @@ source ~/.bashrc
 rostest/gtest style unit tests are set up in numerous packages (not all) - run them all to check your install with:
 
 ```
-cd catkin_ws/src
+cd ~/catkin_ws/src
 catkin run_tests
 ```
 
