@@ -103,7 +103,7 @@ Note: the steps for running LOCUS live on the robot is no different from running
 ## Download dataset
 
 Download data from [nebula-odometry-dataset](https://github.com/NeBula-Autonomy/nebula-odometry-dataset/blob/main/pages/dataset.md)
-1. Download the rosbag data for [dataset C](https://nextcloud.robotics.caltech.edu/index.php/s/6QNKyLN85WqN9Rd) - this will be approximately 45.8 GB (out smallest dataset)
+1. Download the rosbag data for [dataset C](https://nextcloud.robotics.caltech.edu/index.php/s/6QNKyLN85WqN9Rd) (optionally just the first few lidar bags for a small test)
 2. Download the [Extras configuration files](https://nextcloud.robotics.caltech.edu/index.php/s/TyoFS93rRo5rgXa) for dataset C.
 
 Place the data in a common folder, e.g. 
