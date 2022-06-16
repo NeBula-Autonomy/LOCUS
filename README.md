@@ -224,6 +224,7 @@ There are four main parts to change in LOCUS to set up for your own robot
 
 In general, it is recommended to start with an example of a Spot or Husky, and modify it to suit your needs - i.e. just call your robot `husky1` for the purposes of testing with LOCUS. 
 
+
 ## Sensor Calibration 
 
 You can see the sensor calibration files in `LOCUS/sensor_description/config`, e.g. `husky4_sensors.yaml`. There are multiple transfers there, but the main frames we care about for LOCUS are:
@@ -247,6 +248,11 @@ Go to the launch file in `LOCUS/locus/launch/locus.launch`. Modify the following
 1. `ODOMETRY_TOPIC` - to match your input odometry (optional)
 2. `b_integrate_interpolated_odom` - choose `true` or `false` to match your needs. This will interpolate the prior input odom to compute the transforms and is recommended for low rate odom inputs (e.g. 20 Hz) - for inputs of 50 Hz and above it is recommended to use `false`.
 3. Number of threads - for `localization/num_threads`, `icp/num_threads`, `mapper/num_threads` and the voxel filter `num_threads` - based on your computational capability (e.g. Spot uses 1 core, Husky uses 4)
+
+## Motion Distortion Correction 
+As of now, our motion distorition correction (MDC) is in our velodyne driver, hence is not internal to LOCUS at this stage. If your datasets has large rate rotations, this will result in a reduction in accuracy for data without separate MDC.
+
+We are working on releasing a way to run our MDC on velodyne packets for those running on their own data. 
 
 
 # Cite
