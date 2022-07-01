@@ -174,7 +174,6 @@ private:
   bool b_pcld_received_;
   int pcld_seq_prev_;
 
-  PointCloudF::Ptr msg_filtered_;
   PointCloudF::Ptr msg_transformed_;
   PointCloudF::Ptr msg_neighbors_;
   PointCloudF::Ptr msg_base_;
