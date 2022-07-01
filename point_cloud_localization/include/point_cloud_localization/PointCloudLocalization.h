@@ -87,8 +87,8 @@ public:
 
   // Align incoming point cloud with a reference point cloud from the map.
   // Output the query scan aligned in the localization frame
-  bool MeasurementUpdate(const PointCloudF::Ptr& query,
-                         const PointCloudF::Ptr& reference,
+  bool MeasurementUpdate(const PointCloudF::ConstPtr& query,
+                         const PointCloudF::ConstPtr& reference,
                          PointCloudF* aligned_query);
 
   bool

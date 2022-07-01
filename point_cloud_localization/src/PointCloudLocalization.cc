@@ -289,8 +289,8 @@ bool PointCloudLocalization::SetupICP() {
 }
 
 bool PointCloudLocalization::MeasurementUpdate(
-    const PointCloudF::Ptr& query,
-    const PointCloudF::Ptr& reference,
+    const PointCloudF::ConstPtr& query,
+    const PointCloudF::ConstPtr& reference,
     PointCloudF* aligned_query) {
   if (aligned_query == NULL) {
     ROS_ERROR("%s: Output is null.", name_.c_str());
