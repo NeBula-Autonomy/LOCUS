@@ -161,7 +161,6 @@ private:
   Eigen::Affine3d B_T_I_;
   Eigen::Quaterniond I_T_B_q_;
 
-  PointCloudFilter filter_;
   PointCloudOdometry odometry_;
   PointCloudLocalization localization_;
   IPointCloudMapper::Ptr mapper_;

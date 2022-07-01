@@ -16,7 +16,6 @@ Locus::Locus()
   : b_add_first_scan_to_key_(true),
     counter_(0),
     b_pcld_received_(false),
-    msg_filtered_(new PointCloudF()),
     msg_transformed_(new PointCloudF()),
     msg_neighbors_(new PointCloudF()),
     msg_base_(new PointCloudF()),
@@ -113,10 +112,6 @@ void Locus::setLidarSubscriber(ros::NodeHandle& _nh) {
 bool Locus::Initialize(const ros::NodeHandle& n, bool from_log) {
   ROS_INFO("Locus::Initialize");
   name_ = ros::names::append(n.getNamespace(), "locus");
-  if (!filter_.Initialize(n)) {
-    ROS_ERROR("%s: Failed to initialize point cloud filter.", name_.c_str());
-    return false;
-  }
   if (!odometry_.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize point cloud odometry.", name_.c_str());
     return false;
@@ -355,9 +350,9 @@ bool Locus::CreatePublishers(const ros::NodeHandle& n) {
 
 void Locus::ImuCallback(const ImuConstPtr& imu_msg) {
   last_reception_time_imu_ = ros::Time::now();
-  if (!b_imu_frame_is_correct_) {
-    CheckImuFrame(imu_msg);
-  }
+  // if (!b_imu_frame_is_correct_) {
+  //   CheckImuFrame(imu_msg);
+  // }
   if (CheckNans(*imu_msg)) {
     ROS_WARN("Throwing IMU message as it contains NANS");
     return;
@@ -447,8 +442,7 @@ void Locus::LidarCallback(const PointCloudF::ConstPtr& msg) {
     b_process_pure_lo_prev_ = b_process_pure_lo_;
   }
 
-  filter_.Filter(msg, msg_filtered_, b_is_open_space_); // TODO: remove
-  odometry_.SetLidar(*msg_filtered_);
+  odometry_.SetLidar(*msg);
 
   if (!odometry_.UpdateEstimate()) {
     b_add_first_scan_to_key_ = true;
@@ -473,7 +467,7 @@ void Locus::LidarCallback(const PointCloudF::ConstPtr& msg) {
 
   localization_.MotionUpdate(odometry_.GetIncrementalEstimate());
 
-  localization_.TransformPointsToFixedFrame(*msg_filtered_,
+  localization_.TransformPointsToFixedFrame(*msg,
                                             msg_transformed_.get());
 
   if (!mapper_->ApproxNearestNeighbors(*msg_transformed_,
@@ -486,7 +480,7 @@ void Locus::LidarCallback(const PointCloudF::ConstPtr& msg) {
                                              msg_neighbors_.get());
 
   localization_.MeasurementUpdate(
-      msg_filtered_, msg_neighbors_, msg_base_.get());
+      msg, msg_neighbors_, msg_base_.get());
 
   auto diagnostics_localization = localization_.GetDiagnostics();
   if (diagnostics_localization.level == 0) {
