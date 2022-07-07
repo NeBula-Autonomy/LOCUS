@@ -1,7 +1,0 @@
-map:
-  octree_resolution: 0.001
-  b_publish_only_with_subscribers: true
-  b_publish_map_info: false # only for lamp base station
-  volume_voxel_size: 1.024 #(0.001 * 2^10)
-  default_map_buffer_max_size: 7 # Only for LO_frontend, if selected - approximately 1 m per cloud
-
