@@ -9,17 +9,18 @@
     <arg name="nodelet_args" value="--no-bond"/>
     <arg name="respawn" value="false" if="$(arg use_gdb)"/>
     <arg name="respawn" value="true" unless="$(arg use_gdb)"/>
-    <arg name="robot_type" value="husky" if="$(eval robot_namespace.startswith('husky'))"/>
-    <arg name="robot_type" value="spot"  if="$(eval robot_namespace.startswith('spot'))"/> 
+    <arg name="robot_type" default="husky" if="$(eval robot_namespace.startswith('husky'))"/>
+    <arg name="robot_type" default="spot"  if="$(eval robot_namespace.startswith('spot'))"/> 
 
+    <arg name="pc_topic" default="velodyne_points"/>
     <arg name="number_of_velodynes" default="3" />
     <arg name="b_use_multiple_pc" value="$(eval arg('number_of_velodynes') > 1)"/>
     <arg name="pc_input" value="locus_input"/>
 
     <!-- 0:TOP, 1:FRONT, 2:REAR -->
-    <arg name="pc_trans_in_0" default="velodyne_points/transformed"/>
-    <arg name="pc_trans_in_1" default="velodyne_front/velodyne_points/transformed"/>
-    <arg name="pc_trans_in_2" default="velodyne_rear/velodyne_points/transformed"/>
+    <arg name="pc_trans_in_0" default="$(arg pc_topic)/transformed"/>
+    <arg name="pc_trans_in_1" default="velodyne_front/$(arg pc_topic)/transformed"/>
+    <arg name="pc_trans_in_2" default="velodyne_rear/$(arg pc_topic)/transformed"/>
 
     <group ns="$(arg robot_namespace)">
 
@@ -28,9 +29,9 @@
                     subst_value="true"/>
 
         <!-- Load robot description -->
-        <include file="$(find locus)/launch/robot_description.launch">
+        <!-- <include file="$(find locus)/launch/robot_description.launch">
             <arg name="robot_namespace" value="$(arg robot_namespace)"/>
-        </include>
+        </include> -->
    
         <node
             pkg="locus"
@@ -41,6 +42,7 @@
            
             <remap from="~LIDAR_TOPIC" to="$(arg pc_input)"/>
 
+            <remap from="~ODOMETRY_TOPIC" to="jackal_velocity_controller/odom"/>
             <remap from="~ODOMETRY_TOPIC" to="visual_odom" if="$(eval robot_namespace.startswith('spot'))"/>
             <remap from="~ODOMETRY_TOPIC" to="hero/wio_ekf/odom" if="$(eval robot_namespace.startswith('husky'))"/>
 
@@ -58,17 +60,16 @@
             <param name="tf_prefix" value="$(arg robot_namespace)"/>
 
             <param name="b_integrate_interpolated_odom" value="true" if="$(eval robot_namespace.startswith('spot'))"/>
-            <param name="b_integrate_interpolated_odom" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+            <param name="b_integrate_interpolated_odom" value="false" unless="$(eval robot_namespace.startswith('spot'))"/>
 
             <rosparam file="$(find locus)/config/lo_settings.yaml" />
 
-            <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('spot'))"/>
-            <param name="b_pub_odom_on_timer" value="false" if="$(eval robot_namespace.startswith('husky'))"/>
+            <param name="b_pub_odom_on_timer" value="false" />
 
             <rosparam file="$(find locus)/config/lo_frames.yaml" subst_value="true"/>
             <rosparam file="$(find point_cloud_filter)/config/parameters.yaml"/>
             <rosparam file="$(find point_cloud_odometry)/config/parameters.yaml"/>          
-            <rosparam file="$(find point_cloud_localization)/config/parameters.yaml" if="$(eval robot_type == 'husky')"/>
+            <rosparam file="$(find point_cloud_localization)/config/parameters.yaml" unless="$(eval robot_type == 'spot')"/>
             <rosparam file="$(find point_cloud_localization)/config/spot_parameters.yaml" if="$(eval robot_type == 'spot')"/>
             <rosparam file="$(find point_cloud_mapper)/config/parameters.yaml"/>
 
@@ -76,9 +77,9 @@
             <param name="icp/num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
             <param name="mapper/num_threads"             value="4" if="$(eval robot_namespace.startswith('husky'))" />
 
-            <param name="localization/num_threads"       value="1" if="$(eval robot_namespace.startswith('spot'))" />
-            <param name="icp/num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
-            <param name="mapper/num_threads"             value="1" if="$(eval robot_namespace.startswith('spot'))" />
+            <param name="localization/num_threads"       value="1" unless="$(eval robot_namespace.startswith('husky'))" />
+            <param name="icp/num_threads"                value="1" unless="$(eval robot_namespace.startswith('husky'))" />
+            <param name="mapper/num_threads"             value="1" unless="$(eval robot_namespace.startswith('husky'))" />
 
         </node>
 
@@ -91,7 +92,7 @@
             type="nodelet"
             name="transform_points_base_link"
             args="standalone pcl/PassThrough">
-            <remap from="~input" to="velodyne_points"/>
+            <remap from="~input" to="$(arg pc_topic)"/>
             <remap from="~output" to="$(arg pc_trans_in_0)"/>
             <rosparam subst_value="true">
                 filter_field_name: z
@@ -153,7 +154,7 @@
               args="load point_cloud_filter/BodyFilter $(arg nodelet_manager) $(arg nodelet_args)"
               respawn="$(arg respawn)">
           <remap from="~input" to="combined_point_cloud" if="$(arg b_use_multiple_pc)"/>
-          <remap from="~input" to="velodyne_points/transformed" unless="$(arg b_use_multiple_pc)"/>
+          <remap from="~input" to="$(arg pc_topic)/transformed" unless="$(arg b_use_multiple_pc)"/>
         </node>
 
 <!-- old way. TODO: removing after locus testing-->
@@ -163,11 +164,11 @@
             <remap from="~input" to="body_filter/output" />
 
             <rosparam subst_value="true">
-            filter_field_name: z
-            filter_limit_min: -100
-            filter_limit_max: 100
+            filter_field_name: y
+            filter_limit_min: -10
+            filter_limit_max: 10
             filter_limit_negative: False
-            leaf_size: 0.25
+            leaf_size: 0.2
             output_frame: $(arg robot_namespace)/base_link
             </rosparam>
         </node>
@@ -181,9 +182,12 @@
             <remap from="~output" to="$(arg pc_input)" />
 
            <param name="num_threads"                value="4" if="$(eval robot_namespace.startswith('husky'))" />
-           <param name="num_threads"                value="1" if="$(eval robot_namespace.startswith('spot'))" />
+           <param name="num_threads"                value="1" unless="$(eval robot_namespace.startswith('husky'))" />
 
         </node>
+
+        <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_velolink" args="0 0 0 0 0 0 $(arg robot_namespace)/base_link $(arg robot_namespace)/velodyne_link" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_velo" args="0 0 0 0 0 0 $(arg robot_namespace)/base_link $(arg robot_namespace)/velodyne" />
       
     </group>
  
