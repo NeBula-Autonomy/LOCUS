@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+set -e
+
+print_help() {
+    echo
+    echo "Usage: "$(basename "$0")" <IMAGE_NAME> <ACTION> [ <ARGS> ]"
+    echo
+    echo "    IMAGE_NAME  name of the image & container which is going to be built"
+    echo
+    echo "    ARGS  arguments passed directly to docker run, e.g. --volume=/tmp:/tmp"
+    echo
+    echo "    Commands:"
+    echo
+    echo "        build,b         build an image"
+    echo "        run,r           run a container in detached mode"
+    echo "        start,s         start a container"
+    echo "        stop,p          stop a container"
+    echo "        delete,d        delete a container"
+    echo "        bash            run bash"
+    echo "        help,h          print help"
+    exit 1
+}
+
+die() {
+    local message=$1
+    [ -z "$message" ] && message="Died"
+    echo "Error: $message" >&2
+    print_help
+    exit 1
+}
+
+init_paths() {
+    SCRIPT_PATH=$(readlink -f "$0")
+    SCRIPT_DIR_PATH=$(dirname "$SCRIPT_PATH")
+    REPO_DIR_PATH=$(realpath "$SCRIPT_DIR_PATH/..")
+}
+
+init_xauth() {
+    XSOCK=/tmp/.X11-unix
+    XAUTH=/tmp/.docker.xauth
+    touch $XAUTH
+    xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge -
+}
+
+docker_build() {
+    echo "Building $1"
+
+    docker build \
+        -t $1 \
+        -f "$REPO_DIR_PATH/docker/Dockerfile" \
+        "$REPO_DIR_PATH"
+}
+
+docker_run() {
+    local image_name=$1
+    shift
+    local args=$@
+
+    echo "Running container in detached mode: $image_name"
+
+    init_xauth
+
+    docker run -it -d \
+        --name $image_name \
+        --volume=$XSOCK:$XSOCK:rw \
+        --volume=$XAUTH:$XAUTH:rw \
+        --volume=$REPO_DIR_PATH:/root/locus_ws/src/locus/ \
+        --network host \
+        --env="XAUTHORITY=${XAUTH}" \
+        --env="QT_X11_NO_MITSHM=1" \
+        --env="DISPLAY" \
+        $args \
+        $image_name
+}
+
+docker_delete() {
+    echo "Deleting container $1"
+
+    docker stop "$1" >/dev/null
+    docker rm "$1" >/dev/null
+}
+
+docker_start() {
+    echo "Starting container $1"
+
+    docker start "$1" >/dev/null
+}
+
+docker_stop() {
+    echo "Stopping container $1"
+
+    docker stop "$1" >/dev/null
+}
+
+docker_bash() {
+    echo "Executing bash: $1"
+
+    docker exec -it $1 bash
+}
+
+main() {
+    if [ "$1" == "help" ] || [ "$1" == "h" ]; then
+        print_help
+        exit 0
+    fi
+
+    local image_name=$1
+    [ -z "$image_name" ] && die "No image name found"
+
+    local option=$2
+    [ -z "$option" ] && die "No option found"
+
+    shift 2
+    local args=$@
+
+    case "$option" in
+    build | b)
+        docker_build $image_name
+        ;;
+    run | r)
+        docker_run $image_name $args
+        ;;
+    start | s)
+        docker_start $image_name
+        ;;
+    stop | p)
+        docker_stop $image_name
+        ;;
+    delete | d)
+        docker_delete $image_name
+        ;;
+    bash)
+        docker_bash $image_name
+        ;;
+    *)
+        echo "No option: $option"
+        print_help
+        exit 1
+        ;;
+    esac
+}
+
+init_paths
+
+main $*
