@@ -271,6 +271,7 @@ bool PointCloudOdometry::UpdateICP() {
   if (b_use_imu_integration_) {
     T = T * imu_prior_;
   } else if (b_use_odometry_integration_) {
+    T.block(0, 3, 3, 1) = Eigen::MatrixXd::Zero(3, 1);
     T = T * odometry_prior_;
   } 
 
