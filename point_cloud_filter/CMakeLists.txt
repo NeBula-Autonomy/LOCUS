@@ -63,3 +63,6 @@ target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
+
+# add dependencies to the dynamic reconfigure files
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
